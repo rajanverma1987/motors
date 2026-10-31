@@ -826,7 +826,7 @@ export default function SettingsPageClient() {
               <FormSectionTitle as="h2">Email Settings</FormSectionTitle>
               <p className="mb-4 text-sm text-secondary">
                 When enabled, quotes and invoices sent to customers use your shop&apos;s SMTP server and from address
-                instead of IQMotorBase.com. Save settings after entering credentials, then test the connection.
+                instead of 3PhaseFlow.com. Save settings after entering credentials, then test the connection.
               </p>
               <div className="flex flex-col gap-4">
                 <Checkbox
@@ -953,7 +953,7 @@ export default function SettingsPageClient() {
                 <Checkbox
                   name="leadEmailAlerts"
                   label="New lead notifications"
-                  help="Email when new website or IQMotorTrack leads are assigned to this shop."
+                  help="Email when new website or 3PhaseTrack leads are assigned to this shop."
                   checked={draft.leadEmailAlerts !== false}
                   onChange={(e) => updateDraft({ leadEmailAlerts: e.target.checked })}
                 />

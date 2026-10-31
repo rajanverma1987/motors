@@ -24,7 +24,7 @@ export default function ListingsDirectorySeoContent({ total = 0 }) {
         Find electric motor repair shops and rewinding centers
       </h2>
       <p id="listings-directory-summary" className="mt-4 max-w-[57.6rem] text-sm leading-relaxed text-secondary sm:text-base">
-        IQMotorBase.com publishes this <strong className="text-title">electric motor repair</strong> directory so
+        3PhaseFlow.com publishes this <strong className="text-title">electric motor repair</strong> directory so
         facilities, maintenance teams, and buyers can locate qualified <strong className="text-title">electric motor
         repair shops</strong> without relying on outdated phone books or generic maps. Browse {totalLabel} listed
         centers, filter by location, and compare <strong className="text-title">industrial electric motor repair</strong>{" "}
@@ -141,7 +141,7 @@ export default function ListingsDirectorySeoContent({ total = 0 }) {
           <Link href="/list-your-electric-motor-services" className="font-medium text-primary hover:underline">
             list electric motor repair services
           </Link>{" "}
-          on IQMotorBase.com to appear in this directory, receive quote requests, and access shop software. Explore the{" "}
+          on 3PhaseFlow.com to appear in this directory, receive quote requests, and access shop software. Explore the{" "}
           <Link href="/marketplace" className="font-medium text-primary hover:underline">
             motor repair marketplace
           </Link>{" "}

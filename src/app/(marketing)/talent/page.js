@@ -13,7 +13,7 @@ export const metadata = marketingPageMetadata({
   path: "/talent",
   title: "Electric Motor Shop Talent Directory | Hire Technicians & Winders",
   description:
-    "Browse free public profiles of motor rewind technicians, machinists, and field techs. Shops hire on IQMotorBase Careers. Create your free profile today.",
+    "Browse free public profiles of motor rewind technicians, machinists, and field techs. Shops hire on 3PhaseFlow Careers. Create your free profile today.",
 });
 
 export default async function TalentDirectoryPage() {
@@ -34,7 +34,7 @@ export default async function TalentDirectoryPage() {
     <div className="relative">
       <section className="border-b border-border bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-primary/15 via-bg to-bg">
         <div className="mx-auto max-w-[67.2rem] px-4 py-14 sm:px-6 sm:py-20">
-          <p className="text-sm font-semibold uppercase tracking-wide text-primary">IQMotorBase Talent</p>
+          <p className="text-sm font-semibold uppercase tracking-wide text-primary">3PhaseFlow Talent</p>
           <h1 className="mt-3 max-w-3xl text-4xl font-bold tracking-tight text-title sm:text-5xl">
             Motor shop professionals, ready to hire
           </h1>

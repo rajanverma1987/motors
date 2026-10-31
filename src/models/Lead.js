@@ -21,22 +21,22 @@ const leadSchema = new mongoose.Schema(
     assignedListingIds: [{ type: String }],
     /** CRM: new → contacted → quoted → won | lost */
     status: { type: String, enum: ["new", "contacted", "quoted", "won", "lost"], default: "new" },
-    /** How lead arrived: website submission, admin assignment, manual entry, contact unlock, or IQMotorTrack RFQ */
+    /** How lead arrived: website submission, admin assignment, manual entry, contact unlock, or 3PhaseTrack RFQ */
     leadSource: {
       type: String,
       enum: ["website", "admin_assigned", "manual", "contact_unlock", "iqmotortrack"],
       default: "website",
     },
-    /** Reason captured when a shop declines to quote an IQMotorTrack RFQ (§9.4). */
+    /** Reason captured when a shop declines to quote an 3PhaseTrack RFQ (§9.4). */
     declineReason: { type: String, default: "" },
     /** Reason a lead moved to lost (e.g. "Awarded to another shop"). */
     lostReason: { type: String, default: "" },
-    /** IQMotorTrack integration: stable external identifiers (§9.3). */
+    /** 3PhaseTrack integration: stable external identifiers (§9.3). */
     trackFacilityId: { type: String, default: "" },
     trackRfqRequestId: { type: String, default: "" },
     trackInvitationId: { type: String, default: "" },
     trackMotorId: { type: String, default: "" },
-    /** Structured motor snapshot from IQMotorTrack, never flattened into `message`. */
+    /** Structured motor snapshot from 3PhaseTrack, never flattened into `message`. */
     trackMotorSnapshot: { type: mongoose.Schema.Types.Mixed, default: null },
     /** Latest datasheet version shared with this RFQ, or null when not shared. */
     trackDatasheetSnapshot: { type: mongoose.Schema.Types.Mixed, default: null },

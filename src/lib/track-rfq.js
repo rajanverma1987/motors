@@ -1,5 +1,5 @@
 /**
- * IQMotorTrack RFQ vocabulary, serializers and comparison rules (§7, §8, §9.11).
+ * 3PhaseTrack RFQ vocabulary, serializers and comparison rules (§7, §8, §9.11).
  */
 
 export const TRACK_RFQ_STATUS_LABEL = {

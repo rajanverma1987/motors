@@ -15,7 +15,7 @@ export default function BrandLogo({
   className = "h-8 w-auto max-w-[min(100%,12rem)] object-contain object-left",
   wrapperClassName = "",
   priority = false,
-  alt = "IQ Motorbase",
+  alt = "3PhaseFlow",
   /** No padding, gradient, or border, use in the always-light navbar. */
   plain = false,
 }) {

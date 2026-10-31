@@ -1,5 +1,5 @@
 /**
- * Shop-side handling of IQMotorTrack Leads inside the Simple portal (§9.4 to §9.6, §14).
+ * Shop-side handling of 3PhaseTrack Leads inside the Simple portal (§9.4 to §9.6, §14).
  *
  * Simple has no Motor collection: motor data lives on the Service Proposal, so
  * conversion produces a Customer plus one RFQ-type Service Proposal. Both are
@@ -23,7 +23,7 @@ import { applyTrackConvertedToProposal } from "@/lib/track-integration";
 import { TRACK_LOGISTICS_LABEL, TRACK_URGENCY_LABEL } from "@/lib/track-rfq";
 import { nextCustomerNumberForShop } from "@/lib/next-customer-number";
 
-export const TRACK_SOURCE_SYSTEM = "IQMotorTrack";
+export const TRACK_SOURCE_SYSTEM = "3PhaseTrack";
 
 /** Leads a shop user may act on, newest first. */
 export async function listTrackLeadsForShop(email) {
@@ -116,7 +116,7 @@ async function createTrackCustomer(shopEmail, lead) {
   const doc = await Customer.create({
     createdByEmail: shopEmail,
     customerNumber: await nextCustomerNumberForShop(shopEmail),
-    companyName: facilityCompany(lead) || "IQMotorTrack customer",
+    companyName: facilityCompany(lead) || "3PhaseTrack customer",
     primaryContactName: String(lead.name || ""),
     email: String(lead.email || ""),
     phone: String(lead.phone || ""),
@@ -125,7 +125,7 @@ async function createTrackCustomer(shopEmail, lead) {
     state: String(lead.trackFacilityState || ""),
     zipCode: String(lead.zipCode || ""),
     country: String(lead.trackFacilityCountry || "United States"),
-    notes: "Created from an IQMotorTrack motor down request.",
+    notes: "Created from an 3PhaseTrack motor down request.",
     sourceSystem: TRACK_SOURCE_SYSTEM,
     externalRef: String(lead.trackFacilityId || ""),
     importedAt: new Date(),
@@ -133,7 +133,7 @@ async function createTrackCustomer(shopEmail, lead) {
   return doc;
 }
 
-/** §9.5 motor field mapping, IQMotorTrack snapshot to the Simple proposal fields. */
+/** §9.5 motor field mapping, 3PhaseTrack snapshot to the Simple proposal fields. */
 function motorFieldsFromSnapshot(snapshot) {
   const src = snapshot || {};
   const powerType = resolveMachineType(src.powerType, "AC");
@@ -157,7 +157,7 @@ function motorFieldsFromSnapshot(snapshot) {
 
 function proposalNotesFromLead(lead) {
   const lines = [
-    `Motor down request from ${facilityCompany(lead) || "an IQMotorTrack customer"} via IQMotorTrack.`,
+    `Motor down request from ${facilityCompany(lead) || "an 3PhaseTrack customer"} via 3PhaseTrack.`,
     `Urgency: ${TRACK_URGENCY_LABEL[String(lead.urgencyLevel || "").toLowerCase()] || lead.urgencyLevel || "Standard"}`,
     lead.trackLogistics ? `Logistics: ${TRACK_LOGISTICS_LABEL[lead.trackLogistics] || lead.trackLogistics}` : "",
     lead.trackNeededBackBy
@@ -171,7 +171,7 @@ function proposalNotesFromLead(lead) {
 }
 
 /**
- * §9.5 - convert one IQMotorTrack Lead into an RFQ-type Service Proposal.
+ * §9.5 - convert one 3PhaseTrack Lead into an RFQ-type Service Proposal.
  *
  * @param {{ email: string, lead: any, customerId?: string, createCustomer?: boolean }} args
  * @returns {Promise<{ ok: boolean, needsCustomerChoice?: boolean, candidates?: unknown[], item?: unknown, existing?: boolean, error?: string }>}
@@ -180,7 +180,7 @@ export async function convertTrackLeadToProposal({ email, lead, customerId = "",
   await connectDB();
   const shopEmail = String(email || "").trim().toLowerCase();
   const invitationId = String(lead.trackInvitationId || "");
-  if (!invitationId) return { ok: false, error: "This lead is missing its IQMotorTrack reference." };
+  if (!invitationId) return { ok: false, error: "This lead is missing its 3PhaseTrack reference." };
 
   // A second click must open the same proposal (§9.5 C).
   const existing = await SimpleServiceProposal.findOne({
@@ -245,7 +245,7 @@ export async function convertTrackLeadToProposal({ email, lead, customerId = "",
     customerPo: "",
     attachments: (Array.isArray(lead.motorPhotos) ? lead.motorPhotos : [])
       .slice(0, 20)
-      .map((url, index) => ({ name: `IQMotorTrack photo ${index + 1}`, url: String(url) })),
+      .map((url, index) => ({ name: `3PhaseTrack photo ${index + 1}`, url: String(url) })),
     scopeDetails: [],
     otherItems: [],
     sourceSystem: TRACK_SOURCE_SYSTEM,
@@ -292,7 +292,7 @@ export async function convertTrackLeadToProposal({ email, lead, customerId = "",
 
 /**
  * Read the datasheet the shop currently holds on a linked proposal, ready for
- * write-back. Returns null when the proposal is not linked to IQMotorTrack.
+ * write-back. Returns null when the proposal is not linked to 3PhaseTrack.
  * @param {Record<string, unknown>} proposal
  */
 export function trackLinkedProposalContext(proposal) {

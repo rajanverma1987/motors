@@ -11,10 +11,10 @@ const path = "/emergency-motor-repair-what-to-do";
 
 export const metadata = marketingPageMetadata({
   path,
-  title: "Emergency Motor Repair | 24/7 Rush Service | IQMotorBase",
+  title: "Emergency Motor Repair | 24/7 Rush Service | 3PhaseFlow",
   description:
     "Motor down? Submit an emergency repair request now, matched to 24/7 shops in your area. Find rush motor repair, rewinding, and field service. Get back online fast.",
-  ogTitle: "Emergency Motor Repair | 24/7 Rush Service | IQMotorBase",
+  ogTitle: "Emergency Motor Repair | 24/7 Rush Service | 3PhaseFlow",
   ogDescription: "Motor down? Submit an emergency repair request now, matched to 24/7 shops in your area.",
   keywords: [
     "emergency motor repair",
@@ -55,7 +55,7 @@ const EMERGENCY_FAQS = [
   {
     question: "Are emergency motor repair shops available 24/7?",
     answer:
-      "Many industrial motor repair shops listed on IQMotorBase offer 24/7 emergency intake and technician callout. Coverage varies by region, use the form on this page to submit your requirement and we will match you to shops in your area that have confirmed emergency capability.",
+      "Many industrial motor repair shops listed on 3PhaseFlow offer 24/7 emergency intake and technician callout. Coverage varies by region, use the form on this page to submit your requirement and we will match you to shops in your area that have confirmed emergency capability.",
   },
 ];
 

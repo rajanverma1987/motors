@@ -27,7 +27,7 @@ export function buildSimpleReportPdfBuffer(sheetName, headers, rows, options = {
       margin: 28,
       info: {
         Title: String(sheetName || "Report"),
-        Author: "IQMotorBase",
+        Author: "3PhaseFlow",
       },
     });
     const chunks = [];

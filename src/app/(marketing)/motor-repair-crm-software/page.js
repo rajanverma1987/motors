@@ -12,12 +12,12 @@ import {
 
 const path = SEO_SOFTWARE_CRM_PATH;
 
-// The root layout applies a "%s | IQMotorBase" template, so the brand suffix is
+// The root layout applies a "%s | 3PhaseFlow" template, so the brand suffix is
 // omitted here; SOCIAL_TITLE carries it because og:/twitter: titles skip the template.
 const TITLE = "Electric Motor Repair CRM & Customer Management";
-const SOCIAL_TITLE = `${TITLE} | IQMotorBase`;
+const SOCIAL_TITLE = `${TITLE} | 3PhaseFlow`;
 const DESCRIPTION =
-  "One customer and motor registry with full repair history, plus the leads that fill it. See how IQMotorBase connects leads, customers, and jobs.";
+  "One customer and motor registry with full repair history, plus the leads that fill it. See how 3PhaseFlow connects leads, customers, and jobs.";
 
 export const metadata = {
   title: TITLE,
@@ -32,7 +32,7 @@ export const metadata = {
     description: DESCRIPTION,
     url: path,
     type: "article",
-    siteName: "IQMotorBase.com",
+    siteName: "3PhaseFlow.com",
     locale: "en_US",
   },
   twitter: {
@@ -47,7 +47,7 @@ export const metadata = {
 const faqItems = [
   {
     q: "How do repair leads work?",
-    a: "Leads come from the IQMotorBase directory and local SEO pages. You can choose shared leads (sent to multiple shops) or exclusive leads (sent only to you). Credits are deducted when a lead is delivered.",
+    a: "Leads come from the 3PhaseFlow directory and local SEO pages. You can choose shared leads (sent to multiple shops) or exclusive leads (sent only to you). Credits are deducted when a lead is delivered.",
   },
   {
     q: "What is stored on a customer and motor record?",
@@ -86,12 +86,12 @@ export default function MotorRepairCrmSoftwarePage() {
               twenty minutes hunting folders and email.
             </p>
             <p className="mt-4 text-secondary leading-relaxed">
-              IQMotorBase treats the customer and motor registry as the front door of the same shop system that runs{" "}
+              3PhaseFlow treats the customer and motor registry as the front door of the same shop system that runs{" "}
               <Link href={SEO_SOFTWARE_PILLAR_PATH} className="text-primary font-medium hover:underline">
                 motor repair shop management
               </Link>
               : Job Write-Ups, quotes, work orders, and billing. The differentiator is how that registry gets filled.
-              Leads originate from the IQMotorBase public directory and local SEO pages, land in the shop with shared
+              Leads originate from the 3PhaseFlow public directory and local SEO pages, land in the shop with shared
               or exclusive delivery, and, when you win, convert directly into a customer record and a Job Write-Up. No
               second Shop Management System. No retyping the inquiry so the floor can start intake. This page is about that connection:
               lead generation into the shop system, and a durable customer/motor history once the work repeats.
@@ -122,7 +122,7 @@ export default function MotorRepairCrmSoftwarePage() {
               need a chain of work, not a vague “we fixed something like that.” When test results and service history
               sit on the motor, and job history sits on the customer, you can open a new Job Write-Up without re-entering
               motor details and specs across separate screens. That is the same continuous-record rule that runs the
-              rest of IQMotorBase: one job number path from intake through quote and work order, with the registry as
+              rest of 3PhaseFlow: one job number path from intake through quote and work order, with the registry as
               the durable layer underneath. Tag QR on the floor still encodes the job number for the current repair;
               the registry is what you open before that job exists, when the customer is only on the phone and the
               serial is the only hard fact you have.
@@ -146,7 +146,7 @@ export default function MotorRepairCrmSoftwarePage() {
             <p className="mt-4 text-secondary leading-relaxed">
               Shops that still run on spreadsheets often have a “customer sheet” and a separate “motor log” that
               drift apart after the first busy month. Someone updates the phone number in email but not in the sheet.
-              Someone writes insulation readings on a bench form that never gets scanned. The IQMotorBase registry is
+              Someone writes insulation readings on a bench form that never gets scanned. The 3PhaseFlow registry is
               meant to stop that drift: contacts and billing on the customer; serial, specs, service history, and test
               results on the motor; full job history tying the two together through Job Write-Ups. If you are coming
               from another system, existing customers, motors, and job history can be uploaded or imported from
@@ -161,7 +161,7 @@ export default function MotorRepairCrmSoftwarePage() {
             </h2>
             <p className="mt-4 text-secondary leading-relaxed">
               This is the section generic shop management systems and most motor-industry competitors cannot write honestly: the
-              product also originates leads for the shop. Leads come from the IQMotorBase public directory and local
+              product also originates leads for the shop. Leads come from the 3PhaseFlow public directory and local
               SEO pages, searches like electric motor repair in a city or emergency motor repair near me. The directory
               side of the business is visible on the{" "}
               <Link
@@ -213,7 +213,7 @@ export default function MotorRepairCrmSoftwarePage() {
               That closed loop is the real differentiator versus Spring Point, Aptean, Tekmetric, or any generic
               shop-management tool that expects you to buy leads elsewhere and paste them in. Those systems may store
               customers well enough. They do not originate directory and local SEO leads into the same database that
-              opens the Job Write-Up. IQMotorBase does. The Shop Management System page is not a separate product SKU bolted on for
+              opens the Job Write-Up. 3PhaseFlow does. The Shop Management System page is not a separate product SKU bolted on for
               marketers, it is the registry plus the lead path that fills it, sitting beside the same job board,
               inventory, and AR tools described on the{" "}
               <Link href={SEO_SOFTWARE_PILLAR_PATH} className="text-primary font-medium hover:underline">
@@ -250,7 +250,7 @@ export default function MotorRepairCrmSoftwarePage() {
               and schedule without starting from zero.
             </p>
             <p className="mt-4 text-secondary leading-relaxed">
-              Reporting reinforces the same point. IQMotorBase surfaces revenue, completed jobs, technician workload,
+              Reporting reinforces the same point. 3PhaseFlow surfaces revenue, completed jobs, technician workload,
               and top customers without exporting to a spreadsheet just to see who actually drives the month. Spotting
               repeat-customer patterns is easier when “top customers” and job history sit on the same system that took
               the original lead. You can see which accounts return, which motors bounce back, and where capacity is

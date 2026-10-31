@@ -705,7 +705,7 @@ export default function SettingsPageClient() {
               <FormSectionTitle as="h2">Customer email (SMTP)</FormSectionTitle>
               <p className="mb-4 text-sm text-secondary">
                 When enabled, quotes and invoices sent to customers use your shop&apos;s SMTP server and from address
-                instead of IQMotorBase.com. Save settings after entering credentials, then test the connection.
+                instead of 3PhaseFlow.com. Save settings after entering credentials, then test the connection.
               </p>
               <div className="flex flex-col gap-4">
                 <Checkbox

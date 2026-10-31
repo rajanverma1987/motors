@@ -20,15 +20,15 @@ import {
 
 const path = SEO_SOFTWARE_PILLAR_PATH;
 
-// The root layout applies a "%s | IQMotorBase" template, so the brand suffix is
+// The root layout applies a "%s | 3PhaseFlow" template, so the brand suffix is
 // omitted here; SOCIAL_TITLE carries it because og:/twitter: titles skip the template.
 const TITLE = "Electric Motor Repair Shop Software";
-const SOCIAL_TITLE = `${TITLE} | IQMotorBase`;
+const SOCIAL_TITLE = `${TITLE} | 3PhaseFlow`;
 const DESCRIPTION =
   "Software for electric motor and rewind shops: job write-ups, work orders, inventory, invoicing, time clock, and repair leads. Not motorcycle or auto shop software. Starts at $349/mo.";
 
 const heroOg = heroDashboardTabletOgImage({
-  alt: "IQMotorBase motor repair shop management software dashboard on a tablet, service proposals pipeline and job list",
+  alt: "3PhaseFlow motor repair shop management software dashboard on a tablet, service proposals pipeline and job list",
 });
 
 export const metadata = {
@@ -45,7 +45,7 @@ export const metadata = {
     description: DESCRIPTION,
     url: path,
     type: "article",
-    siteName: "IQMotorBase.com",
+    siteName: "3PhaseFlow.com",
     locale: "en_US",
     images: [heroOg],
   },
@@ -66,8 +66,8 @@ export const metadata = {
 
 const faqItems = [
   {
-    q: "How much does IQMotorBase cost?",
-    a: "IQMotorBase is $349 per month, or $3,235 per year (equivalent to $269 per month, saving $983 per year). Both plans include unlimited users and the full platform. Founder pricing is also available for the first 10 shops at a permanently locked discounted rate. Book a free demo to see the workflow and confirm fit for your shop.",
+    q: "How much does 3PhaseFlow cost?",
+    a: "3PhaseFlow is $349 per month, or $3,235 per year (equivalent to $269 per month, saving $983 per year). Both plans include unlimited users and the full platform. Founder pricing is also available for the first 10 shops at a permanently locked discounted rate. Book a free demo to see the workflow and confirm fit for your shop.",
   },
   {
     q: "Can I import my existing customer and job data?",
@@ -83,15 +83,15 @@ const faqItems = [
   },
   {
     q: "How is this different from general auto repair shop software?",
-    a: "IQMotorBase is built for electric motor and rewind shops, not cars. Motor and customer registries carry serial numbers, specs, service history, and test results across visits. Work orders carry motor details and quote-backed line items. Tag QR floor updates and inventory reservation are tied to that same job path. Auto-shop tools are built for oil changes and vehicle RO workflows; they do not replace a motor-specific record.",
+    a: "3PhaseFlow is built for electric motor and rewind shops, not cars. Motor and customer registries carry serial numbers, specs, service history, and test results across visits. Work orders carry motor details and quote-backed line items. Tag QR floor updates and inventory reservation are tied to that same job path. Auto-shop tools are built for oil changes and vehicle RO workflows; they do not replace a motor-specific record.",
   },
   {
     q: "Does the software also generate leads for my shop?",
-    a: "Yes. Leads originate from the IQMotorBase public directory and local SEO pages. Shops can take shared leads (sent to multiple shops) or exclusive leads (one shop only). A credit balance deducts when a lead is delivered. A won lead converts directly into a customer and Job Write-Up, no re-entry into a separate Shop Management System.",
+    a: "Yes. Leads originate from the 3PhaseFlow public directory and local SEO pages. Shops can take shared leads (sent to multiple shops) or exclusive leads (one shop only). A credit balance deducts when a lead is delivered. A won lead converts directly into a customer and Job Write-Up, no re-entry into a separate Shop Management System.",
   },
   {
-    q: "Does IQMotorBase integrate with QuickBooks Online?",
-    a: "Yes. Connect QuickBooks Online under Settings → Accounts. When a job reaches your selected closed status, IQMotorBase syncs customers, invoices, payments, and vendor purchase orders to QBO so you do not re-key the shop floor into your books.",
+    q: "Does 3PhaseFlow integrate with QuickBooks Online?",
+    a: "Yes. Connect QuickBooks Online under Settings → Accounts. When a job reaches your selected closed status, 3PhaseFlow syncs customers, invoices, payments, and vendor purchase orders to QBO so you do not re-key the shop floor into your books.",
   },
 ];
 
@@ -136,7 +136,7 @@ export default function MotorRepairShopManagementSoftwarePage() {
         <article className="prose prose-neutral dark:prose-invert max-w-none">
           <section>
             <p className="mt-2 text-secondary leading-relaxed">
-              IQMotorBase is shop management software for electric motor repair and rewinding businesses. It is not
+              3PhaseFlow is shop management software for electric motor repair and rewinding businesses. It is not
               motorcycle shop software, not auto repair software, and not generic field service. Every repair starts as
               a Job Write-Up with its own job number:
               intake, inspection notes, preliminary and final quotes, customer send, attachments, shop actions, and
@@ -147,7 +147,7 @@ export default function MotorRepairShopManagementSoftwarePage() {
             </p>
             <p className="mt-4 text-secondary leading-relaxed">
               The one-sentence difference versus almost every competitor in “motor repair software” search results:
-              IQMotorBase is the only shop system in this cluster that also generates the shop’s leads. Leads come
+              3PhaseFlow is the only shop system in this cluster that also generates the shop’s leads. Leads come
               from the public directory and local SEO pages, convert into a customer and Job Write-Up without a second
               Shop Management System, and sit beside the same inventory, board, and billing tools the floor already uses. If you run a
               rewind shop and you are tired of spreadsheets for WIP and a separate inbox for inquiries, this page is
@@ -168,7 +168,7 @@ export default function MotorRepairShopManagementSoftwarePage() {
               test bench.
             </p>
             <p className="mt-4 text-secondary leading-relaxed">
-              IQMotorBase keeps a digital record per motor: serial number, specs, service history, and test results
+              3PhaseFlow keeps a digital record per motor: serial number, specs, service history, and test results
               that persist across repeat visits. When a returning customer’s motor comes back, that history is
               available when you quote new work, not buried in an old PDF folder. The customer registry holds contacts,
               addresses, billing details, and full job history alongside that motor record.
@@ -257,7 +257,7 @@ export default function MotorRepairShopManagementSoftwarePage() {
               measure, on-hand, reserved, and optional bin or aisle location when you use locations.
             </p>
             <p className="mt-4 text-secondary leading-relaxed">
-              Leads are not a bolt-on form. They originate from the IQMotorBase public directory and local SEO pages
+              Leads are not a bolt-on form. They originate from the 3PhaseFlow public directory and local SEO pages
               (for example city- and service-oriented searches). Shared leads go to multiple shops; exclusive leads go
               to one shop, used for emergency or high-value work. The shop tops up a lead credit balance; credits deduct
               when a lead is delivered, not when you decide you “like” it. A won lead becomes a customer and a Job
@@ -298,7 +298,7 @@ export default function MotorRepairShopManagementSoftwarePage() {
                 <thead>
                   <tr className="border-b border-border text-title">
                     <th className="py-2 pr-4 font-semibold">Capability</th>
-                    <th className="py-2 pr-4 font-semibold">IQMotorBase</th>
+                    <th className="py-2 pr-4 font-semibold">3PhaseFlow</th>
                     <th className="py-2 pr-4 font-semibold">Spreadsheets</th>
                     <th className="py-2 pr-4 font-semibold">Generic shop software</th>
                     <th className="py-2 font-semibold">Spring Point</th>
@@ -399,7 +399,7 @@ export default function MotorRepairShopManagementSoftwarePage() {
               sick and a promised date slips.
             </p>
             <p className="mt-4 text-secondary leading-relaxed">
-              IQMotorBase consolidates that stack around the Job Write-Up: quotes and work orders on the same job
+              3PhaseFlow consolidates that stack around the Job Write-Up: quotes and work orders on the same job
               number, reservations and POs from the quote path, board and mobile updates for the floor, invoices and
               AR for the office, and directory-driven leads that become customers without a second Shop Management System. Built-in
               QuickBooks Online sync pushes customers, invoices, payments, and vendor POs when a job closes, so
@@ -513,7 +513,7 @@ export default function MotorRepairShopManagementSoftwarePage() {
           <section className="mt-10 not-prose">
             <div className="rounded-2xl bg-primary px-6 py-10 text-center sm:px-10 sm:py-12">
               <h2 className="text-2xl font-bold tracking-tight text-white sm:text-3xl">
-                See IQMotorBase in 30 minutes
+                See 3PhaseFlow in 30 minutes
               </h2>
               <p className="mx-auto mt-3 max-w-xl text-base text-white/80 sm:text-lg">
                 Book a free demo call. We will show you the full platform and tell you honestly whether it fits your

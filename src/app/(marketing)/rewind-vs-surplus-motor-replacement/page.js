@@ -6,7 +6,7 @@ import { getPublicSiteUrl } from "@/lib/public-site-url";
 const path = "/rewind-vs-surplus-motor-replacement";
 
 export const metadata = {
-  title: "Rewind vs Surplus Motor | Which Is Cheaper? | IQMotorBase",
+  title: "Rewind vs Surplus Motor | Which Is Cheaper? | 3PhaseFlow",
   description:
     "Is it cheaper to rewind an industrial motor or buy a surplus replacement? A straight comparison of cost, risk, lead time, and warranty, with a form to get a rewind quote.",
   keywords: [
@@ -16,19 +16,19 @@ export const metadata = {
     "industrial motor rewind cost",
     "surplus motor replacement",
   ],
-  authors: [{ name: "IQMotorBase.com" }],
+  authors: [{ name: "3PhaseFlow.com" }],
   openGraph: {
-    title: "Rewind vs Surplus Motor | Which Is Cheaper? | IQMotorBase",
+    title: "Rewind vs Surplus Motor | Which Is Cheaper? | 3PhaseFlow",
     description:
       "Honest comparison: motor rewinding vs surplus replacement. Costs, risks, lead times, and warranty terms side by side.",
     url: path,
     type: "article",
-    siteName: "IQMotorBase.com",
+    siteName: "3PhaseFlow.com",
     locale: "en_US",
   },
   twitter: {
     card: "summary_large_image",
-    title: "Rewind vs Surplus Motor | Which Is Cheaper? | IQMotorBase",
+    title: "Rewind vs Surplus Motor | Which Is Cheaper? | 3PhaseFlow",
     description: "Cost and risk comparison for industrial motor rewinding vs surplus replacement.",
   },
   alternates: { canonical: path },

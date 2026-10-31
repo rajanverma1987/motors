@@ -13,10 +13,10 @@ import {
 
 const path = SEO_WORK_ORDER_TEMPLATE_PATH;
 
-// The root layout applies a "%s | IQMotorBase" template, so the brand suffix is
+// The root layout applies a "%s | 3PhaseFlow" template, so the brand suffix is
 // omitted here; SOCIAL_TITLE carries it because og:/twitter: titles skip the template.
 const TITLE = "Motor Repair Work Order Template (Free)";
-const SOCIAL_TITLE = `${TITLE} | IQMotorBase`;
+const SOCIAL_TITLE = `${TITLE} | 3PhaseFlow`;
 const DESCRIPTION =
   "A free electric motor repair work order template: every field a rewind shop needs, what belongs in each one, and a plain-text version to copy. No sign-up.";
 
@@ -35,7 +35,7 @@ export const metadata = {
     description: DESCRIPTION,
     url: path,
     type: "article",
-    siteName: "IQMotorBase.com",
+    siteName: "3PhaseFlow.com",
     locale: "en_US",
   },
   twitter: {

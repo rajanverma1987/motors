@@ -8,7 +8,7 @@ import { trackMotorLocation, trackMotorTitle } from "@/lib/track-motor-fields";
 
 /**
  * §6.6 - printable durable label for a motor. The QR points at the motor inside
- * IQMotorTrack, which requires login, so scanning exposes nothing publicly.
+ * 3PhaseTrack, which requires login, so scanning exposes nothing publicly.
  *
  * Follows the house print rule: off-screen portal plus the native print dialog,
  * no extra overlay for the user to dismiss.

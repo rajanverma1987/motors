@@ -8,7 +8,7 @@ import { generateSecret, generateURI } from "otplib";
 const secret = generateSecret();
 const adminEmail = process.env.ADMIN_EMAIL || "admin@example.com";
 const otpauth = generateURI({
-  issuer: "IQMotorBase Admin",
+  issuer: "3PhaseFlow Admin",
   label: adminEmail,
   secret,
 });

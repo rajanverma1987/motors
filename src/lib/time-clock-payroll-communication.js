@@ -266,7 +266,7 @@ async function buildPayrollWorkbook({ ownerEmail, from, to, timeZone }) {
   });
 
   const workbook = new ExcelJS.Workbook();
-  workbook.creator = "IQMotorBase";
+  workbook.creator = "3PhaseFlow";
   workbook.created = new Date();
   const timeZoneLabel = windowsTimeZoneLabel(timeZone) || timeZone;
   const timeZoneNote = timeZoneLabel ? `Timezone: ${timeZoneLabel}` : "";

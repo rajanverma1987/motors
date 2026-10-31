@@ -4,11 +4,11 @@ import CalculatorsSubscriptionPageClient from "./calculators-subscription-page-c
 const path = "/calculators-subscription";
 
 export const metadata = {
-  title: "Calculator subscription | electric motor shop tools | IQMotorBase.com",
+  title: "Calculator subscription | electric motor shop tools | 3PhaseFlow.com",
   description:
-    "Subscribe to IQMotorBase calculators: rewind cost ballpark, CM Best Match, FLA, torque, speed, and bench electrical tools for motor repair shops.",
+    "Subscribe to 3PhaseFlow calculators: rewind cost ballpark, CM Best Match, FLA, torque, speed, and bench electrical tools for motor repair shops.",
   alternates: { canonical: path },
-  openGraph: { url: path, siteName: "IQMotorBase.com", type: "website" },
+  openGraph: { url: path, siteName: "3PhaseFlow.com", type: "website" },
   robots: { index: true, follow: true },
 };
 

@@ -66,7 +66,7 @@ function FacilityDetailModal({ account, open, onClose }) {
     { label: "Pro access", value: account.isPro ? "Active" : "Free tier" },
   ];
   return (
-    <Modal open={open} onClose={onClose} title="IQMotorTrack facility" size="md">
+    <Modal open={open} onClose={onClose} title="3PhaseTrack facility" size="md">
       <div className="space-y-4">
         {fields.map(({ label, value }) => (
           <div key={label}>
@@ -129,7 +129,7 @@ function FacilitiesPanel() {
       setAccounts(data.accounts || []);
       setTotalCount(Number(data.totalCount) || 0);
     } catch (e) {
-      toast.error(e.message || "Failed to load IQMotorTrack facilities");
+      toast.error(e.message || "Failed to load 3PhaseTrack facilities");
       setAccounts([]);
       setTotalCount(0);
     } finally {
@@ -434,7 +434,7 @@ function FacilitiesPanel() {
       <div className="shrink-0 border-b border-border pb-4">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-0 flex-1">
-            <h1 className="text-2xl font-bold text-title">IQMotorTrack facilities</h1>
+            <h1 className="text-2xl font-bold text-title">3PhaseTrack facilities</h1>
             <p className="mt-1 text-sm text-secondary">
               Plant accounts (not shop management). Free: {IQMOTORTRACK_FREE_MOTOR_LIMIT} motors. Pro: $
               {IQMOTORTRACK_MONTHLY_USD}/mo. Remove Pro cancels PayPal; ban blocks sign-in.
@@ -470,7 +470,7 @@ function FacilitiesPanel() {
           data={accounts}
           rowKey="id"
           loading={loading}
-          emptyMessage="No IQMotorTrack facilities yet."
+          emptyMessage="No 3PhaseTrack facilities yet."
           responsive
           sortState={tableSort}
           onSort={onTableSort}
@@ -546,7 +546,7 @@ function FacilitiesPanel() {
         onClose={() => {
           if (!createSaving) setCreateOpen(false);
         }}
-        title="Add IQMotorTrack facility"
+        title="Add 3PhaseTrack facility"
         size="md"
         actions={
           <Button type="submit" form="track-facility-create-form" variant="primary" size="sm" disabled={createSaving}>
@@ -625,7 +625,7 @@ export default function AdminIqMotorTrackPage() {
     <Tabs
       className="h-full min-h-0 w-full min-w-0 flex-1"
       panelClassName="flex min-h-0 flex-1 flex-col pt-6"
-      ariaLabel="IQMotorTrack sections"
+      ariaLabel="3PhaseTrack sections"
       keepMounted
       tabs={[
         { id: "facilities", label: "Facilities", children: <FacilitiesPanel /> },

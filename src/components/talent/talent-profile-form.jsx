@@ -465,7 +465,7 @@ export default function TalentProfileForm({ initialProfile }) {
           <div className="mt-4">
             <TalentShareButtons
               profileUrl={publicProfileUrl}
-              shareTitle={`${form.fullName} | IQMotorBase Talent`}
+              shareTitle={`${form.fullName} | 3PhaseFlow Talent`}
               shareText={buildTalentShareText(form)}
             />
           </div>

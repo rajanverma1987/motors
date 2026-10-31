@@ -82,7 +82,7 @@ const invitationSchema = new mongoose.Schema(
 );
 
 /**
- * One "motor down" event in IQMotorTrack (§7), with one Shop Invitation per selected shop.
+ * One "motor down" event in 3PhaseTrack (§7), with one Shop Invitation per selected shop.
  */
 const trackRfqRequestSchema = new mongoose.Schema(
   {

@@ -12,7 +12,7 @@ const ACTIVITY_TYPES = [
 ];
 
 /**
- * IQMotorTrack maintenance log (§6.8) — a log with due dates, not a scheduling engine.
+ * 3PhaseTrack maintenance log (§6.8) — a log with due dates, not a scheduling engine.
  */
 const trackMaintenanceLogSchema = new mongoose.Schema(
   {

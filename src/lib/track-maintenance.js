@@ -1,5 +1,5 @@
 /**
- * IQMotorTrack maintenance vocabulary and due-date maths (§6.8, §6.9).
+ * 3PhaseTrack maintenance vocabulary and due-date maths (§6.8, §6.9).
  */
 
 export const TRACK_MAINTENANCE_ACTIVITY_LABEL = {

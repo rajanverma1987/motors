@@ -20,14 +20,14 @@ export const metadata = {
     "AC motor rewind price calculator",
     "motor rewind ballpark calculator",
   ],
-  authors: [{ name: "IQMotorBase.com" }],
+  authors: [{ name: "3PhaseFlow.com" }],
   openGraph: {
-    title: "Electric Motor Rewinding Cost Calculator | Free US Ballpark | IQMotorBase.com",
+    title: "Electric Motor Rewinding Cost Calculator | Free US Ballpark | 3PhaseFlow.com",
     description:
       "Instant US ballpark for electric motor rewinding cost. Enter HP, phase, and RPM, your estimate updates as you adjust the fields.",
     url: path,
     type: "website",
-    siteName: "IQMotorBase.com",
+    siteName: "3PhaseFlow.com",
     locale: "en_US",
     modifiedTime: dateModified,
   },
@@ -59,7 +59,7 @@ const faqItems = [
   {
     question: "What should I do after I get a ballpark from the calculator?",
     answer:
-      "Use the PDF if you need to share numbers internally, or Upload nameplate to request shop follow-up. For pricing tables, cost drivers, and longer FAQs, see the IQMotorBase.com motor rewinding cost guide, not this tool page.",
+      "Use the PDF if you need to share numbers internally, or Upload nameplate to request shop follow-up. For pricing tables, cost drivers, and longer FAQs, see the 3PhaseFlow.com motor rewinding cost guide, not this tool page.",
   },
 ];
 
@@ -111,7 +111,7 @@ function WebPageJsonLd({ pageUrl, site }) {
     description:
       "Free US ballpark calculator for electric motor rewinding cost, how to enter HP, phase, RPM, and optional winding details.",
     dateModified,
-    isPartOf: { "@type": "WebSite", name: "IQMotorBase.com", url: site },
+    isPartOf: { "@type": "WebSite", name: "3PhaseFlow.com", url: site },
     about: { "@type": "Thing", name: "Electric motor rewinding cost calculator" },
     speakable: {
       "@type": "SpeakableSpecification",
@@ -154,7 +154,7 @@ function HowToJsonLd({ pageUrl }) {
     "@context": "https://schema.org",
     "@type": "HowTo",
     name: "How to use the electric motor rewinding cost calculator",
-    description: "Step-by-step instructions for the IQMotorBase.com rewinding cost calculator.",
+    description: "Step-by-step instructions for the 3PhaseFlow.com rewinding cost calculator.",
     step: [
       {
         "@type": "HowToStep",

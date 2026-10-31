@@ -10,8 +10,8 @@ const footerLinks = {
     { href: "/careers", label: "Careers: hire technicians (public job posts)" },
     { href: "/talent", label: "Talent: free seeker profiles" },
     { href: "/blog", label: "Blog: shop guides & calculators" },
-    { href: "/iqwirecalculator", label: "IQWireCalculator: CM Best Match app" },
-    { href: "/motor-maintenance-and-repair", label: "IQMotorTrack: motor maintenance and repair" },
+    { href: "/iqwirecalculator", label: "3PhaseWire: CM Best Match app" },
+    { href: "/motor-maintenance-and-repair", label: "3PhaseTrack: motor maintenance and repair" },
     { href: "/motor-repair-shop-management-software", label: "Shop management software" },
     { href: "/motor-repair-crm-software", label: "Motor repair shop management system" },
     { href: "/work-order-software-for-motor-repair-shops", label: "Work order software" },
@@ -27,7 +27,7 @@ const footerLinks = {
     { href: "/benefits-of-motor-repair-directory", label: "Directory benefits" },
   ],
   "For buyers": [
-    { href: "/motor-maintenance-and-repair", label: "Motor maintenance and repair (IQMotorTrack)" },
+    { href: "/motor-maintenance-and-repair", label: "Motor maintenance and repair (3PhaseTrack)" },
     { href: "/electric-motor-repair", label: "Electric motor repair hub" },
     { href: "/industrial-motor-repair", label: "Industrial motor repair" },
     { href: "/marketplace", label: "Parts & equipment marketplace" },
@@ -57,9 +57,9 @@ const footerLinks = {
     { href: "/about", label: "About" },
   ],
   Legal: [
-    { href: "/support", label: "IQWireCalculator Support" },
-    { href: "/iqwirecalculator/privacy", label: "IQWireCalculator Privacy" },
-    { href: "/iqwirecalculator/privacy-choices", label: "IQWireCalculator Privacy Choices" },
+    { href: "/support", label: "3PhaseWire Support" },
+    { href: "/iqwirecalculator/privacy", label: "3PhaseWire Privacy" },
+    { href: "/iqwirecalculator/privacy-choices", label: "3PhaseWire Privacy Choices" },
     { href: "/privacy", label: "Privacy Policy" },
     { href: "/terms", label: "Terms of Service" },
   ],
@@ -75,7 +75,7 @@ export default function Footer() {
           <Link
             href="/"
             className="inline-block shrink-0 transition-opacity hover:opacity-90"
-            aria-label="IQ Motorbase, home"
+            aria-label="3PhaseFlow, home"
           >
             <BrandLogo className="h-[2.4rem] w-auto max-w-[min(100%,200px)] object-contain object-left md:h-[2.7rem] md:max-w-[min(100%,216px)]" />
           </Link>
@@ -117,7 +117,7 @@ export default function Footer() {
             <div className="flex flex-col items-center gap-3 sm:items-end">
               <FacebookFollowCta variant="compact" />
               <p className="shrink-0 text-center text-sm text-secondary sm:text-right">
-                © {year} IQMotorBase.com. All rights reserved.
+                © {year} 3PhaseFlow.com. All rights reserved.
               </p>
             </div>
           </div>

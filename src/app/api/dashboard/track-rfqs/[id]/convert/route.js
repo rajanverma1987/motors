@@ -9,7 +9,7 @@ async function resolveId(context) {
   return String(params?.id || "").trim();
 }
 
-/** §9.5 - convert an IQMotorTrack Lead into an RFQ-type Service Proposal. */
+/** §9.5 - convert an 3PhaseTrack Lead into an RFQ-type Service Proposal. */
 export async function POST(request, context) {
   try {
     const user = await getPortalUserFromRequest(request);

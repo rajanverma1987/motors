@@ -176,7 +176,7 @@ export default function LoginPage() {
                 </div>
               ) : null}
               <p className="text-base text-secondary">
-                Sign in to see your center board, open work orders, and any new repair leads from IQMotorBase.com.
+                Sign in to see your center board, open work orders, and any new repair leads from 3PhaseFlow.com.
               </p>
               <ul className="mt-6 space-y-3 text-sm text-secondary">
                 <li className="flex gap-2">

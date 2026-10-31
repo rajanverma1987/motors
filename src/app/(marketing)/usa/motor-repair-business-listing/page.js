@@ -21,17 +21,17 @@ export const metadata = {
     "electric motor shop job management",
   ],
   openGraph: {
-    title: "Motor Repair Business Listing in the USA | IQMotorBase.com",
+    title: "Motor Repair Business Listing in the USA | 3PhaseFlow.com",
     description:
       "Get more repair jobs and manage your workshop. List your electric motor shop and run quotes, jobs, and billing in one place.",
     url: path,
     type: "website",
-    siteName: "IQMotorBase.com",
+    siteName: "3PhaseFlow.com",
     locale: "en_US",
   },
   twitter: {
     card: "summary_large_image",
-    title: "Motor Repair Business Listing in the USA | IQMotorBase.com",
+    title: "Motor Repair Business Listing in the USA | 3PhaseFlow.com",
     description: "More leads + motor-repair-focused Shop Management System for shops across the United States.",
   },
   alternates: { canonical: path },

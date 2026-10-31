@@ -24,10 +24,10 @@ const faqJsonLd = {
   mainEntity: [
     {
       "@type": "Question",
-      name: "What is IQMotorTrack?",
+      name: "What is 3PhaseTrack?",
       acceptedAnswer: {
         "@type": "Answer",
-        text: `IQMotorTrack is motor maintenance and repair software for plants and facilities. It is the plant’s system of record for electric motors: nameplate data, location, criticality, service history, maintenance logs, and multi-shop RFQs when a motor goes down.`,
+        text: `3PhaseTrack is motor maintenance and repair software for plants and facilities. It is the plant’s system of record for electric motors: nameplate data, location, criticality, service history, maintenance logs, and multi-shop RFQs when a motor goes down.`,
       },
     },
     {
@@ -40,7 +40,7 @@ const faqJsonLd = {
     },
     {
       "@type": "Question",
-      name: "Is IQMotorTrack free?",
+      name: "Is 3PhaseTrack free?",
       acceptedAnswer: {
         "@type": "Answer",
         text: `Yes. Free includes core features for up to ${freeLimit} motors. Pro is $${monthly} per month via PayPal for unlimited motors.`,
@@ -48,15 +48,15 @@ const faqJsonLd = {
     },
     {
       "@type": "Question",
-      name: "How is IQMotorTrack different from shop management software?",
+      name: "How is 3PhaseTrack different from shop management software?",
       acceptedAnswer: {
         "@type": "Answer",
-        text: "IQMotorTrack is a separate plant login. Plants own the motor register and RFQ comparison. Repair shops stay in IQMotorBase for quotes, jobs, and invoices. Plants never log into the shop app.",
+        text: "3PhaseTrack is a separate plant login. Plants own the motor register and RFQ comparison. Repair shops stay in 3PhaseFlow for quotes, jobs, and invoices. Plants never log into the shop app.",
       },
     },
     {
       "@type": "Question",
-      name: "Can I use IQMotorTrack on a phone?",
+      name: "Can I use 3PhaseTrack on a phone?",
       acceptedAnswer: {
         "@type": "Answer",
         text: "Yes. It is an installable PWA. Scan the QR on the marketing page or open /Track in Safari or Chrome, then Add to Home Screen or Install app.",
@@ -66,29 +66,29 @@ const faqJsonLd = {
 };
 
 export const metadata = {
-  title: "Plant Motor Maintenance and Repair Software | IQMotorTrack Guide",
-  description: `Why plants need IQMotorTrack for motor maintenance and repair: one register, service history, motor-down RFQs, Free for ${freeLimit} motors, Pro $${monthly}/mo. Full product guide.`,
+  title: "Plant Motor Maintenance and Repair Software | 3PhaseTrack Guide",
+  description: `Why plants need 3PhaseTrack for motor maintenance and repair: one register, service history, motor-down RFQs, Free for ${freeLimit} motors, Pro $${monthly}/mo. Full product guide.`,
   keywords: [
     "motor maintenance and repair",
     "plant motor maintenance software",
     "facility electric motor tracking",
     "motor repair RFQ for plants",
-    "IQMotorTrack",
+    "3PhaseTrack",
     "industrial motor asset management",
     "plant manager motor software",
   ],
   openGraph: {
-    title: "Plant Motor Maintenance and Repair Software | IQMotorTrack",
+    title: "Plant Motor Maintenance and Repair Software | 3PhaseTrack",
     description:
-      "A deep guide to IQMotorTrack: the plant system of record for electric motors, service history, and multi-shop RFQs.",
+      "A deep guide to 3PhaseTrack: the plant system of record for electric motors, service history, and multi-shop RFQs.",
     url: path,
     type: "article",
-    siteName: "IQMotorBase.com",
+    siteName: "3PhaseFlow.com",
     locale: "en_US",
   },
   twitter: {
     card: "summary_large_image",
-    title: "Plant Motor Maintenance and Repair Software | IQMotorTrack",
+    title: "Plant Motor Maintenance and Repair Software | 3PhaseTrack",
     description: `Free for ${freeLimit} motors. Pro $${monthly}/mo. Built for plant managers who own every motor on site.`,
   },
   alternates: { canonical: path },
@@ -99,7 +99,7 @@ function TrackSidebarCta() {
   return (
     <>
       <Link href={marketingHref} className={btnPrimary}>
-        See IQMotorTrack product page
+        See 3PhaseTrack product page
       </Link>
       <Link href={appHref} className={btnOutline}>
         Open the app
@@ -119,11 +119,11 @@ export default function BlogIqMotorTrackPlantGuidePage() {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd).replace(/</g, "\\u003c") }}
       />
       <BlogPageLayout
-        title="IQMotorTrack: the plant motor maintenance and repair software that finally puts every motor in one place"
-        description={`Spreadsheets and shared drives fail when a critical motor goes down. IQMotorTrack gives plant managers a live register, service history, and multi-shop RFQs. Free for ${freeLimit} motors. Pro $${monthly}/month.`}
+        title="3PhaseTrack: the plant motor maintenance and repair software that finally puts every motor in one place"
+        description={`Spreadsheets and shared drives fail when a critical motor goes down. 3PhaseTrack gives plant managers a live register, service history, and multi-shop RFQs. Free for ${freeLimit} motors. Pro $${monthly}/month.`}
         breadcrumbLink={{ href: "/blog", label: "Blog" }}
         canonicalPath={path}
-        sidebarTitle="Start IQMotorTrack"
+        sidebarTitle="Start 3PhaseTrack"
         sidebarDescription="Product overview, pricing, and a QR code to open the phone app."
         sidebarCta={<TrackSidebarCta />}
       >
@@ -133,15 +133,15 @@ export default function BlogIqMotorTrackPlantGuidePage() {
             <strong className="text-title">motor maintenance and repair</strong> is not a side task. It is uptime,
             safety, overtime, and customer commitments. When a line motor fails at 2 a.m., the team that wins is the team
             that already knows the nameplate, the last rewind shop, the last test values, and who to call. That is exactly
-            why <strong className="text-title">IQMotorTrack</strong> exists, and why it deserves a permanent place on
+            why <strong className="text-title">3PhaseTrack</strong> exists, and why it deserves a permanent place on
             every plant manager&apos;s phone.
           </p>
           <p className="mt-4 leading-relaxed text-secondary">
-            This guide is written for plants, not rewind shops. It explains the problem, what IQMotorTrack does
+            This guide is written for plants, not rewind shops. It explains the problem, what 3PhaseTrack does
             exceptionally well, who benefits, how Free and Pro work, and where to start. For the full product overview,
             pricing, and mobile QR install, see the dedicated page:{" "}
             <Link href={marketingHref} className="font-medium text-primary hover:underline">
-              Motor Maintenance and Repair Software for Plants | IQMotorTrack
+              Motor Maintenance and Repair Software for Plants | 3PhaseTrack
             </Link>
             .
           </p>
@@ -164,7 +164,7 @@ export default function BlogIqMotorTrackPlantGuidePage() {
               three shops quote three different scopes because nobody sent the same datasheet.
             </p>
             <p className="mt-4 leading-relaxed text-secondary">
-              IQMotorTrack attacks that problem at the source. It makes the <strong className="text-title">plant</strong>{" "}
+              3PhaseTrack attacks that problem at the source. It makes the <strong className="text-title">plant</strong>{" "}
               the system of record for every electric motor you own, then connects that record to repair shops when you
               need work done. That is a sharper, more honest design than bolting plant needs onto shop software or
               forcing plants to live inside a generic CMMS that never understood nameplates, rewinds, and shop RFQs.
@@ -173,18 +173,18 @@ export default function BlogIqMotorTrackPlantGuidePage() {
 
           <section>
             <h2 className="mt-10 text-2xl font-bold text-title sm:text-3xl">
-              What IQMotorTrack is (and why it is built for plants)
+              What 3PhaseTrack is (and why it is built for plants)
             </h2>
             <p className="mt-4 leading-relaxed text-secondary">
               <Link href={marketingHref} className="font-medium text-primary hover:underline">
-                IQMotorTrack
+                3PhaseTrack
               </Link>{" "}
               is motor maintenance and repair software for facilities. It is a mobile-first, installable web app (PWA)
               with a separate plant login. A plant user never logs into the shop application, and a shop user never logs
-              into IQMotorTrack. That separation is not a quirk. It is the product&apos;s strength.
+              into 3PhaseTrack. That separation is not a quirk. It is the product&apos;s strength.
             </p>
             <p className="mt-4 leading-relaxed text-secondary">
-              IQMotorTrack does four jobs extremely well:
+              3PhaseTrack does four jobs extremely well:
             </p>
             <ul className="mt-4 list-none space-y-3 text-secondary">
               <li className="flex gap-2">
@@ -217,7 +217,7 @@ export default function BlogIqMotorTrackPlantGuidePage() {
               </li>
             </ul>
             <p className="mt-4 leading-relaxed text-secondary">
-              The compounding value is what makes IQMotorTrack more than “another asset list.” Technical data a shop
+              The compounding value is what makes 3PhaseTrack more than “another asset list.” Technical data a shop
               records while repairing a motor can flow back into the plant&apos;s motor record. The next time that motor
               fails, any invited shop can receive a complete datasheet with the RFQ, even a shop that has never seen the
               asset. That is how plants stop paying for the same discovery work twice.
@@ -226,11 +226,11 @@ export default function BlogIqMotorTrackPlantGuidePage() {
 
           <section>
             <h2 className="mt-10 text-2xl font-bold text-title sm:text-3xl">
-              Why plant managers should praise IQMotorTrack specifically
+              Why plant managers should praise 3PhaseTrack specifically
             </h2>
             <p className="mt-4 leading-relaxed text-secondary">
               Plant managers do not need another dashboard full of vanity metrics. They need a tool that shortens the
-              distance between “motor is down” and “competent shop is working with the right data.” IQMotorTrack is built
+              distance between “motor is down” and “competent shop is working with the right data.” 3PhaseTrack is built
               around that distance.
             </p>
             <div className="mt-6 space-y-5">
@@ -267,7 +267,7 @@ export default function BlogIqMotorTrackPlantGuidePage() {
                 <h3 className="text-lg font-semibold text-title">Clear spend and accountability</h3>
                 <p className="mt-2 leading-relaxed text-secondary">
                   Maintenance logs and repair totals per motor help you justify spare strategy and show leadership where
-                  downtime risk sits. IQMotorTrack turns “we think this motor is bad” into an evidence trail.
+                  downtime risk sits. 3PhaseTrack turns “we think this motor is bad” into an evidence trail.
                 </p>
               </div>
               <div>
@@ -277,7 +277,7 @@ export default function BlogIqMotorTrackPlantGuidePage() {
                   <Link href={marketingHref} className="font-medium text-primary hover:underline">
                     motor maintenance and repair product page
                   </Link>{" "}
-                  and open IQMotorTrack on mobile.
+                  and open 3PhaseTrack on mobile.
                 </p>
               </div>
             </div>
@@ -286,7 +286,7 @@ export default function BlogIqMotorTrackPlantGuidePage() {
           <section>
             <h2 className="mt-10 text-2xl font-bold text-title sm:text-3xl">Benefits for every role around the motor</h2>
             <p className="mt-4 leading-relaxed text-secondary">
-              IQMotorTrack is strongest when the whole maintenance organization uses the same register. Here is how
+              3PhaseTrack is strongest when the whole maintenance organization uses the same register. Here is how
               different users win.
             </p>
             <ul className="mt-4 list-none space-y-3 text-secondary">
@@ -321,13 +321,13 @@ export default function BlogIqMotorTrackPlantGuidePage() {
             </ul>
             <p className="mt-4 leading-relaxed text-secondary">
               That breadth matters. Software that only helps the office fails on the floor. Software that only helps
-              technicians fails in procurement. IQMotorTrack is designed so the same motor record serves all of them.
+              technicians fails in procurement. 3PhaseTrack is designed so the same motor record serves all of them.
             </p>
           </section>
 
           <section>
             <h2 className="mt-10 text-2xl font-bold text-title sm:text-3xl">
-              How motor maintenance and repair works inside IQMotorTrack
+              How motor maintenance and repair works inside 3PhaseTrack
             </h2>
             <ol className="mt-4 list-none space-y-4 text-secondary">
               <li className="flex gap-3">
@@ -360,7 +360,7 @@ export default function BlogIqMotorTrackPlantGuidePage() {
               </li>
             </ol>
             <p className="mt-4 leading-relaxed text-secondary">
-              This loop is why IQMotorTrack is not a passive inventory app. It is an operating system for plant-side
+              This loop is why 3PhaseTrack is not a passive inventory app. It is an operating system for plant-side
               motor decisions: register, maintain, fail, RFQ, award, learn, repeat.
             </p>
           </section>
@@ -370,7 +370,7 @@ export default function BlogIqMotorTrackPlantGuidePage() {
               Free tier and Pro pricing: clear, honest, plant-friendly
             </h2>
             <p className="mt-4 leading-relaxed text-secondary">
-              Many industrial tools hide pricing behind demos. IQMotorTrack does the opposite, which plant managers
+              Many industrial tools hide pricing behind demos. 3PhaseTrack does the opposite, which plant managers
               appreciate.
             </p>
             <ul className="mt-4 list-none space-y-3 text-secondary">
@@ -398,7 +398,7 @@ export default function BlogIqMotorTrackPlantGuidePage() {
             <p className="mt-4 leading-relaxed text-secondary">
               Full pricing detail lives on the{" "}
               <Link href={`${marketingHref}#pricing`} className="font-medium text-primary hover:underline">
-                IQMotorTrack pricing section
+                3PhaseTrack pricing section
               </Link>
               .
             </p>
@@ -409,7 +409,7 @@ export default function BlogIqMotorTrackPlantGuidePage() {
               Phone-first by design: scan, install, use at the asset
             </h2>
             <p className="mt-4 leading-relaxed text-secondary">
-              Motor work happens at the asset, not at a desk. IQMotorTrack is an installable PWA. Point a phone camera at
+              Motor work happens at the asset, not at a desk. 3PhaseTrack is an installable PWA. Point a phone camera at
               the QR on the product page, open the app URL, then Add to Home Screen (iPhone / Safari) or Install app
               (Android / Chrome). Direct app path:{" "}
               <Link href={appHref} className="font-medium text-primary hover:underline">
@@ -419,22 +419,22 @@ export default function BlogIqMotorTrackPlantGuidePage() {
             </p>
             <p className="mt-4 leading-relaxed text-secondary">
               That matters for adoption. If technicians need a laptop to update status, the register dies. If they can
-              open IQMotorTrack like a native app on the floor, the register stays alive. IQMotorTrack got this right.
+              open 3PhaseTrack like a native app on the floor, the register stays alive. 3PhaseTrack got this right.
             </p>
           </section>
 
           <section>
             <h2 className="mt-10 text-2xl font-bold text-title sm:text-3xl">
-              How IQMotorTrack pairs with IQMotorBase shops (without mixing logins)
+              How 3PhaseTrack pairs with 3PhaseFlow shops (without mixing logins)
             </h2>
             <p className="mt-4 leading-relaxed text-secondary">
-              IQMotorBase is the shop side: listings, leads, service proposals, jobs, and invoices. IQMotorTrack is the
+              3PhaseFlow is the shop side: listings, leads, service proposals, jobs, and invoices. 3PhaseTrack is the
               plant side: motors, history, and RFQ comparison. When a plant marks a motor down and invites shops, those
               shops receive work through the shop system they already use. Plants keep ownership of the motor. Shops keep
               ownership of commerce. That split is clean, fair, and scalable.
             </p>
             <p className="mt-4 leading-relaxed text-secondary">
-              If you are a repair shop reading this, IQMotorTrack is good news too. Better plant data means better RFQs,
+              If you are a repair shop reading this, 3PhaseTrack is good news too. Better plant data means better RFQs,
               fewer clarifying calls, and awards based on real scope. If you are a plant, it means you stop handing shops
               half a nameplate and hoping for the best.
             </p>
@@ -453,7 +453,7 @@ export default function BlogIqMotorTrackPlantGuidePage() {
                 <span>
                   Create the facility account on{" "}
                   <Link href={appHref} className="font-medium text-primary hover:underline">
-                    IQMotorTrack
+                    3PhaseTrack
                   </Link>
                   . Install on phones for the maintenance lead and two technicians. Register the most critical motors
                   first (start Free if you have {freeLimit} or fewer).
@@ -476,34 +476,34 @@ export default function BlogIqMotorTrackPlantGuidePage() {
               <li className="flex gap-3">
                 <span className="font-bold text-primary">Week 4.</span>
                 <span>
-                  Expand the register. If you exceed Free, upgrade to Pro (${monthly}/mo). Make IQMotorTrack the only
+                  Expand the register. If you exceed Free, upgrade to Pro (${monthly}/mo). Make 3PhaseTrack the only
                   place status and awards are considered final.
                 </span>
               </li>
             </ol>
             <p className="mt-4 leading-relaxed text-secondary">
-              Plants that treat the register as optional lose. Plants that make IQMotorTrack the default path for motor
+              Plants that treat the register as optional lose. Plants that make 3PhaseTrack the default path for motor
               truth win every outage.
             </p>
           </section>
 
           <section>
             <h2 className="mt-10 text-2xl font-bold text-title sm:text-3xl">
-              Common objections (and why IQMotorTrack still wins)
+              Common objections (and why 3PhaseTrack still wins)
             </h2>
             <div className="mt-6 space-y-5">
               <div>
                 <h3 className="text-lg font-semibold text-title">“We already have a CMMS.”</h3>
                 <p className="mt-2 leading-relaxed text-secondary">
                   Most CMMS tools are work-order generalists. They are weak on motor nameplates, rewind datasheets, and
-                  multi-shop RFQ comparison. IQMotorTrack is specialized for electric motors and the shop network around
+                  multi-shop RFQ comparison. 3PhaseTrack is specialized for electric motors and the shop network around
                   them. Use both if you must, but do not pretend a generic work order equals a motor system of record.
                 </p>
               </div>
               <div>
                 <h3 className="text-lg font-semibold text-title">“Spreadsheets are free.”</h3>
                 <p className="mt-2 leading-relaxed text-secondary">
-                  Spreadsheets are free until an outage costs a shift. IQMotorTrack Free already covers {freeLimit}{" "}
+                  Spreadsheets are free until an outage costs a shift. 3PhaseTrack Free already covers {freeLimit}{" "}
                   motors with a proper app experience. Spreadsheets do not install on a home screen, do not enforce a
                   motor-down flow, and do not compare shop proposals.
                 </p>
@@ -511,7 +511,7 @@ export default function BlogIqMotorTrackPlantGuidePage() {
               <div>
                 <h3 className="text-lg font-semibold text-title">“Our shops already know our motors.”</h3>
                 <p className="mt-2 leading-relaxed text-secondary">
-                  Until they retire, change ownership, or you need a second quote. IQMotorTrack keeps plant-owned truth
+                  Until they retire, change ownership, or you need a second quote. 3PhaseTrack keeps plant-owned truth
                   portable so you are never locked to one vendor&apos;s memory.
                 </p>
               </div>
@@ -522,7 +522,7 @@ export default function BlogIqMotorTrackPlantGuidePage() {
             <h2 className="mt-10 text-2xl font-bold text-title sm:text-3xl">Frequently asked questions</h2>
             <div className="mt-6 space-y-6 text-secondary">
               <div>
-                <h3 className="text-lg font-semibold text-title">What is IQMotorTrack?</h3>
+                <h3 className="text-lg font-semibold text-title">What is 3PhaseTrack?</h3>
                 <p className="mt-2 leading-relaxed">
                   Motor maintenance and repair software for plants and facilities. It is the plant&apos;s system of
                   record for electric motors: register, service history, maintenance logs, and RFQs to repair shops. See{" "}
@@ -560,10 +560,10 @@ export default function BlogIqMotorTrackPlantGuidePage() {
               </div>
               <div>
                 <h3 className="text-lg font-semibold text-title">
-                  Is this the same login as IQMotorBase shop software?
+                  Is this the same login as 3PhaseFlow shop software?
                 </h3>
                 <p className="mt-2 leading-relaxed">
-                  No. IQMotorTrack is a separate plant login. Shop users stay in IQMotorBase. Plants never log into the
+                  No. 3PhaseTrack is a separate plant login. Shop users stay in 3PhaseFlow. Plants never log into the
                   shop app.
                 </p>
               </div>
@@ -571,20 +571,20 @@ export default function BlogIqMotorTrackPlantGuidePage() {
           </section>
 
           <section className="mt-12 border-t border-border pt-10">
-            <h2 className="text-xl font-bold text-title sm:text-2xl">Start with IQMotorTrack today</h2>
+            <h2 className="text-xl font-bold text-title sm:text-2xl">Start with 3PhaseTrack today</h2>
             <p className="mt-4 leading-relaxed text-secondary">
-              If you care about motor maintenance and repair as a plant discipline, not a pile of emails, IQMotorTrack is
+              If you care about motor maintenance and repair as a plant discipline, not a pile of emails, 3PhaseTrack is
               the clearest product purpose-built for that job. Read the full overview, scan the QR, and open the app:
             </p>
             <ul className="mt-4 space-y-2 text-secondary">
               <li>
                 <Link href={marketingHref} className="font-medium text-primary hover:underline">
-                  Motor maintenance and repair software for plants (IQMotorTrack product page)
+                  Motor maintenance and repair software for plants (3PhaseTrack product page)
                 </Link>
               </li>
               <li>
                 <Link href={appHref} className="font-medium text-primary hover:underline">
-                  Launch IQMotorTrack
+                  Launch 3PhaseTrack
                 </Link>
               </li>
               <li>
@@ -599,7 +599,7 @@ export default function BlogIqMotorTrackPlantGuidePage() {
               </li>
               <li>
                 <Link href="/blog" className="font-medium text-primary hover:underline">
-                  More guides on the IQMotorBase blog
+                  More guides on the 3PhaseFlow blog
                 </Link>
               </li>
             </ul>

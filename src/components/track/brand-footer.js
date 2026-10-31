@@ -3,7 +3,7 @@
 import Link from "next/link";
 import BrandLogo from "@/components/marketing/brand-logo";
 
-/** Compact IQMotorBase wordmark for the Track PWA footer. */
+/** Compact 3PhaseFlow wordmark for the Track PWA footer. */
 export default function TrackBrandFooter({ className = "" }) {
   return (
     <footer
@@ -12,11 +12,11 @@ export default function TrackBrandFooter({ className = "" }) {
       <Link
         href="/"
         className="mx-auto flex max-w-[11rem] items-center justify-center opacity-90 transition-opacity hover:opacity-100"
-        aria-label="IQMotorBase home"
+        aria-label="3PhaseFlow home"
       >
         <BrandLogo
           plain
-          alt="IQMotorBase"
+          alt="3PhaseFlow"
           className="h-6 w-auto max-w-full object-contain object-center"
         />
       </Link>

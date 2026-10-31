@@ -143,7 +143,7 @@ export default function PricingCardsClient() {
           <p className="mt-1 text-sm font-medium text-title">Permanently locked. Your rate never increases</p>
           <p className="mt-3 text-sm leading-relaxed text-secondary">
             A significantly discounted rate locked in for life for the first {FOUNDER_SPOTS_TOTAL} shops that join
-            IQMotorBase. Contact us to check availability and get your exclusive rate.
+            3PhaseFlow. Contact us to check availability and get your exclusive rate.
           </p>
           <ul className="mt-5 space-y-2.5">
             {FOUNDER_FEATURES.map((f) => (

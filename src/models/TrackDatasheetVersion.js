@@ -1,8 +1,8 @@
 import mongoose from "mongoose";
 
 /**
- * Versioned datasheet on an IQMotorTrack motor (§6.5, §9.8).
- * `data` holds the IQMotorBase datasheet shape verbatim (acDatasheet / dcDatasheet keys)
+ * Versioned datasheet on an 3PhaseTrack motor (§6.5, §9.8).
+ * `data` holds the 3PhaseFlow datasheet shape verbatim (acDatasheet / dcDatasheet keys)
  * so values round-trip losslessly between the two systems.
  */
 const trackDatasheetVersionSchema = new mongoose.Schema(

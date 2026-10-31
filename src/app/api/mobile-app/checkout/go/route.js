@@ -37,7 +37,7 @@ function paypalBounceHtml(dest) {
 </html>`;
 }
 
-/** HTML bounce to PayPal. HTTP Location redirects get rewritten onto iqmotorbase.com by IIS/ARR. */
+/** HTML bounce to PayPal. HTTP Location redirects get rewritten onto 3phaseflow.com by IIS/ARR. */
 export async function GET(request) {
   try {
     const url = new URL(request.url);

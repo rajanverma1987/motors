@@ -57,7 +57,7 @@ function AdminLoginShell({ title, subtitle, children }) {
       <section className="relative overflow-hidden border-b border-border bg-card py-10 sm:py-14">
         <HeroBackground />
         <div className="relative z-10 mx-auto max-w-[86.4rem] px-4 sm:px-6">
-          <Link href="/" className="inline-block transition-opacity hover:opacity-90" aria-label="IQ Motorbase — home">
+          <Link href="/" className="inline-block transition-opacity hover:opacity-90" aria-label="3PhaseFlow — home">
             <BrandLogo
               priority
               className="h-10 w-auto max-w-[min(100%,240px)] object-contain object-left sm:h-12 sm:max-w-[min(100%,280px)] md:h-14 md:max-w-[320px]"
@@ -262,7 +262,7 @@ export default function AdminLoginPage() {
   return (
     <AdminLoginShell
       title="Admin sign in"
-      subtitle="Secure access for IQMotorBase operations — listings, clients, and platform tools."
+      subtitle="Secure access for 3PhaseFlow operations — listings, clients, and platform tools."
     >
       <Form onSubmit={handlePasswordSubmit} className="bg-card/80 shadow-sm backdrop-blur sm:p-8">
         <div>

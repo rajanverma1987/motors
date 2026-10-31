@@ -22,9 +22,9 @@ const POSTS = [
   },
   {
     href: "/blog/plant-motor-maintenance-and-repair-software-iqmotortrack",
-    title: "IQMotorTrack: plant motor maintenance and repair software",
+    title: "3PhaseTrack: plant motor maintenance and repair software",
     excerpt:
-      "Why plants need a motor system of record, how IQMotorTrack handles registers, service history, and multi-shop RFQs, plus Free vs Pro pricing.",
+      "Why plants need a motor system of record, how 3PhaseTrack handles registers, service history, and multi-shop RFQs, plus Free vs Pro pricing.",
   },
   {
     href: "/blog/motor-repair-job-diagram-drawing-tool",

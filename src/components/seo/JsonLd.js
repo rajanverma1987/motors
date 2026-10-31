@@ -15,7 +15,7 @@ export function HomePageJsonLd() {
   const webSite = {
     "@context": "https://schema.org",
     "@type": "WebSite",
-    name: "IQMotorBase.com",
+    name: "3PhaseFlow.com",
     url: siteUrl,
     description:
       "Motor repair center software with Job Write-Up (intake through quote approval on one job number), shop parts inventory and reservations, lead generation, public Careers job postings for hiring technicians, and a public marketplace for surplus parts and equipment. Work orders, repair leads, and SEO-friendly listings for motor repair and rewinding businesses.",
@@ -31,10 +31,10 @@ export function HomePageJsonLd() {
     "@type": "WebPage",
     "@id": `${siteUrl}/#webpage`,
     url: siteUrl,
-    name: "Motor Repair Shop Software | Proposals, Work Orders, Invoices & Inventory in One Place | IQMotorBase",
+    name: "Motor Repair Shop Software | Proposals, Work Orders, Invoices & Inventory in One Place | 3PhaseFlow",
     description:
       "Manage work orders, leads, inventory, invoicing, and QuickBooks Online sync for your electric motor repair shop, all in one platform.",
-    isPartOf: { "@type": "WebSite", name: "IQMotorBase.com", url: siteUrl },
+    isPartOf: { "@type": "WebSite", name: "3PhaseFlow.com", url: siteUrl },
     primaryImageOfPage: {
       "@type": "ImageObject",
       url: heroUrl,
@@ -63,13 +63,13 @@ export function HomePageJsonLd() {
   const organizationSchema = {
     "@context": "https://schema.org",
     "@type": ["Organization", "SoftwareApplication"],
-    name: "IQMotorBase",
-    alternateName: "IQ Motor Base",
+    name: "3PhaseFlow",
+    alternateName: "3 Phase Flow",
     url: siteUrl,
     logo: `${siteUrl}${BRAND_LOGO_PUBLIC_PATH}`,
     foundingDate: "2025",
     description:
-      "IQMotorBase is a shop management platform and lead generation directory " +
+      "3PhaseFlow is a shop management platform and lead generation directory " +
       "built exclusively for electric motor repair and rewinding businesses. " +
       "The platform includes digital job write-ups with motor nameplate data, " +
       "work order management, customer and motor history registry, shop inventory, " +

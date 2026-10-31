@@ -5,7 +5,7 @@ const linkBase =
   "inline-flex w-full min-w-0 max-w-full items-center justify-center gap-2 whitespace-nowrap rounded-md bg-primary px-4 py-2.5 text-sm font-semibold text-white transition-opacity hover:opacity-90 sm:text-base";
 
 /**
- * CTA to grow IQMotorBase Facebook page followers.
+ * CTA to grow 3PhaseFlow Facebook page followers.
  * @param {"card"|"compact"|"inline"} [variant]
  * @param {string} [className]
  */
@@ -17,7 +17,7 @@ export default function FacebookFollowCta({ variant = "card", className = "" }) 
         target="_blank"
         rel="noopener noreferrer"
         className={`inline-flex items-center gap-1.5 text-sm font-medium text-primary transition-colors hover:underline ${className}`.trim()}
-        aria-label="Follow IQMotorBase on Facebook (opens in a new tab)"
+        aria-label="Follow 3PhaseFlow on Facebook (opens in a new tab)"
       >
         <FaFacebook className="h-4 w-4 shrink-0" aria-hidden />
         Follow on Facebook
@@ -32,7 +32,7 @@ export default function FacebookFollowCta({ variant = "card", className = "" }) 
         target="_blank"
         rel="noopener noreferrer"
         className={`inline-flex items-center gap-2 rounded-md border border-border bg-card px-3 py-2 text-sm font-medium text-title transition-colors hover:border-primary/30 hover:bg-primary/5 ${className}`.trim()}
-        aria-label="Follow IQMotorBase on Facebook (opens in a new tab)"
+        aria-label="Follow 3PhaseFlow on Facebook (opens in a new tab)"
       >
         <FaFacebook className="h-4 w-4 shrink-0 text-primary" aria-hidden />
         Follow on Facebook
@@ -51,7 +51,7 @@ export default function FacebookFollowCta({ variant = "card", className = "" }) 
         </span>
         <div className="min-w-0">
           <h2 id="facebook-follow-heading" className="text-base font-bold text-title sm:text-lg">
-            Follow IQMotorBase on Facebook
+            Follow 3PhaseFlow on Facebook
           </h2>
           <p className="mt-1 text-sm leading-relaxed text-secondary">
             Shop tips, directory updates, and product news for motor repair teams.
@@ -63,7 +63,7 @@ export default function FacebookFollowCta({ variant = "card", className = "" }) 
         target="_blank"
         rel="noopener noreferrer"
         className={`${linkBase} mt-4`}
-        aria-label="Follow IQMotorBase on Facebook (opens in a new tab)"
+        aria-label="Follow 3PhaseFlow on Facebook (opens in a new tab)"
       >
         <FaFacebook className="h-4 w-4 shrink-0" aria-hidden />
         Follow on Facebook

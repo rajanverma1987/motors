@@ -4,12 +4,12 @@ import { getPublicSiteUrl } from "@/lib/public-site-url";
 export const metadata = {
   title: "Terms of Service",
   description:
-    "Terms governing use of IQMotorBase.com, including accounts, software, directory listings, marketplace features, and limitations of liability.",
+    "Terms governing use of 3PhaseFlow.com, including accounts, software, directory listings, marketplace features, and limitations of liability.",
   alternates: { canonical: "/terms" },
   robots: { index: false, follow: true },
   openGraph: {
-    title: "Terms of Service | IQMotorBase.com",
-    description: "Terms of use for IQMotorBase.com software and website.",
+    title: "Terms of Service | 3PhaseFlow.com",
+    description: "Terms of use for 3PhaseFlow.com software and website.",
     url: "/terms",
   },
 };
@@ -32,7 +32,7 @@ export default function TermsPage() {
       <p className="mt-2 text-sm text-secondary">Last updated: {LAST_UPDATED}</p>
       <p className="mt-6 rounded-lg border border-border bg-muted/30 p-4 text-sm text-secondary">
         These Terms of Service (“Terms”) govern your access to and use of the website, software, and related services
-        offered by <strong className="text-title">IQMotorBase.com</strong> (“Service”). By accessing or using the
+        offered by <strong className="text-title">3PhaseFlow.com</strong> (“Service”). By accessing or using the
         Service, you agree to these Terms. If you do not agree, do not use the Service. See also our{" "}
         <Link href="/privacy" className="text-primary font-medium hover:underline">
           Privacy Policy
@@ -43,7 +43,7 @@ export default function TermsPage() {
       <article className="prose prose-neutral dark:prose-invert mt-10 max-w-none">
         <h2 className="text-xl font-semibold text-title">1. The Service</h2>
         <p className="mt-3 text-secondary leading-relaxed">
-          IQMotorBase.com provides cloud-based tools for motor repair and rewinding businesses and related features,
+          3PhaseFlow.com provides cloud-based tools for motor repair and rewinding businesses and related features,
           including but not limited to job and customer management, inventory, quotes and invoicing, integrations, lead
           and directory features, marketplace listings, career postings, and public marketing pages. The Service is offered
           at{" "}
@@ -131,7 +131,7 @@ export default function TermsPage() {
 
         <h2 className="mt-10 text-xl font-semibold text-title">10. Indemnity</h2>
         <p className="mt-3 text-secondary leading-relaxed">
-          You will defend, indemnify, and hold harmless IQMotorBase.com and its affiliates from and against any claims,
+          You will defend, indemnify, and hold harmless 3PhaseFlow.com and its affiliates from and against any claims,
           damages, losses, and expenses (including reasonable attorneys’ fees) arising out of Your Content, your use of
           the Service in violation of these Terms, or your violation of applicable law or third-party rights.
         </p>

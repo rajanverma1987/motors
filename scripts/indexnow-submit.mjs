@@ -104,7 +104,7 @@ async function main() {
     process.exit(0);
   }
   if (!siteUrlRaw) {
-    console.warn("[indexnow] Skip: set NEXT_PUBLIC_SITE_URL or SITE_URL to your public origin (e.g. https://IQMotorBase.com).");
+    console.warn("[indexnow] Skip: set NEXT_PUBLIC_SITE_URL or SITE_URL to your public origin (e.g. https://3PhaseFlow.com).");
     process.exit(0);
   }
 

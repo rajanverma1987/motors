@@ -66,7 +66,7 @@ export function buildLeadNurtureUnsubscribeUrl(email, baseUrl) {
 }
 
 /**
- * True when the shop already pays for IQMotorBase (PayPal-backed active/trialing plan).
+ * True when the shop already pays for 3PhaseFlow (PayPal-backed active/trialing plan).
  * Free Ultimate, Trial, Listing-only, and shops with no paid plan are not paying.
  * @param {{ email?: string, crmUserId?: unknown } | null | undefined} listing
  * @returns {Promise<boolean>}
@@ -144,7 +144,7 @@ export async function recordLeadNurtureOptOut(email) {
 }
 
 /**
- * After a website or IQMotorTrack repair lead is delivered to a listing,
+ * After a website or 3PhaseTrack repair lead is delivered to a listing,
  * optionally send the platform nurture email to non-paying shops.
  *
  * @param {object} opts

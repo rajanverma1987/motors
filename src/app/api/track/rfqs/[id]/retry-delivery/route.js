@@ -8,7 +8,7 @@ import { loadOwnedTrackRfq } from "@/lib/track-rfq-service";
 export const dynamic = "force-dynamic";
 
 /**
- * §10 - IQMotorBase unreachable when the RFQ was sent: invitations stay pending
+ * §10 - 3PhaseFlow unreachable when the RFQ was sent: invitations stay pending
  * and can be redelivered without creating duplicate Leads.
  */
 export async function POST(request, context) {

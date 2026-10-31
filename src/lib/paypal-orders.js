@@ -23,12 +23,12 @@ export async function createPaypalCalculatorOrder({ returnUrl, cancelUrl, amount
       intent: "CAPTURE",
       purchase_units: [
         {
-          description: "IQMotorBase calculator — single price reveal",
+          description: "3PhaseFlow calculator — single price reveal",
           amount: { currency_code: "USD", value },
         },
       ],
       application_context: {
-        brand_name: "IQMotorBase",
+        brand_name: "3PhaseFlow",
         locale: "en-US",
         shipping_preference: "NO_SHIPPING",
         user_action: "PAY_NOW",

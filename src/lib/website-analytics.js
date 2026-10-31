@@ -7,7 +7,7 @@ export const GA_MEASUREMENT_ID = "G-RTSF7V6T7M";
 export const CLARITY_PROJECT_ID = "wota3fv3hy";
 
 /** Hosts that are our brand / legacy brand. Treat as self-referral, not a channel. */
-const SELF_REFERRAL_ROOT_HOSTS = ["iqmotorbase.com", "motorswinding.com"];
+const SELF_REFERRAL_ROOT_HOSTS = ["3phaseflow.com", "iqmotorbase.com", "motorswinding.com"];
 
 /**
  * @param {string | null | undefined} pathname

@@ -78,7 +78,7 @@ export function mapVendorToQbo(vendor) {
  * Alternative: use "SalesItemLineDetail" with ItemRef to a generic Service item, OR create lines as:
  * `{ DetailType: "SalesItemLineDetail", Amount, Description, SalesItemLineDetail: { UnitPrice, Qty, ItemRef } }`
  *
- * For MVP without Item catalog sync: query/create a Service item "IQMotorBase Service" linked to income account.
+ * For MVP without Item catalog sync: query/create a Service item "3PhaseFlow Service" linked to income account.
  * Mappers only build Description + Amount; sync.js resolves ItemRef.
  */
 

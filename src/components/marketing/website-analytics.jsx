@@ -102,7 +102,8 @@ gtag('js', new Date());
     var ref = document.referrer || "";
     if (ref) {
       var host = new URL(ref).hostname.toLowerCase().replace(/^www\\./, "");
-      ignore = host === "iqmotorbase.com" || host.endsWith(".iqmotorbase.com")
+      ignore = host === "3phaseflow.com" || host.endsWith(".3phaseflow.com")
+        || host === "iqmotorbase.com" || host.endsWith(".iqmotorbase.com")
         || host === "motorswinding.com" || host.endsWith(".motorswinding.com");
     }
   } catch (e) {}

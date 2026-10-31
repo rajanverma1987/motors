@@ -10,8 +10,8 @@ const WORK_TYPES = [
 ];
 
 /**
- * IQMotorTrack service history (§6.7). Entries are created automatically from
- * IQMotorBase job events, or manually for work done outside the platform.
+ * 3PhaseTrack service history (§6.7). Entries are created automatically from
+ * 3PhaseFlow job events, or manually for work done outside the platform.
  */
 const trackServiceHistorySchema = new mongoose.Schema(
   {

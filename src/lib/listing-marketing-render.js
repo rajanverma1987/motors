@@ -20,11 +20,11 @@ export function renderListingMarketingHtml(html, ctx) {
 
   const baseUrl = getPublicSiteUrl();
   out = out
-    .replace(/https:\/\/iqmotorbase\.com\//gi, `${baseUrl}/`)
-    .replace(/(?:https?:\/\/)?(?:www\.)?motorswinding\.com\/?/gi, `${baseUrl}/`);
+    .replace(/https:\/\/(?:www\.)?(?:iqmotorbase|motorswinding)\.com\//gi, `${baseUrl}/`)
+    .replace(/(?:https?:\/\/)?(?:www\.)?(?:iqmotorbase|motorswinding)\.com\/?/gi, `${baseUrl}/`);
 
   if (unsubscribeUrl && !out.includes(unsubscribeUrl)) {
-    out += `<p style="margin-top:2em;font-size:12px;color:#666">You received this because your business was contacted about listing on IQMotorBase. <a href="${unsubscribeUrl}">Unsubscribe</a> from these emails.</p>`;
+    out += `<p style="margin-top:2em;font-size:12px;color:#666">You received this because your business was contacted about listing on 3PhaseFlow. <a href="${unsubscribeUrl}">Unsubscribe</a> from these emails.</p>`;
   }
   return out;
 }

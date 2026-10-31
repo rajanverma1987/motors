@@ -10,7 +10,7 @@ import {
   updatePaypalPlanPricing,
 } from "@/lib/paypal-api";
 
-/** Admin → Subscription plans slug for IQWireCalculator monthly. */
+/** Admin → Subscription plans slug for 3PhaseWire monthly. */
 export const MOBILE_APP_SUBSCRIPTION_PLAN_SLUG = "mobile-app";
 export const MOBILE_APP_YEARLY_PLAN_SLUG = "mobile-app-yearly";
 
@@ -104,7 +104,7 @@ function serializePlan(planDoc, fallbackPrice, fallbackCycle) {
     usd: Number.isFinite(usd) ? usd : fallbackPrice,
     monthlyUsd: billingCycle === "yearly" ? MOBILE_APP_DEFAULT_MONTHLY_USD : Number.isFinite(usd) ? usd : fallbackPrice,
     currency: String(planDoc?.currency || "USD").toUpperCase(),
-    planName: planDoc?.name || "IQWireCalculator",
+    planName: planDoc?.name || "3PhaseWire",
     planSlug: planDoc?.slug || "",
     billingCycle,
     billingIntervalCount: planDoc?.billingIntervalCount || 1,
@@ -148,7 +148,7 @@ async function upsertBillingPlan({ slug, name, description, customPrice, billing
       plan.active = true;
       dirty = true;
     }
-    if (!plan.description || /IQMotorBase Calculators mobile app/.test(plan.description)) {
+    if (!plan.description || /3PhaseFlow Calculators mobile app/.test(plan.description)) {
       plan.description = description;
       dirty = true;
     }
@@ -160,15 +160,15 @@ async function upsertBillingPlan({ slug, name, description, customPrice, billing
 }
 
 /**
- * Ensure the IQWireCalculator monthly PayPal plan exists.
+ * Ensure the 3PhaseWire monthly PayPal plan exists.
  */
 export async function ensureMobileAppSubscriptionPlan() {
   const slug = planSlugFromEnv();
   return upsertBillingPlan({
     slug,
-    name: "IQWireCalculator",
+    name: "3PhaseWire",
     description:
-      "IQWireCalculator PWA: CM Best Match wire calculator, named saves, and print. Not tied to shop management.",
+      "3PhaseWire PWA: CM Best Match wire calculator, named saves, and print. Not tied to shop management.",
     customPrice: MOBILE_APP_DEFAULT_MONTHLY_USD,
     billingCycle: "monthly",
   });
@@ -180,9 +180,9 @@ export async function ensureMobileAppYearlySubscriptionPlan() {
     .toLowerCase();
   return upsertBillingPlan({
     slug,
-    name: "IQWireCalculator Yearly",
+    name: "3PhaseWire Yearly",
     description:
-      "IQWireCalculator PWA yearly subscription: CM Best Match wire calculator, named saves, and print.",
+      "3PhaseWire PWA yearly subscription: CM Best Match wire calculator, named saves, and print.",
     customPrice: MOBILE_APP_DEFAULT_YEARLY_USD,
     billingCycle: "yearly",
   });
@@ -503,7 +503,7 @@ function isoOrNull(d) {
 
 export function subscriptionTypeLabel(account) {
   const status = String(account?.subscriptionStatus || "trial");
-  if (status === "active") return "IQWireCalculator";
+  if (status === "active") return "3PhaseWire";
   if (status === "trial") return "Trial";
   if (status === "past_due") return "Past due";
   if (status === "cancelled") return "Cancelled";
@@ -571,7 +571,7 @@ export async function revokeMobileAppAccess(account) {
   const subId = String(account.paypalSubscriptionId || "").trim();
   if (subId) {
     try {
-      await cancelPaypalSubscription(subId, "Admin removed IQWireCalculator access");
+      await cancelPaypalSubscription(subId, "Admin removed 3PhaseWire access");
     } catch (err) {
       console.warn("revokeMobileAppAccess paypal:", err.message);
     }

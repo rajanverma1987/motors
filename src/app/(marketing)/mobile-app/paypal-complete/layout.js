@@ -1,5 +1,5 @@
 export const metadata = {
-  title: "PayPal | IQWireCalculator",
+  title: "PayPal | 3PhaseWire",
   robots: { index: false, follow: false },
 };
 

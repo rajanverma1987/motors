@@ -175,7 +175,7 @@ export default function AdminSubscriptionPlansPage() {
         editPlan.slug === CALCULATOR_PAYWALL_SLUG
           ? "Plan updated. Calculator paywall uses this plan’s price."
           : editPlan.slug === MOBILE_APP_PLAN_SLUG
-            ? "Plan updated. IQWireCalculator paywall uses this price immediately. A new PayPal plan is created when price or billing changes."
+            ? "Plan updated. 3PhaseWire paywall uses this price immediately. A new PayPal plan is created when price or billing changes."
             : "Plan updated."
       );
       setEditPlan(null);
@@ -277,7 +277,7 @@ export default function AdminSubscriptionPlansPage() {
           ) : null}
           {row.slug === MOBILE_APP_PLAN_SLUG ? (
             <Badge variant="primary" className="rounded-full px-2 py-0.5 text-[10px]">
-              IQWireCalculator
+              3PhaseWire
             </Badge>
           ) : null}
         </span>
@@ -332,7 +332,7 @@ export default function AdminSubscriptionPlansPage() {
           <strong>calculator subscription</strong> uses the active plan with slug{" "}
           <code className="rounded bg-muted px-1 text-xs">{CALCULATOR_PAYWALL_SLUG}</code> (override with{" "}
           <code className="rounded bg-muted px-1 text-xs">CALCULATOR_SUBSCRIPTION_PLAN_SLUG</code> in env). The{" "}
-          <strong>IQWireCalculator</strong> app uses slug{" "}
+          <strong>3PhaseWire</strong> app uses slug{" "}
           <code className="rounded bg-muted px-1 text-xs">{MOBILE_APP_PLAN_SLUG}</code> — change its price anytime; new
           checkouts pick up the latest PayPal plan. New shop clients register with <strong>Trial</strong> (internal)
           until you assign a paid plan.
@@ -460,7 +460,7 @@ export default function AdminSubscriptionPlansPage() {
               ) : null}
               {editPlan.slug === MOBILE_APP_PLAN_SLUG ? (
                 <span className="mt-1 block text-amber-700 dark:text-amber-400">
-                  Powers the IQWireCalculator app. A price change updates the PayPal plan in place. Existing
+                  Powers the 3PhaseWire app. A price change updates the PayPal plan in place. Existing
                   subscribers are billed the new amount on their next monthly cycle (PayPal emails them; if renewal is
                   within 10 days, the new price starts the cycle after). Changing billing cycle still creates a new
                   PayPal plan.

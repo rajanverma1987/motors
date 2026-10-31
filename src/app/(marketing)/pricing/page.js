@@ -7,14 +7,14 @@ import PricingContactFaqClient from "./pricing-contact-faq-client";
 
 export const metadata = marketingPageMetadata({
   path: "/pricing",
-  title: "Pricing | $349/mo | Motor Repair Shop Software | IQMotorBase",
+  title: "Pricing | $349/mo | Motor Repair Shop Software | 3PhaseFlow",
   description:
-    "IQMotorBase starts at $349/month or $3,235/year. Work orders, leads, " +
+    "3PhaseFlow starts at $349/month or $3,235/year. Work orders, leads, " +
     "inventory, invoicing, and QuickBooks sync for electric motor repair shops. " +
     "Founder pricing available for first 10 shops.",
-  ogTitle: "Pricing | $349/mo | Motor Repair Shop Software | IQMotorBase",
+  ogTitle: "Pricing | $349/mo | Motor Repair Shop Software | 3PhaseFlow",
   ogDescription:
-    "IQMotorBase starts at $349/month or $3,235/year. Built exclusively for electric " +
+    "3PhaseFlow starts at $349/month or $3,235/year. Built exclusively for electric " +
     "motor repair shops. Founder pricing available for first 10 shops.",
 });
 
@@ -23,7 +23,7 @@ const site = getPublicSiteUrl().replace(/\/$/, "");
 const pricingSchema = {
   "@context": "https://schema.org",
   "@type": "SoftwareApplication",
-  name: "IQMotorBase",
+  name: "3PhaseFlow",
   url: site,
   applicationCategory: "BusinessApplication",
   operatingSystem: "Web, iOS, Android",
@@ -62,11 +62,11 @@ const faqSchema = {
   mainEntity: [
     {
       "@type": "Question",
-      name: "How much does IQMotorBase cost?",
+      name: "How much does 3PhaseFlow cost?",
       acceptedAnswer: {
         "@type": "Answer",
         text:
-          "IQMotorBase costs $349/month on the monthly plan or $3,235/year " +
+          "3PhaseFlow costs $349/month on the monthly plan or $3,235/year " +
           "on the annual plan (equivalent to $269/month, saving $983/year). " +
           "Both plans include unlimited users and full platform access, " +
           "work orders, lead generation, inventory, invoicing, accounts " +
@@ -75,7 +75,7 @@ const faqSchema = {
     },
     {
       "@type": "Question",
-      name: "What is included in IQMotorBase pricing?",
+      name: "What is included in 3PhaseFlow pricing?",
       acceptedAnswer: {
         "@type": "Answer",
         text:
@@ -83,17 +83,17 @@ const faqSchema = {
           "work order tracking, customer and motor history registry, shop " +
           "inventory management, invoicing and accounts receivable, vendor " +
           "purchase orders, QuickBooks Online sync, lead generation from the " +
-          "IQMotorBase directory, marketplace listings, careers/job board, " +
+          "3PhaseFlow directory, marketplace listings, careers/job board, " +
           "and API access. Technician mobile app coming soon.",
       },
     },
     {
       "@type": "Question",
-      name: "Does IQMotorBase offer a free trial?",
+      name: "Does 3PhaseFlow offer a free trial?",
       acceptedAnswer: {
         "@type": "Answer",
         text:
-          "IQMotorBase offers a free demo rather than a self-serve trial. " +
+          "3PhaseFlow offers a free demo rather than a self-serve trial. " +
           "Book a 30-minute demo to see the full platform and get your " +
           "questions answered before committing.",
       },
@@ -112,11 +112,11 @@ const faqSchema = {
     },
     {
       "@type": "Question",
-      name: "What is IQMotorBase founder pricing?",
+      name: "What is 3PhaseFlow founder pricing?",
       acceptedAnswer: {
         "@type": "Answer",
         text:
-          "IQMotorBase is offering a permanently locked discounted rate to " +
+          "3PhaseFlow is offering a permanently locked discounted rate to " +
           "the first 10 shops that join the platform. Founder pricing is " +
           "locked for life. Your rate never increases as long as you stay " +
           "subscribed. Contact us to check if founder spots are still available.",
@@ -190,12 +190,12 @@ const INCLUDED_FEATURES = [
   {
     title: "Lead generation directory",
     description:
-      "Your shop is listed in the IQMotorBase public directory, indexed on Google, reaching industrial buyers searching for motor repair in your area. Leads land in your dashboard.",
+      "Your shop is listed in the 3PhaseFlow public directory, indexed on Google, reaching industrial buyers searching for motor repair in your area. Leads land in your dashboard.",
   },
   {
     title: "Marketplace and careers board",
     description:
-      "List surplus parts and equipment on the IQMotorBase marketplace. Post open technician and winder positions on the careers board, reaching the right candidates in the motor repair trade.",
+      "List surplus parts and equipment on the 3PhaseFlow marketplace. Post open technician and winder positions on the careers board, reaching the right candidates in the motor repair trade.",
   },
   {
     title: "Unlimited users",
@@ -253,7 +253,7 @@ export default function PricingPage() {
               Everything included in every plan
             </h2>
             <p className="mt-2 text-sm leading-relaxed text-secondary sm:text-base">
-              No add-ons. No per-user fees. No surprise charges. Every plan includes the full IQMotorBase
+              No add-ons. No per-user fees. No surprise charges. Every plan includes the full 3PhaseFlow
               platform:
             </p>
             <dl className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2">

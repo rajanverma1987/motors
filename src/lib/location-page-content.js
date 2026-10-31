@@ -77,12 +77,12 @@ export function buildLocationFaqItems(areaLabel) {
     {
       question: "Is a directory listing the same as a repair quote?",
       answer:
-        "No. Listings describe capabilities and contact paths. Ballpark pricing tools and articles on IQMotorBase.com help you budget, but the only reliable price is a written shop quote after inspection.",
+        "No. Listings describe capabilities and contact paths. Ballpark pricing tools and articles on 3PhaseFlow.com help you budget, but the only reliable price is a written shop quote after inspection.",
     },
     {
       question: `How do I list my motor repair shop in ${areaLabel}?`,
       answer:
-        "repair shops can apply for a directory profile on IQMotorBase.com. Complete capacity, services, and coverage fields so buyers filtering this area can find you accurately.",
+        "repair shops can apply for a directory profile on 3PhaseFlow.com. Complete capacity, services, and coverage fields so buyers filtering this area can find you accurately.",
     },
   ];
 }

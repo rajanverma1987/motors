@@ -2,8 +2,8 @@
 export default function manifest() {
   return {
     id: "/?source=pwa",
-    name: "IQMotorBase",
-    short_name: "IQMotorBase",
+    name: "3PhaseFlow",
+    short_name: "3PhaseFlow",
     description:
       "Motor repair shop software: work orders, leads, inventory, and invoicing.",
     start_url: "/dashboards?source=pwa",

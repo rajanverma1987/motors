@@ -17,17 +17,17 @@ export const metadata = {
     "rewinding shop paperwork",
   ],
   openGraph: {
-    title: "Job Card System for Repair Shops | IQMotorBase.com",
+    title: "Job Card System for Repair Shops | 3PhaseFlow.com",
     description:
       "Structure disassembly, approval, labor, parts, and testing so every job is traceable.",
     url: path,
     type: "article",
-    siteName: "IQMotorBase.com",
+    siteName: "3PhaseFlow.com",
     locale: "en_US",
   },
   twitter: {
     card: "summary_large_image",
-    title: "Job Card System for Repair Shops | IQMotorBase.com",
+    title: "Job Card System for Repair Shops | 3PhaseFlow.com",
     description: "Traceable work orders for motor repair and rewinding.",
   },
   alternates: { canonical: path },

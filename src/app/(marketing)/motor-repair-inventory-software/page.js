@@ -12,10 +12,10 @@ import {
 
 const path = SEO_SOFTWARE_INVENTORY_PATH;
 
-// The root layout applies a "%s | IQMotorBase" template, so the brand suffix is
+// The root layout applies a "%s | 3PhaseFlow" template, so the brand suffix is
 // omitted here; SOCIAL_TITLE carries it because og:/twitter: titles skip the template.
 const TITLE = "Electric Motor Repair Shop Inventory Software";
-const SOCIAL_TITLE = `${TITLE} | IQMotorBase`;
+const SOCIAL_TITLE = `${TITLE} | 3PhaseFlow`;
 const DESCRIPTION =
   "Track on-hand and reserved parts, get low-stock alerts, and let inventory update itself when a work order ships. Built for electric motor repair shops.";
 
@@ -32,7 +32,7 @@ export const metadata = {
     description: DESCRIPTION,
     url: path,
     type: "article",
-    siteName: "IQMotorBase.com",
+    siteName: "3PhaseFlow.com",
     locale: "en_US",
   },
   twitter: {
@@ -90,7 +90,7 @@ export default function MotorRepairInventorySoftwarePage() {
               how promised dates slip.
             </p>
             <p className="mt-4 text-secondary leading-relaxed">
-              IQMotorBase inventory is built for that shop floor problem, not for a warehouse that ships cartons all
+              3PhaseFlow inventory is built for that shop floor problem, not for a warehouse that ships cartons all
               day. The parts catalog holds SKU, unit of measure, on-hand count, reserved count, and optional bin/aisle
               location. Reservations follow the quote path; shortfalls can become vendor POs from the same screen;
               when a{" "}

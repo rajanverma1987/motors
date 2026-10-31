@@ -35,6 +35,8 @@ const COMMON_PASSWORDS = new Set([
   "motors",
   "motor123",
   "iqmotorbase",
+  "3phaseflow",
+  "phaseflow",
 ]);
 
 /**

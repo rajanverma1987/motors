@@ -1,8 +1,8 @@
 import { Resend } from "resend";
 import { Webhook } from "standardwebhooks";
 
-const DEFAULT_FROM = "IQMotorBase <contact@mail.iqmotorbase.com>";
-const DEFAULT_REPLY_TO = "contact@iqmotorbase.com";
+const DEFAULT_FROM = "3PhaseFlow <contact@mail.3phaseflow.com>";
+const DEFAULT_REPLY_TO = "contact@3phaseflow.com";
 
 function getResendClient() {
   const apiKey = String(process.env.RESEND_API_KEY || "").trim();

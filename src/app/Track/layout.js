@@ -1,14 +1,14 @@
 import { IQMOTORTRACK_MANIFEST_PATH } from "@/lib/iqmotortrack-pwa";
 
 export const metadata = {
-  title: { absolute: "IQMotorTrack" },
+  title: { absolute: "3PhaseTrack" },
   description: "Motor maintenance and repair tracking for plants and facilities.",
   robots: { index: false, follow: false },
   manifest: IQMOTORTRACK_MANIFEST_PATH,
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
-    title: "IQMotorTrack",
+    title: "3PhaseTrack",
   },
   icons: {
     apple: [{ url: "/apple-touch-icon.png", sizes: "180x180", type: "image/png" }],

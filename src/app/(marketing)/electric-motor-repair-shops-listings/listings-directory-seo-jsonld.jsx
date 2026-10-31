@@ -20,7 +20,7 @@ export function ListingsDirectoryStaticJsonLd() {
     description:
       "Directory of electric motor repair and rewinding centers in the United States. Search by location, compare capabilities, and request quotes.",
     url: pageUrl,
-    isPartOf: { "@type": "WebSite", name: "IQMotorBase.com", url: site },
+    isPartOf: { "@type": "WebSite", name: "3PhaseFlow.com", url: site },
     about: [
       { "@type": "Thing", name: "Electric motor repair" },
       { "@type": "Thing", name: "Motor rewinding" },
@@ -40,7 +40,7 @@ export function ListingsDirectoryStaticJsonLd() {
     name: "Electric motor repair shops directory",
     description:
       "Find electric motor repair shops and rewinding centers. Browse listings by city, state, or ZIP code and request quotes from qualified repair shops.",
-    isPartOf: { "@type": "WebSite", name: "IQMotorBase.com", url: site },
+    isPartOf: { "@type": "WebSite", name: "3PhaseFlow.com", url: site },
     primaryImageOfPage: { "@type": "ImageObject", url: `${site}/og-image.png` },
   };
 
@@ -92,7 +92,7 @@ export function ListingsDirectoryItemListJsonLd({ listings, page, pageSize, tota
     "@context": "https://schema.org",
     "@type": "ItemList",
     name: "Electric motor repair shops",
-    description: "Electric motor repair and rewinding centers listed on IQMotorBase.com",
+    description: "Electric motor repair and rewinding centers listed on 3PhaseFlow.com",
     numberOfItems: total,
     itemListOrder: "https://schema.org/ItemListOrderAscending",
     itemListElement: listings.map((listing, index) => {

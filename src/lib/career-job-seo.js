@@ -76,7 +76,7 @@ export function buildJobPostingJsonLd(job, canonicalUrl) {
     hiringOrganization: org,
     identifier: {
       "@type": "PropertyValue",
-      name: "IQMotorBase job slug",
+      name: "3PhaseFlow job slug",
       value: job.slug,
     },
     directApply: true,

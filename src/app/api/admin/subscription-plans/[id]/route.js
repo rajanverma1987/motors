@@ -156,7 +156,7 @@ export async function DELETE(request, context) {
       if (mobileInUse > 0) {
         return NextResponse.json(
           {
-            error: `Cannot delete: ${mobileInUse} IQWireCalculator account(s) still have a PayPal subscription. Deactivate the plan instead.`,
+            error: `Cannot delete: ${mobileInUse} 3PhaseWire account(s) still have a PayPal subscription. Deactivate the plan instead.`,
           },
           { status: 400 }
         );

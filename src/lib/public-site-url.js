@@ -3,7 +3,14 @@
  * Never returns localhost so messages are safe to send from dev/staging servers.
  */
 
-const DEFAULT_PUBLIC_SITE_URL = "https://iqmotorbase.com";
+const DEFAULT_PUBLIC_SITE_URL = "https://3phaseflow.com";
+
+const LEGACY_HOSTS = new Set([
+  "motorswinding.com",
+  "www.motorswinding.com",
+  "iqmotorbase.com",
+  "www.iqmotorbase.com",
+]);
 
 function stripTrailingSlash(u) {
   return String(u || "").replace(/\/+$/, "");
@@ -33,8 +40,8 @@ function normalizeSiteUrl(raw) {
     const parsed = new URL(u);
     const host = parsed.hostname.toLowerCase();
     // Force canonical brand domain even if old env vars remain.
-    if (host === "motorswinding.com" || host === "www.motorswinding.com") {
-      parsed.hostname = "iqmotorbase.com";
+    if (LEGACY_HOSTS.has(host)) {
+      parsed.hostname = "3phaseflow.com";
     }
     if (parsed.protocol === "http:" && !isLocalhostHost(parsed.hostname)) {
       parsed.protocol = "https:";

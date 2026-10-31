@@ -9,15 +9,15 @@ const site = getPublicSiteUrl().replace(/\/$/, "");
 const aboutSchema = {
   "@context": "https://schema.org",
   "@type": "AboutPage",
-  name: "About IQMotorBase",
+  name: "About 3PhaseFlow",
   url: `${site}/about`,
   mainEntity: {
     "@type": "Organization",
-    name: "IQMotorBase",
+    name: "3PhaseFlow",
     url: site,
     foundingDate: "2025",
     description:
-      "IQMotorBase is a shop management platform and public directory built " +
+      "3PhaseFlow is a shop management platform and public directory built " +
       "exclusively for electric motor repair and rewinding businesses in the " +
       "United States. The platform manages work orders, customer and motor " +
       "history, inventory, invoicing, and leads. The public directory lists " +
@@ -56,17 +56,17 @@ export default function AboutPage() {
               { name: "About", url: "/about" },
             ]}
           />
-          <h1 className="mt-4 text-3xl font-bold tracking-tight text-title sm:text-4xl">About IQMotorBase</h1>
+          <h1 className="mt-4 text-3xl font-bold tracking-tight text-title sm:text-4xl">About 3PhaseFlow</h1>
         </div>
       </section>
 
       <div className="mx-auto max-w-3xl px-4 py-12 sm:px-6 sm:py-16">
         <section aria-labelledby="story-heading" className="mb-12">
           <h2 id="story-heading" className="text-xl font-bold text-title sm:text-2xl">
-            How IQMotorBase started
+            How 3PhaseFlow started
           </h2>
           <p className="mt-4 text-sm leading-relaxed text-secondary sm:text-base">
-            IQMotorBase started with one motor repair shop running entirely on paper, job cards everywhere, winding
+            3PhaseFlow started with one motor repair shop running entirely on paper, job cards everywhere, winding
             data written on travelers that got lost, work orders tracked on a whiteboard, and invoices going out late
             because nobody could find the completed job sheet.
           </p>
@@ -76,7 +76,7 @@ export default function AboutPage() {
             The question became: how many other motor repair shops are running the same way?
           </p>
           <p className="mt-4 text-sm leading-relaxed text-secondary sm:text-base">
-            The answer was almost all of them. IQMotorBase launched in 2025 to bring purpose-built shop management
+            The answer was almost all of them. 3PhaseFlow launched in 2025 to bring purpose-built shop management
             software to the electric motor repair industry, an industry that had never had software designed
             specifically for its workflow.
           </p>
@@ -84,10 +84,10 @@ export default function AboutPage() {
 
         <section aria-labelledby="what-heading" className="mb-12">
           <h2 id="what-heading" className="text-xl font-bold text-title sm:text-2xl">
-            What IQMotorBase is
+            What 3PhaseFlow is
           </h2>
           <p className="mt-4 text-sm leading-relaxed text-secondary sm:text-base">
-            IQMotorBase is two things operating as one platform:
+            3PhaseFlow is two things operating as one platform:
           </p>
           <dl className="about-two-sides">
             <div>
@@ -118,9 +118,9 @@ export default function AboutPage() {
 
         <section aria-labelledby="who-heading" className="mb-12">
           <h2 id="who-heading" className="text-xl font-bold text-title sm:text-2xl">
-            Who IQMotorBase serves
+            Who 3PhaseFlow serves
           </h2>
-          <p className="mt-4 text-sm leading-relaxed text-secondary sm:text-base">IQMotorBase serves two audiences:</p>
+          <p className="mt-4 text-sm leading-relaxed text-secondary sm:text-base">3PhaseFlow serves two audiences:</p>
           <ul className="about-audiences">
             <li>
               <strong className="text-title">Motor repair shop owners and operators</strong> who need a system to manage
@@ -138,10 +138,10 @@ export default function AboutPage() {
 
         <section aria-labelledby="standards-heading" className="mb-12">
           <h2 id="standards-heading" className="text-xl font-bold text-title sm:text-2xl">
-            Industry standards IQMotorBase references
+            Industry standards 3PhaseFlow references
           </h2>
           <p className="mt-4 text-sm leading-relaxed text-secondary sm:text-base">
-            Content and shop matching on IQMotorBase references the following industry standards:
+            Content and shop matching on 3PhaseFlow references the following industry standards:
           </p>
           <ul className="about-standards">
             <li>
@@ -170,7 +170,7 @@ export default function AboutPage() {
 
         <section aria-labelledby="contact-about-heading" className="mb-12">
           <h2 id="contact-about-heading" className="text-xl font-bold text-title sm:text-2xl">
-            Contact IQMotorBase
+            Contact 3PhaseFlow
           </h2>
           <p className="mt-4 text-sm leading-relaxed text-secondary sm:text-base">
             For shop owners interested in listing or the platform:{" "}
@@ -214,7 +214,7 @@ export default function AboutPage() {
             </li>
             <li>
               <Link href="/pricing" className="text-primary hover:underline">
-                IQMotorBase pricing
+                3PhaseFlow pricing
               </Link>
             </li>
             <li>

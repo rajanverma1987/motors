@@ -6,7 +6,7 @@ import { getPublicSiteUrl } from "@/lib/public-site-url";
 const path = "/where-to-get-electric-motor-repaired";
 
 export const metadata = {
-  title: "Where to Get an Electric Motor Repaired Near You | IQMotorBase",
+  title: "Where to Get an Electric Motor Repaired Near You | 3PhaseFlow",
   description:
     "Submit your motor details and get matched to certified repair shops in your area, same-day response. AC, DC, servo, high-voltage, and 24/7 emergency motor repair.",
   keywords: [
@@ -16,19 +16,19 @@ export const metadata = {
     "find motor repair shop",
     "motor repair shop near me",
   ],
-  authors: [{ name: "IQMotorBase.com" }],
+  authors: [{ name: "3PhaseFlow.com" }],
   openGraph: {
-    title: "Where to Get an Electric Motor Repaired | IQMotorBase",
+    title: "Where to Get an Electric Motor Repaired | 3PhaseFlow",
     description:
       "Find certified motor repair shops near you. Submit your motor details, matched to shops in your area. Same-day response.",
     url: path,
     type: "article",
-    siteName: "IQMotorBase.com",
+    siteName: "3PhaseFlow.com",
     locale: "en_US",
   },
   twitter: {
     card: "summary_large_image",
-    title: "Where to Get an Electric Motor Repaired Near You | IQMotorBase",
+    title: "Where to Get an Electric Motor Repaired Near You | 3PhaseFlow",
     description: "Submit your motor details, matched to certified shops in your area.",
   },
   alternates: { canonical: path },
@@ -38,11 +38,11 @@ export const metadata = {
 const faqs = [
   {
     q: "Where can I get my electric motor repaired?",
-    a: "Submit a repair request on IQMotorBase and we'll match you to certified repair shops in your area. You can also browse the directory by state to find shops near you. Most shops respond within a few hours during business hours.",
+    a: "Submit a repair request on 3PhaseFlow and we'll match you to certified repair shops in your area. You can also browse the directory by state to find shops near you. Most shops respond within a few hours during business hours.",
   },
   {
     q: "How do I know which motor repair shop to choose?",
-    a: "Look for EASA (Electrical Apparatus Service Association) accreditation, it means the shop follows EASA AR100 repair standards. Ask whether they perform all rewind work in-house or subcontract it. Ask for a written test report with the repaired motor. Shops listed on IQMotorBase have verified capabilities and service areas.",
+    a: "Look for EASA (Electrical Apparatus Service Association) accreditation, it means the shop follows EASA AR100 repair standards. Ask whether they perform all rewind work in-house or subcontract it. Ask for a written test report with the repaired motor. Shops listed on 3PhaseFlow have verified capabilities and service areas.",
   },
   {
     q: "How quickly can an electric motor be repaired?",
@@ -156,7 +156,7 @@ export default function WhereToGetElectricMotorRepairedPage() {
                 <dd className="mt-1.5 text-sm leading-relaxed text-secondary">
                   The{" "}
                   <Link href="/electric-motor-repair-shops-listings" className="font-medium text-primary hover:underline">
-                    IQMotorBase directory
+                    3PhaseFlow directory
                   </Link>{" "}
                   lists certified repair centers across the USA. Best for non-urgent repairs where you want to compare a
                   few shops first.

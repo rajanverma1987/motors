@@ -32,7 +32,7 @@ export async function POST(request) {
       return NextResponse.json(
         {
           error:
-            "IQMotorTrack Pro is not linked to PayPal yet. Run scripts/ensure-iqmotortrack-paypal-plan.js or set the plan in Admin.",
+            "3PhaseTrack Pro is not linked to PayPal yet. Run scripts/ensure-iqmotortrack-paypal-plan.js or set the plan in Admin.",
         },
         { status: 503 }
       );

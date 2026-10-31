@@ -21,7 +21,7 @@ async function resolveId(context) {
   return String(params?.id || "").trim();
 }
 
-/** §9.4 - Lead detail for an IQMotorTrack request, scoped to this shop only. */
+/** §9.4 - Lead detail for an 3PhaseTrack request, scoped to this shop only. */
 export async function GET(request, context) {
   try {
     const user = await getPortalUserFromRequest(request);
@@ -30,7 +30,7 @@ export async function GET(request, context) {
     const lead = await loadTrackLeadForShop(user.email, await resolveId(context));
     if (!lead) return NextResponse.json({ error: "Request not found" }, { status: 404 });
 
-    // E4 - first open marks the invitation Viewed in IQMotorTrack.
+    // E4 - first open marks the invitation Viewed in 3PhaseTrack.
     await applyTrackLeadViewed(lead).catch((err) =>
       console.warn("Track lead viewed emit failed:", err?.message || err)
     );

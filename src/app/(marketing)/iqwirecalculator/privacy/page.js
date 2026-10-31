@@ -10,13 +10,13 @@ import {
 } from "@/lib/iqwirecalculator-marketing";
 
 const LAST_UPDATED = "August 16, 2026";
-const mailto = `mailto:${IQWIRECALCULATOR_SUPPORT_EMAIL}?subject=${encodeURIComponent("IQWireCalculator privacy")}`;
+const mailto = `mailto:${IQWIRECALCULATOR_SUPPORT_EMAIL}?subject=${encodeURIComponent("3PhaseWire privacy")}`;
 
 export const metadata = marketingPageMetadata({
   path: IQWIRECALCULATOR_PRIVACY_PATH,
-  title: "IQWireCalculator Privacy Policy",
+  title: "3PhaseWire Privacy Policy",
   description:
-    "Privacy policy for the IQWireCalculator phone app: what we collect, how we use it, and how to request deletion.",
+    "Privacy policy for the 3PhaseWire phone app: what we collect, how we use it, and how to request deletion.",
 });
 
 export default function IqwirecalculatorPrivacyPage() {
@@ -30,18 +30,18 @@ export default function IqwirecalculatorPrivacyPage() {
         </Link>
         <span className="mx-2">/</span>
         <Link href={IQWIRECALCULATOR_PATH} className="text-primary hover:underline">
-          IQWireCalculator
+          3PhaseWire
         </Link>
         <span className="mx-2">/</span>
         Privacy Policy
       </p>
       <h1 className="mt-4 text-3xl font-bold tracking-tight text-title sm:text-4xl">
-        IQWireCalculator Privacy Policy
+        3PhaseWire Privacy Policy
       </h1>
       <p className="mt-2 text-sm text-secondary">Last updated: {LAST_UPDATED}</p>
       <p className="mt-6 rounded-lg border border-border bg-muted/30 p-4 text-sm text-secondary">
-        This policy applies to the <strong className="text-title">IQWireCalculator</strong> mobile app published by
-        IQMotorBase (“we,” “us,” or “our”). It describes information collected when you create an account, use CM Best
+        This policy applies to the <strong className="text-title">3PhaseWire</strong> mobile app published by
+        3PhaseFlow (“we,” “us,” or “our”). It describes information collected when you create an account, use CM Best
         Match, save calculations, or subscribe. For website and shop management system privacy, see our{" "}
         <Link href="/privacy" className="font-medium text-primary hover:underline">
           website Privacy Policy
@@ -56,8 +56,8 @@ export default function IqwirecalculatorPrivacyPage() {
       <article className="mt-10 max-w-none">
         <h2 className="text-xl font-semibold text-title">1. Who we are</h2>
         <p className="mt-3 leading-relaxed text-secondary">
-          IQWireCalculator is a standalone circular mils / wire substitution calculator for motor rewind work. It is
-          not the IQMotorBase shop management system. The app and related services are operated at{" "}
+          3PhaseWire is a standalone circular mils / wire substitution calculator for motor rewind work. It is
+          not the 3PhaseFlow shop management system. The app and related services are operated at{" "}
           <a href={siteUrl} className="text-primary hover:underline">
             {siteUrl}
           </a>
@@ -103,7 +103,7 @@ export default function IqwirecalculatorPrivacyPage() {
         <h2 className="mt-10 text-xl font-semibold text-title">4. Sharing</h2>
         <p className="mt-3 leading-relaxed text-secondary">
           We share information with service providers who host the app backend, send email, and process PayPal
-          payments, only as needed to operate IQWireCalculator. We may disclose information if required by law or to
+          payments, only as needed to operate 3PhaseWire. We may disclose information if required by law or to
           protect users and the public. We do not sell your personal information, and we do not share it for
           cross-app advertising.
         </p>
@@ -129,7 +129,7 @@ export default function IqwirecalculatorPrivacyPage() {
 
         <h2 className="mt-10 text-xl font-semibold text-title">7. Children</h2>
         <p className="mt-3 leading-relaxed text-secondary">
-          IQWireCalculator is not directed to children under 16 (or the minimum age in your jurisdiction). We do not
+          3PhaseWire is not directed to children under 16 (or the minimum age in your jurisdiction). We do not
           knowingly collect personal information from children.
         </p>
 

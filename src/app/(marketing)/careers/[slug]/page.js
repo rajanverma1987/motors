@@ -44,7 +44,7 @@ export async function generateMetadata({ params }) {
       title: `${job.title} | Careers`,
       description,
       url: canonicalUrl,
-      siteName: "IQMotorBase.com",
+      siteName: "3PhaseFlow.com",
       locale: "en_US",
       type: "article",
       images: [
@@ -58,7 +58,7 @@ export async function generateMetadata({ params }) {
     },
     twitter: {
       card: "summary_large_image",
-      title: `${job.title} | IQMotorBase.com`,
+      title: `${job.title} | 3PhaseFlow.com`,
       description,
       images: [`${base}/og-image.png`],
     },

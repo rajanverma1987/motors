@@ -64,7 +64,7 @@ export async function isQuickBooksSyncActive(ownerEmail) {
 }
 
 async function ensureServiceItem(ownerEmail, incomeAccountId) {
-  const name = "IQMotorBase Service";
+  const name = "3PhaseFlow Service";
   try {
     const data = await qboQuery(
       ownerEmail,

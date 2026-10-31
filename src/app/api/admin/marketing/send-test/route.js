@@ -19,7 +19,7 @@ export async function POST(request) {
     if (!admin) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const body = await request.json();
-    const to = String(body?.to || "contact@iqmotorbase.com")
+    const to = String(body?.to || "contact@3phaseflow.com")
       .trim()
       .toLowerCase();
     if (!EMAIL_RE.test(to)) {

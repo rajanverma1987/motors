@@ -66,7 +66,7 @@ function tableNameFromSheet(sheetName) {
  */
 export async function buildSimpleReportWorkbook(sheetName, headers, rows, options = {}) {
   const workbook = new ExcelJS.Workbook();
-  workbook.creator = "IQMotorBase Simple";
+  workbook.creator = "3PhaseFlow Simple";
   workbook.created = new Date();
 
   const safeName =

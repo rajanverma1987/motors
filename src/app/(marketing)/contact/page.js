@@ -96,7 +96,7 @@ export default function ContactPage() {
             </h1>
             <p className="mt-5 text-lg text-secondary sm:text-xl">
               Pick a time on our calendar for a 30-minute walkthrough. We will show you the full platform, answer
-              every question, and tell you honestly whether IQMotorBase is the right fit for your shop.
+              every question, and tell you honestly whether 3PhaseFlow is the right fit for your shop.
             </p>
             <div className="mt-8">
               <DemoBookingLink className="inline-flex min-h-12 items-center justify-center rounded-md bg-primary px-8 py-3 text-base font-semibold text-white hover:opacity-90">
@@ -125,7 +125,7 @@ export default function ContactPage() {
                     </span>
                     <div>
                       <span className="font-medium text-title">Schedule a demo</span>
-                      <p className="mt-0.5 text-sm text-secondary">See how IQMotorBase.com works for your shop, work orders, leads, and more.</p>
+                      <p className="mt-0.5 text-sm text-secondary">See how 3PhaseFlow.com works for your shop, work orders, leads, and more.</p>
                     </div>
                   </li>
                   <li className="flex gap-3">
@@ -151,7 +151,7 @@ export default function ContactPage() {
                 <div className="mt-8 border-t border-border pt-6">
                   <h3 className="text-sm font-semibold uppercase tracking-wide text-secondary">Direct email</h3>
                   <p className="mt-3 text-sm">
-                    <a href="mailto:contact@IQMotorBase.com" className="font-medium text-primary hover:underline">contact@IQMotorBase.com</a>
+                    <a href="mailto:contact@3PhaseFlow.com" className="font-medium text-primary hover:underline">contact@3PhaseFlow.com</a>
                   </p>
                 </div>
 

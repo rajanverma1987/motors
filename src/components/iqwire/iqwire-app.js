@@ -42,7 +42,7 @@ function AppShell() {
   if (loading) {
     return (
       <div className="flex min-h-[100dvh] items-center justify-center bg-bg">
-        <p className="text-sm text-secondary">Loading IQWireCalculator…</p>
+        <p className="text-sm text-secondary">Loading 3PhaseWire…</p>
       </div>
     );
   }
@@ -62,7 +62,7 @@ function AppShell() {
     <div className="relative mx-auto flex h-[100dvh] max-w-md flex-col overflow-hidden bg-bg shadow-sm sm:border-x sm:border-border">
       <InstallBanner />
       <header className="border-b border-border bg-card px-4 pb-3 pt-[max(0.75rem,env(safe-area-inset-top))]">
-        <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-primary">IQWireCalculator</p>
+        <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-primary">3PhaseWire</p>
         <h1 className="mt-0.5 text-lg font-extrabold text-title">{title}</h1>
       </header>
       <main className="relative flex min-h-0 flex-1 flex-col overflow-hidden">

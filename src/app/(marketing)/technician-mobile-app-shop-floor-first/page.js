@@ -16,12 +16,12 @@ export const metadata = {
     "motor repair qr tag app",
   ],
   openGraph: {
-    title: "Technician Mobile App for Motor Repair Shops | IQMotorBase.com",
+    title: "Technician Mobile App for Motor Repair Shops | 3PhaseFlow.com",
     description:
       "Shop-floor first mobile workflow: QR scan, status updates, and testing notes in one app.",
     url: path,
     type: "article",
-    siteName: "IQMotorBase.com",
+    siteName: "3PhaseFlow.com",
     locale: "en_US",
   },
   twitter: {

@@ -8,7 +8,7 @@ const path = "/electric-motor-repair";
 
 export const metadata = {
   title: {
-    absolute: "Electric Motor Repair & Rewinding | Find Certified Shops | IQMotorBase",
+    absolute: "Electric Motor Repair & Rewinding | Find Certified Shops | 3PhaseFlow",
   },
   description:
     "Find certified electric motor repair and rewinding shops near you. AC motor rewinding, DC armature and stator rewinds, servo, high-voltage, and emergency repair. Browse shops by state.",
@@ -20,19 +20,19 @@ export const metadata = {
     "motor repair quote",
     "electric motor repair near me",
   ],
-  authors: [{ name: "IQMotorBase.com" }],
+  authors: [{ name: "3PhaseFlow.com" }],
   openGraph: {
-    title: "Electric Motor Repair & Rewinding | IQMotorBase",
+    title: "Electric Motor Repair & Rewinding | 3PhaseFlow",
     description:
       "Find certified motor repair and rewinding shops. AC, DC, armature, stator, and emergency rewinds. Browse by state.",
     url: path,
     type: "website",
-    siteName: "IQMotorBase.com",
+    siteName: "3PhaseFlow.com",
     locale: "en_US",
   },
   twitter: {
     card: "summary_large_image",
-    title: "Electric Motor Repair & Rewinding | IQMotorBase",
+    title: "Electric Motor Repair & Rewinding | 3PhaseFlow",
     description:
       "Find certified motor repair and rewinding shops. AC, DC, armature, stator, and emergency rewinds. Browse by state.",
   },
@@ -49,7 +49,7 @@ export default function ElectricMotorRepairHubPage() {
     description:
       "Collection of practical guides for facilities and buyers who need electric motor repair, rewinding, quotes, and qualified shops.",
     url: `${siteUrl.replace(/\/$/, "")}${path}`,
-    isPartOf: { "@type": "WebSite", name: "IQMotorBase.com", url: siteUrl.replace(/\/$/, "") },
+    isPartOf: { "@type": "WebSite", name: "3PhaseFlow.com", url: siteUrl.replace(/\/$/, "") },
   };
 
   return (
@@ -72,7 +72,7 @@ export default function ElectricMotorRepairHubPage() {
             Electric motor repair &amp; rewinding
           </h1>
           <p className="mt-4 text-lg text-secondary">
-            IQMotorBase.com connects buyers with motor repair and rewinding shops and publishes{" "}
+            3PhaseFlow.com connects buyers with motor repair and rewinding shops and publishes{" "}
             <strong className="text-title">buyer-focused guides</strong> so you can budget, compare quotes, and act
             quickly when equipment fails. Use this hub as your starting point, search engines favor clear structure and
             helpful internal links; we group everything you need below.

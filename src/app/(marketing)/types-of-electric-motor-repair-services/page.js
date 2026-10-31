@@ -6,7 +6,7 @@ import RepairRequestForm from "@/components/marketing/repair-request-form";
 const path = "/types-of-electric-motor-repair-services";
 
 export const metadata = {
-  title: "Types of Electric Motor Repair Services | Repair vs Rewind | IQMotorBase.com",
+  title: "Types of Electric Motor Repair Services | Repair vs Rewind | 3PhaseFlow.com",
   description:
     "Overview of electric motor repair and rewinding services: bearing replacement, rewind, testing, VFD and pump repair. Find the right shop for your motor type.",
   keywords: [
@@ -17,19 +17,19 @@ export const metadata = {
     "motor bearing replacement",
     "industrial motor rewinding",
   ],
-  authors: [{ name: "IQMotorBase.com" }],
+  authors: [{ name: "3PhaseFlow.com" }],
   openGraph: {
-    title: "Types of Electric Motor Repair Services | IQMotorBase.com",
+    title: "Types of Electric Motor Repair Services | 3PhaseFlow.com",
     description:
       "Understand the main types of motor repair and rewinding services and how to find a qualified shop.",
     url: path,
     type: "article",
-    siteName: "IQMotorBase.com",
+    siteName: "3PhaseFlow.com",
     locale: "en_US",
   },
   twitter: {
     card: "summary_large_image",
-    title: "Types of Electric Motor Repair Services | IQMotorBase.com",
+    title: "Types of Electric Motor Repair Services | 3PhaseFlow.com",
     description: "Overview of motor repair and rewinding services and how to find a qualified shop.",
   },
   alternates: { canonical: path },

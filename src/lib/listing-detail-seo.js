@@ -104,7 +104,7 @@ export function formatListingOptionLabels(arr) {
 }
 
 /**
- * Title under ~60 chars: "Shop Name | City, ST | IQMotorBase"
+ * Title under ~60 chars: "Shop Name | City, ST | 3PhaseFlow"
  * @param {{ companyName?: string, city?: string, state?: string }} listing
  */
 export function buildListingDetailTitle(listing) {
@@ -112,7 +112,7 @@ export function buildListingDetailTitle(listing) {
   const city = String(listing.city || "").trim();
   const state = String(listing.state || "").trim();
   const place = [city, state].filter(Boolean).join(", ");
-  const suffix = place ? ` | ${place} | IQMotorBase` : " | IQMotorBase";
+  const suffix = place ? ` | ${place} | 3PhaseFlow` : " | 3PhaseFlow";
   const maxName = Math.max(12, 58 - suffix.length);
   const shortName = name.length > maxName ? `${name.slice(0, maxName - 1).trim()}…` : name;
   return `${shortName}${suffix}`;
@@ -151,7 +151,7 @@ export function buildListingDetailDescription(listing, serviceLabels = []) {
     servicesSummary || "",
     emergency ? "24/7 emergency repair." : "",
     hp ? `Up to ${hp} HP.` : "",
-    "Get a quote on IQMotorBase.",
+    "Get a quote on 3PhaseFlow.",
   ].filter(Boolean);
   return parts.join(" ").replace(/\s+/g, " ").trim().slice(0, 160);
 }
@@ -246,7 +246,7 @@ export function listingModifiedIso(listing) {
  * @returns {{ question: string, answer: string, contactCta?: boolean, contactCtaSuffix?: string }[]}
  */
 export function buildListingDetailFaqs(listing, ctx, siteBase) {
-  const base = String(siteBase || "https://IQMotorBase.com").replace(/\/$/, "");
+  const base = String(siteBase || "https://3PhaseFlow.com").replace(/\/$/, "");
   const name = String(listing.companyName || "This repair center").trim() || "This repair center";
   const items = [];
   const emergency = listingOffersEmergency(listing);
@@ -286,14 +286,14 @@ export function buildListingDetailFaqs(listing, ctx, siteBase) {
   if (hasGatedContact) {
     items.push({
       question: `How do I contact ${name}?`,
-      answer: `Submit a repair request through the form on this IQMotorBase listing, or`,
+      answer: `Submit a repair request through the form on this 3PhaseFlow listing, or`,
       contactCta: true,
       contactCtaSuffix: " to reveal phone, email, and website.",
     });
   } else {
     items.push({
       question: `How do I contact ${name}?`,
-      answer: `Submit a repair request through the form on this IQMotorBase listing.`,
+      answer: `Submit a repair request through the form on this 3PhaseFlow listing.`,
     });
   }
 
@@ -319,12 +319,12 @@ export function buildListingDetailFaqs(listing, ctx, siteBase) {
   items.push({
     question: "Is this electric motor repair listing verified?",
     answer:
-      "Listings on IQMotorBase.com are submitted by repair shops and reviewed before publication. Always confirm credentials, insurance, and scope of work directly with the shop before awarding work.",
+      "Listings on 3PhaseFlow.com are submitted by repair shops and reviewed before publication. Always confirm credentials, insurance, and scope of work directly with the shop before awarding work.",
   });
 
   items.push({
     question: "How can my motor repair shop appear in this directory?",
-    answer: `Motor repair and rewinding businesses can list their company on IQMotorBase.com to reach industrial and commercial customers. Submit your shop profile at ${base}/list-your-electric-motor-services.`,
+    answer: `Motor repair and rewinding businesses can list their company on 3PhaseFlow.com to reach industrial and commercial customers. Submit your shop profile at ${base}/list-your-electric-motor-services.`,
   });
 
   return items;
@@ -515,12 +515,12 @@ export function buildListingDetailJsonLdGraph(opts) {
     dateModified: modified,
     isPartOf: {
       "@type": "WebSite",
-      name: "IQMotorBase.com",
+      name: "3PhaseFlow.com",
       url: siteBase,
     },
     publisher: {
       "@type": "Organization",
-      name: "IQMotorBase.com",
+      name: "3PhaseFlow.com",
       url: siteBase,
       logo: {
         "@type": "ImageObject",

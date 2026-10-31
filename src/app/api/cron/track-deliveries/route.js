@@ -5,7 +5,7 @@ export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
 /**
- * Unattended retry for pending IQMotorTrack → shop deliveries.
+ * Unattended retry for pending 3PhaseTrack → shop deliveries.
  * Protect with CRON_SECRET (Authorization: Bearer <secret> or ?secret=).
  * Wire from your host scheduler, e.g. every 5 to 15 minutes.
  */

@@ -7,7 +7,7 @@ import TrackPaypalCheckoutClient from "./paypal-checkout-client";
 export const dynamic = "force-dynamic";
 
 export const metadata = {
-  title: "Subscribe | IQMotorTrack",
+  title: "Subscribe | 3PhaseTrack",
   robots: { index: false, follow: false },
 };
 
@@ -19,7 +19,7 @@ export default async function TrackPaypalCheckoutPage({ searchParams }) {
   if (!checkoutToken) {
     return (
       <main className="mx-auto flex min-h-[70vh] max-w-lg flex-col items-center justify-center px-6 py-16 text-center">
-        <h1 className="text-2xl font-bold text-title">Subscribe to IQMotorTrack Pro</h1>
+        <h1 className="text-2xl font-bold text-title">Subscribe to 3PhaseTrack Pro</h1>
         <p className="mt-3 text-sm text-secondary">
           This checkout link is incomplete. Go back to the app and tap Subscribe again.
         </p>
@@ -40,10 +40,10 @@ export default async function TrackPaypalCheckoutPage({ searchParams }) {
       <main className="mx-auto flex min-h-[70vh] max-w-lg flex-col items-center justify-center px-6 py-16 text-center">
         <h1 className="text-2xl font-bold text-title">Checkout expired</h1>
         <p className="mt-3 text-sm text-secondary">
-          Open IQMotorTrack and start Subscribe again. {priceLabel} via PayPal.
+          Open 3PhaseTrack and start Subscribe again. {priceLabel} via PayPal.
         </p>
         <a href="/Track" className="mt-6 font-semibold text-primary hover:underline">
-          Back to IQMotorTrack
+          Back to 3PhaseTrack
         </a>
       </main>
     );

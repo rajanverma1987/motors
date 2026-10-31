@@ -8,10 +8,10 @@ import { LISTINGS_DIRECTORY_PATH } from "./listings-directory-seo-data";
 
 export const metadata = marketingPageMetadata({
   path: LISTINGS_DIRECTORY_PATH,
-  title: { absolute: "Find Electric Motor Repair & Rewinding Shops | IQMotorBase Directory" },
+  title: { absolute: "Find Electric Motor Repair & Rewinding Shops | 3PhaseFlow Directory" },
   description:
     "Browse certified electric motor repair and rewinding shops by state. AC motor rewinding, DC armature rewinds, stator rewinding, and emergency service. Submit a repair request, matched to shops in your area.",
-  ogTitle: "Electric Motor Repair & Rewinding Shop Directory | IQMotorBase",
+  ogTitle: "Electric Motor Repair & Rewinding Shop Directory | 3PhaseFlow",
   ogDescription:
     "Find certified motor repair and rewinding shops near you. AC, DC, armature, and stator rewinds. Browse by state or submit a requirement.",
   keywords: [

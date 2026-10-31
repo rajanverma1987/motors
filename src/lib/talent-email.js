@@ -6,7 +6,7 @@ import { talentAvailabilityLabel } from "@/lib/talent-seo";
 export { talentAvailabilityLabel };
 
 export async function sendTalentVerificationCodeEmail(to, code) {
-  const subject = "Your IQMotorBase talent verification code";
+  const subject = "Your 3PhaseFlow talent verification code";
   const html = `
     <p>Your code to sign in to your free electric motor shop talent profile:</p>
     <p style="font-size:24px;font-weight:bold;letter-spacing:4px;font-family:monospace">${code}</p>
@@ -34,7 +34,7 @@ export async function sendTalentJobAlertEmail({
     <p><strong>${escapeHtml(jobTitle)}</strong><br/>
     ${escapeHtml(shopName || "Motor repair shop")}${location ? ` · ${escapeHtml(location)}` : ""}</p>
     <p><a href="${escapeHtml(jobUrl)}">View job and apply with your profile</a></p>
-    <p style="font-size:12px;color:#666;">You are receiving this because you created a free talent profile on IQMotorBase.
+    <p style="font-size:12px;color:#666;">You are receiving this because you created a free talent profile on 3PhaseFlow.
     <a href="${escapeHtml(unsub)}">Unsubscribe from job alerts</a>.</p>
   `;
   return sendMarketingEmail(to, subject, html);
@@ -78,7 +78,7 @@ export async function sendShopNewApplicantEmail({
 }) {
   const subject = `New applicant for ${jobTitle}`;
   const html = `
-    <p>Someone applied to <strong>${escapeHtml(jobTitle)}</strong> via IQMotorBase Careers.</p>
+    <p>Someone applied to <strong>${escapeHtml(jobTitle)}</strong> via 3PhaseFlow Careers.</p>
     <p><strong>${escapeHtml(applicantName || "Applicant")}</strong>
     (${escapeHtml(applicantEmail || "")})</p>
     ${profileUrl ? `<p><a href="${escapeHtml(profileUrl)}">View public talent profile</a></p>` : ""}
@@ -101,7 +101,7 @@ export const TALENT_INVITE_DEFAULT_SUBJECT =
 
 export const TALENT_INVITE_DEFAULT_BODY = `Hi,
 
-We're inviting you to create a free electric motor shop talent profile on IQMotorBase.
+We're inviting you to create a free electric motor shop talent profile on 3PhaseFlow.
 
 Shops hire winders, technicians, machinists, and field service pros through our Talent directory and Careers jobs. Sign in with a 6-digit email code (no password), add your skills and preferred states, and get location-matched job alerts.
 
@@ -120,7 +120,7 @@ export function buildTalentInviteEmailHtml(bodyText, request) {
     .join("\n");
 
   return `
-    ${paragraphs || "<p>You're invited to create a free talent profile on IQMotorBase.</p>"}
+    ${paragraphs || "<p>You're invited to create a free talent profile on 3PhaseFlow.</p>"}
     <p style="margin:24px 0;">
       <a href="${escapeHtml(createUrl)}"
          style="display:inline-block;background:#0b5fff;color:#ffffff;text-decoration:none;padding:12px 20px;border-radius:6px;font-weight:600;">

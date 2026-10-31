@@ -10,7 +10,7 @@ export const metadata = marketingPageMetadata({
   path: "/careers",
   title: "Motor Repair Shop Jobs | Technicians & Winders",
   description:
-    "Browse open roles at motor repair shops. Technician, winder, and field service jobs posted by shops on IQMotorBase.",
+    "Browse open roles at motor repair shops. Technician, winder, and field service jobs posted by shops on 3PhaseFlow.",
 });
 
 export default async function CareersPage() {
@@ -22,7 +22,7 @@ export default async function CareersPage() {
       <div className="border-b border-border pb-8">
         <h1 className="text-3xl font-bold tracking-tight text-title sm:text-4xl">Careers</h1>
         <p className="mt-3 text-lg text-secondary">
-          Open positions posted by motor repair and rewinding shops on IQMotorBase.com. Apply with a free{" "}
+          Open positions posted by motor repair and rewinding shops on 3PhaseFlow.com. Apply with a free{" "}
           <Link href="/talent" className="font-medium text-primary hover:underline">
             talent profile
           </Link>{" "}

@@ -73,9 +73,9 @@ export async function createPaypalProductAndPlan(planDoc) {
 
   const price = Number(planDoc.customPrice || 0).toFixed(2);
   const cycle = String(planDoc.billingCycle || "monthly");
-  const productName = String(planDoc.name || "IQWireCalculator").slice(0, 127);
+  const productName = String(planDoc.name || "3PhaseWire").slice(0, 127);
   const planName = `${productName} ${cycle} ${price}`.slice(0, 127);
-  const description = String(planDoc.description || planDoc.name || "IQWireCalculator").slice(0, 127);
+  const description = String(planDoc.description || planDoc.name || "3PhaseWire").slice(0, 127);
 
   const productRes = await fetch(`${base}/v1/catalogs/products`, {
     method: "POST",
@@ -270,7 +270,7 @@ export async function createPaypalSubscription({
   returnUrl,
   cancelUrl,
   subscriberEmail,
-  brandName = "IQMotorBase",
+  brandName = "3PhaseFlow",
   customId,
   landingPage,
 }) {
@@ -290,7 +290,7 @@ export async function createPaypalSubscription({
         }
       : undefined,
     application_context: {
-      brand_name: String(brandName || "IQMotorBase").slice(0, 127),
+      brand_name: String(brandName || "3PhaseFlow").slice(0, 127),
       locale: "en-US",
       shipping_preference: "NO_SHIPPING",
       user_action: "SUBSCRIBE_NOW",

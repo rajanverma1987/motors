@@ -11,11 +11,11 @@ export const metadata = {
     "Reduce firefighting in electric motor repair shops: clear statuses, parts visibility, change orders, and customer updates, without extra headcount.",
   keywords: ["manage repair jobs", "electric motor shop efficiency", "repair shop workflow"],
   openGraph: {
-    title: "How to Manage Repair Jobs Efficiently | IQMotorBase.com",
+    title: "How to Manage Repair Jobs Efficiently | 3PhaseFlow.com",
     description: "Statuses, handoffs, and fewer status calls for electric motor shops.",
     url: path,
     type: "article",
-    siteName: "IQMotorBase.com",
+    siteName: "3PhaseFlow.com",
     locale: "en_US",
   },
   alternates: { canonical: path },

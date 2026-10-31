@@ -14,9 +14,9 @@ const HERO_VIDEO_PATH = "/videos/job-diagram-drawing.mp4?v=720";
 const siteUrl = getPublicSiteUrl().replace(/\/$/, "");
 const ogImageUrl = `${siteUrl}${OG_IMAGE_PATH}`;
 
-const TITLE = "Job Diagram Drawing Tool for Motor Repair Shops | IQMotorBase";
+const TITLE = "Job Diagram Drawing Tool for Motor Repair Shops | 3PhaseFlow";
 const DESCRIPTION =
-  "Why paper sketches and phone photos fail electric motor shops, how IQMotorBase’s tablet-with-pen job diagram tool works from the datasheet, and how linked drawings protect handoffs and warranties.";
+  "Why paper sketches and phone photos fail electric motor shops, how 3PhaseFlow’s tablet-with-pen job diagram tool works from the datasheet, and how linked drawings protect handoffs and warranties.";
 
 export const metadata = {
   title: TITLE,
@@ -34,7 +34,7 @@ export const metadata = {
     description: DESCRIPTION,
     url: path,
     type: "article",
-    siteName: "IQMotorBase.com",
+    siteName: "3PhaseFlow.com",
     locale: "en_US",
     images: [
       {
@@ -152,7 +152,7 @@ export default function BlogJobDiagramDrawingToolPage() {
         </section>
 
         <section>
-          <h2 className="text-2xl font-bold text-title sm:text-3xl mt-10">What we built in IQMotorBase</h2>
+          <h2 className="text-2xl font-bold text-title sm:text-3xl mt-10">What we built in 3PhaseFlow</h2>
           <p className="mt-4 text-secondary leading-relaxed">
             We put the drawing tool where technicians already capture motor truth: inside the datasheet for the job. From the
             AC or DC datasheet screen, a tech opens <strong className="font-semibold text-title">Draw/View Diagram</strong>{" "}

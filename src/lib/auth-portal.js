@@ -249,7 +249,7 @@ const MOBILE_APP_JWT_TYP = "motors_mobile_app";
 const TRACK_JWT_TYP = "motors_iqmotortrack";
 
 /**
- * JWT for IQWireCalculator mobile app (Bearer). Not interchangeable with portal or technician tokens.
+ * JWT for 3PhaseWire mobile app (Bearer). Not interchangeable with portal or technician tokens.
  */
 export async function createMobileAppToken({ accountId, email, name }) {
   return new SignJWT({
@@ -283,7 +283,7 @@ export async function verifyMobileAppToken(token) {
 }
 
 /**
- * JWT for IQMotorTrack plant PWA (Bearer).
+ * JWT for 3PhaseTrack plant PWA (Bearer).
  */
 export async function createTrackToken({ facilityId, email, contactName }) {
   return new SignJWT({

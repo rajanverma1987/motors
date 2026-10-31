@@ -241,7 +241,7 @@ export default function NearMeGuide() {
           </li>
         </ol>
         <GuideCta href={LISTINGS}>
-          Browse EASA-accredited and certified shops in the IQMotorBase directory →
+          Browse EASA-accredited and certified shops in the 3PhaseFlow directory →
         </GuideCta>
         <p className="mt-3">
           <Link href={LISTINGS} className="font-medium text-primary hover:underline">
@@ -377,7 +377,7 @@ export default function NearMeGuide() {
           <li>
             <h3 className="font-semibold text-title">2. Call shops directly, don&apos;t use contact forms.</h3>
             <p className="mt-1 text-secondary leading-relaxed">
-              Search the IQMotorBase directory for shops in your state that list emergency service. Call them.
+              Search the 3PhaseFlow directory for shops in your state that list emergency service. Call them.
               Emergency authorization happens on the phone, not via a web form.
             </p>
           </li>

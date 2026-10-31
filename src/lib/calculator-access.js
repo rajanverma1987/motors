@@ -73,7 +73,7 @@ export async function requireCalculatorAccount(request) {
 export function calculatorAuthRequiredResponse(nextPath) {
   const urls = calculatorAuthUrls(nextPath);
   return {
-    error: "Sign in to your IQMotorBase portal account before purchasing calculator access.",
+    error: "Sign in to your 3PhaseFlow portal account before purchasing calculator access.",
     authenticated: false,
     ...urls,
   };

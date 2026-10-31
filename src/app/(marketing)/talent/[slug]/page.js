@@ -44,7 +44,7 @@ export async function generateMetadata({ params }) {
     return marketingPageMetadata({
       path: `/talent/${slug}`,
       title: "Talent profile",
-      description: "Motor shop talent profile on IQMotorBase.",
+      description: "Motor shop talent profile on 3PhaseFlow.",
     });
   }
   const profile = serializeTalentProfile(doc);
@@ -165,7 +165,7 @@ export default async function TalentPublicProfilePage({ params }) {
         <div className="mt-4">
           <TalentShareButtons
             profileUrl={canonical}
-            shareTitle={`${profile.fullName || "Talent"} | IQMotorBase Talent`}
+            shareTitle={`${profile.fullName || "Talent"} | 3PhaseFlow Talent`}
             shareText={buildTalentShareText(profile)}
           />
         </div>

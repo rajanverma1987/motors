@@ -3,12 +3,12 @@ import { getMobileAppBillingPlans } from "@/lib/mobile-app-subscription";
 
 export const dynamic = "force-dynamic";
 
-/** Public pricing for IQWireCalculator (Admin can change the plan price any time). */
+/** Public pricing for 3PhaseWire (Admin can change the plan price any time). */
 export async function GET() {
   try {
     const billing = await getMobileAppBillingPlans();
     return NextResponse.json({
-      name: "IQWireCalculator",
+      name: "3PhaseWire",
       trialDays: billing.trialDays,
       currency: billing.currency,
       paypalConfigured: billing.paypalConfigured,

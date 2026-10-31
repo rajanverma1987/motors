@@ -59,7 +59,7 @@ function drawDocumentHeader(doc, generatedAt) {
     doc.image(logoPath, logoX, y, { width: logoW });
     y += 30;
   } else {
-    doc.font("Helvetica-Bold").fontSize(18).fillColor(BRAND.primary).text("IQMotorBase.com", MARGIN, y, {
+    doc.font("Helvetica-Bold").fontSize(18).fillColor(BRAND.primary).text("3PhaseFlow.com", MARGIN, y, {
       width: CONTENT_W,
       align: "center",
     });
@@ -412,7 +412,7 @@ export function buildCalculatorEstimatePdfBuffer(data) {
 
     y = ensureSpace(doc, y, 70, { repeatMiniHeader: true });
     const disclaimerText =
-      "IQMotorBase.com provides informational ballpark ranges to help plan motor repair and rewinding budgets. Always obtain written quotes from qualified motor repair shops after inspection. Visit iqmotorbase.com to compare shops and request quotes.";
+      "3PhaseFlow.com provides informational ballpark ranges to help plan motor repair and rewinding budgets. Always obtain written quotes from qualified motor repair shops after inspection. Visit 3phaseflow.com to compare shops and request quotes.";
     const disclaimerH = measureTextHeight(doc, disclaimerText, CONTENT_W - 28, 8) + 36;
     y = ensureSpace(doc, y, disclaimerH, { repeatMiniHeader: true });
     doc.save();

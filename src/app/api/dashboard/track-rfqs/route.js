@@ -4,7 +4,7 @@ import { listTrackLeadsForShop, trackRfqStateForLead } from "@/lib/track-shop-co
 
 export const dynamic = "force-dynamic";
 
-/** §9.4 / §14.2 - the shop's list of Motor Down RFQs from IQMotorTrack. */
+/** §9.4 / §14.2 - the shop's list of Motor Down RFQs from 3PhaseTrack. */
 export async function GET(request) {
   try {
     const user = await getPortalUserFromRequest(request);
@@ -55,6 +55,6 @@ export async function GET(request) {
     return NextResponse.json({ items: out, totalCount: out.length });
   } catch (err) {
     console.error("Dashboard track RFQ list error:", err);
-    return NextResponse.json({ error: "Failed to load IQMotorTrack requests" }, { status: 500 });
+    return NextResponse.json({ error: "Failed to load 3PhaseTrack requests" }, { status: 500 });
   }
 }

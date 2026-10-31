@@ -4,7 +4,7 @@ import mongoose from "mongoose";
  * Inbound demo / pricing requests from the marketing site.
  *
  * These used to be email-only: /api/contact-demo and /api/pricing-contact sent a
- * notification to contact@IQMotorBase.com and stored nothing. When SMTP failed the
+ * notification to contact@3PhaseFlow.com and stored nothing. When SMTP failed the
  * visitor got an error and the lead was gone with no trace, and there was no way to
  * tell "nobody submitted" apart from "delivery broke". Every submission is now
  * persisted first and the email outcome recorded against it, so the mailbox is a

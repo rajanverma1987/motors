@@ -4,7 +4,7 @@ import { marketingPageMetadata } from "@/lib/marketing-page-metadata";
 export const metadata = marketingPageMetadata({
   path: "/talent/unsubscribe",
   title: "Job alert preferences | Talent",
-  description: "Manage IQMotorBase talent job alert email preferences.",
+  description: "Manage 3PhaseFlow talent job alert email preferences.",
   index: false,
   follow: false,
 });

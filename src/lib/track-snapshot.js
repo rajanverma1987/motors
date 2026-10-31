@@ -1,5 +1,5 @@
 /**
- * Snapshot builders for IQMotorTrack RFQs (§4.5, §9.3).
+ * Snapshot builders for 3PhaseTrack RFQs (§4.5, §9.3).
  * Every RFQ carries the motor exactly as it was when sent, so later edits to the
  * motor never change what shops already received.
  */

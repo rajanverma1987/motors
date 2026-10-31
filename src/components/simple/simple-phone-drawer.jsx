@@ -53,7 +53,7 @@ export default function SimplePhoneDrawer() {
   const settingsHref = calculatorOnly
     ? "/dashboards?tab=calculators"
     : settingsPathForPortalUi(user?.portalUi);
-  const companyName = String(user?.shopName || "").trim() || "IQMotorBase";
+  const companyName = String(user?.shopName || "").trim() || "3PhaseFlow";
   const navItems = hubChrome?.drawerItems || [];
   const activeTab = hubChrome?.activeTab || null;
   const onSelectTab = hubChrome?.onSelectTab;

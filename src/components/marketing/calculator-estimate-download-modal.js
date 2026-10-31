@@ -89,7 +89,7 @@ export default function CalculatorEstimateDownloadModal({
       const blob = await res.blob();
       const disposition = res.headers.get("Content-Disposition") || "";
       const match = disposition.match(/filename="([^"]+)"/);
-      const filename = match?.[1] || "IQMotorBase-Motor-Rewind-Estimate.pdf";
+      const filename = match?.[1] || "3PhaseFlow-Motor-Rewind-Estimate.pdf";
       const url = URL.createObjectURL(blob);
       const anchor = document.createElement("a");
       anchor.href = url;

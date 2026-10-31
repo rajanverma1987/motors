@@ -46,7 +46,7 @@ export async function POST(request) {
       returnUrl,
       cancelUrl,
       subscriberEmail: ctx.email,
-      brandName: "IQMotorBase Calculators",
+      brandName: "3PhaseFlow Calculators",
     });
 
     await connectDB();

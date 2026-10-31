@@ -41,7 +41,7 @@ export async function appFetch(path, opts = {}) {
         code: "TIMEOUT",
       });
     }
-    throw new ApiError("Cannot reach IQWireCalculator. Check your connection.", {
+    throw new ApiError("Cannot reach 3PhaseWire. Check your connection.", {
       status: 0,
       code: "NETWORK",
     });

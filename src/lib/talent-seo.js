@@ -26,7 +26,7 @@ export function buildTalentMetaDescription(profile) {
   const skills = (profile.skills || []).slice(0, 3).map(talentSkillLabel).join(", ");
   let out = `${name}${loc ? ` in ${loc}` : ""}. ${avail}.`;
   if (skills) out += ` Skills: ${skills}.`;
-  out += " Free talent profile on IQMotorBase.";
+  out += " Free talent profile on 3PhaseFlow.";
   if (out.length <= 160) return out;
   return `${out.slice(0, 157).trim()}...`;
 }
@@ -38,7 +38,7 @@ export function buildTalentShareText(profile) {
   const parts = [`Meet ${name}`];
   if (headline) parts.push(headline);
   if (loc) parts.push(loc);
-  parts.push("Free talent profile on IQMotorBase.");
+  parts.push("Free talent profile on 3PhaseFlow.");
   return parts.join(". ");
 }
 
@@ -53,7 +53,7 @@ export function buildTalentProfileMetadata(profile, baseUrl) {
   const path = `/talent/${slug}`;
   const canonical = `${base}${path}`;
   const name = profile?.fullName || "Talent";
-  const title = `${name} | Electric Motor Shop Talent | IQMotorBase`;
+  const title = `${name} | Electric Motor Shop Talent | 3PhaseFlow`;
   const description = buildTalentMetaDescription(profile || {});
   const ogImage = `${base}/og-image.png`;
   return {
@@ -65,7 +65,7 @@ export function buildTalentProfileMetadata(profile, baseUrl) {
       title: `${name} | Electric Motor Shop Talent`,
       description,
       url: canonical,
-      siteName: "IQMotorBase.com",
+      siteName: "3PhaseFlow.com",
       locale: "en_US",
       type: "profile",
       images: [
@@ -73,13 +73,13 @@ export function buildTalentProfileMetadata(profile, baseUrl) {
           url: ogImage,
           width: 1200,
           height: 630,
-          alt: `${name} on IQMotorBase Talent`,
+          alt: `${name} on 3PhaseFlow Talent`,
         },
       ],
     },
     twitter: {
       card: "summary_large_image",
-      title: `${name} | IQMotorBase Talent`,
+      title: `${name} | 3PhaseFlow Talent`,
       description,
       images: [ogImage],
     },

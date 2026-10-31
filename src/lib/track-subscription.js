@@ -43,7 +43,7 @@ async function upsertBillingPlan() {
   let plan = await SubscriptionPlan.findOne({ slug });
   if (!plan) {
     plan = await SubscriptionPlan.create({
-      name: "IQMotorTrack Pro",
+      name: "3PhaseTrack Pro",
       slug,
       description: "Unlimited motors for plant motor maintenance and repair tracking.",
       planType: "paypal",
@@ -72,7 +72,7 @@ export async function ensureTrackBillingPlan() {
     paypalPlanId,
     usd: Number.isFinite(usd) ? usd : TRACK_DEFAULT_MONTHLY_USD,
     currency: String(plan?.currency || "USD").toUpperCase(),
-    planName: plan?.name || "IQMotorTrack Pro",
+    planName: plan?.name || "3PhaseTrack Pro",
     planSlug: plan?.slug || TRACK_SUBSCRIPTION_PLAN_SLUG,
     billingCycle: "monthly",
     planType: plan?.planType || "paypal",
@@ -239,7 +239,7 @@ export async function cancelTrackPaypalSubscription(facility) {
   const subId = String(facility?.paypalSubscriptionId || "").trim();
   if (!subId || !paypalConfigured()) return;
   try {
-    await cancelPaypalSubscription(subId, "Cancelled by facility from IQMotorTrack");
+    await cancelPaypalSubscription(subId, "Cancelled by facility from 3PhaseTrack");
   } catch (err) {
     console.warn("cancelTrackPaypalSubscription:", err.message);
   }
@@ -306,7 +306,7 @@ export async function revokeTrackAccess(facility) {
   const subId = String(facility.paypalSubscriptionId || "").trim();
   if (subId) {
     try {
-      await cancelPaypalSubscription(subId, "Admin removed IQMotorTrack Pro access");
+      await cancelPaypalSubscription(subId, "Admin removed 3PhaseTrack Pro access");
     } catch (err) {
       console.warn("revokeTrackAccess paypal:", err.message);
     }

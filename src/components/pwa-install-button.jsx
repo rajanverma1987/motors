@@ -55,7 +55,7 @@ export default function PwaInstallButton({ className = "" }) {
     if (isIos) setShowIosHint(true);
     if (isAndroid) {
       if (isInsecureLan) {
-        setAndroidHint("Install from https://iqmotorbase.com in Chrome (HTTP LAN installs are blocked on Android).");
+        setAndroidHint("Install from https://3phaseflow.com in Chrome (HTTP LAN installs are blocked on Android).");
       } else if (isSamsungInternet) {
         setAndroidHint("Open this site in Chrome → menu → Install app (Samsung Internet is blocked by Play Protect).");
       }
@@ -88,7 +88,7 @@ export default function PwaInstallButton({ className = "" }) {
         size="sm"
         className={className}
         onClick={handleInstall}
-        title="Install IQMotorBase on this device (use Chrome on Android)"
+        title="Install 3PhaseFlow on this device (use Chrome on Android)"
       >
         <FiDownload className="h-4 w-4 shrink-0" aria-hidden />
         Install app

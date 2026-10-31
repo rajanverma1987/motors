@@ -372,7 +372,7 @@ export async function POST(request) {
     await connectDB();
     const email = user.email.trim().toLowerCase();
     const body = await request.json().catch(() => ({}));
-    // A new proposal can never claim an IQMotorTrack link: only conversion sets those.
+    // A new proposal can never claim an 3PhaseTrack link: only conversion sets those.
     const payload = stripTrackOwnedFields(sanitizeSimplePortalPayload(body));
     delete payload.removedAt;
     delete payload.removedByEmail;

@@ -3,8 +3,8 @@ import mongoose from "mongoose";
 const SUB_STATUSES = ["free", "active", "cancelled", "past_due", "expired"];
 
 /**
- * IQMotorTrack facility account (plant / facility owner).
- * Separate from shop CRM users and IQWireCalculator accounts.
+ * 3PhaseTrack facility account (plant / facility owner).
+ * Separate from shop CRM users and 3PhaseWire accounts.
  */
 const trackFacilitySchema = new mongoose.Schema(
   {

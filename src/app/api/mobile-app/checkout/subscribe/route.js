@@ -35,7 +35,7 @@ export async function POST(request) {
     if (!calcPlan.paypalPlanId) {
       return NextResponse.json(
         {
-          error: `IQWireCalculator ${billingCycle} subscription (“${calcPlan.planSlug}”) is not linked to PayPal yet. Set the price in Admin → Subscription plans.`,
+          error: `3PhaseWire ${billingCycle} subscription (“${calcPlan.planSlug}”) is not linked to PayPal yet. Set the price in Admin → Subscription plans.`,
         },
         { status: 503 }
       );

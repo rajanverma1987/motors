@@ -73,7 +73,7 @@ export async function verifyAppleSignedTransaction(jws) {
   const productId = String(claims.productId || "");
   const bundleId = String(claims.bundleId || "");
   if (productId !== MOBILE_APP_IAP_PRODUCT_ID) {
-    throw new Error("This purchase is not the IQWireCalculator monthly subscription.");
+    throw new Error("This purchase is not the 3PhaseWire monthly subscription.");
   }
   if (bundleId && bundleId !== MOBILE_APP_IAP_IOS_BUNDLE) {
     throw new Error("This purchase belongs to a different app.");
@@ -146,7 +146,7 @@ export async function verifyGooglePlaySubscription(purchaseToken) {
   const line = Array.isArray(data.lineItems) ? data.lineItems[0] : null;
   const productId = String(line?.productId || data.productId || "");
   if (productId && productId !== MOBILE_APP_IAP_PRODUCT_ID) {
-    throw new Error("This purchase is not the IQWireCalculator monthly subscription.");
+    throw new Error("This purchase is not the 3PhaseWire monthly subscription.");
   }
   const expiry = line?.expiryTime || data.expiryTime || "";
   const expiresAt = expiry ? new Date(expiry) : null;

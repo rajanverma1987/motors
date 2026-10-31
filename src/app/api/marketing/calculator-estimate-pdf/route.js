@@ -52,7 +52,7 @@ export async function POST(request) {
     const breakdown = estimate.breakdown || {};
 
     const safeName = name.replace(/[^\w.-]+/g, "_").slice(0, 40) || "estimate";
-    const filename = `IQMotorBase-Motor-Rewind-Estimate-${safeName}.pdf`;
+    const filename = `3PhaseFlow-Motor-Rewind-Estimate-${safeName}.pdf`;
 
     const pdfBuffer = await buildCalculatorEstimatePdfBuffer({
       visitor: { name, email: emailRaw, phone, visitorType },

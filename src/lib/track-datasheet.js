@@ -1,7 +1,7 @@
 /**
- * IQMotorTrack datasheet storage and merge rules (§6.5, §9.8).
+ * 3PhaseTrack datasheet storage and merge rules (§6.5, §9.8).
  *
- * The stored shape is byte-for-byte the IQMotorBase datasheet shape so values
+ * The stored shape is byte-for-byte the 3PhaseFlow datasheet shape so values
  * round-trip losslessly: AC uses `dataSheet` / `disassembly` / `assembly`,
  * DC uses `fieldFrame` / `armature`.
  */
@@ -210,7 +210,7 @@ export function trackDatasheetProvenanceLine(version) {
 
 /**
  * Merge an incoming datasheet (usually from a shop write-back) into the current
- * IQMotorTrack values following the §9.8 table.
+ * 3PhaseTrack values following the §9.8 table.
  *
  * - Track field empty                → fill it
  * - Values equal                     → no change, record a confirming source

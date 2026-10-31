@@ -38,10 +38,10 @@ export const viewport = {
 
 export const metadata = {
   metadataBase: new URL(siteUrl),
-  applicationName: "IQMotorBase",
+  applicationName: "3PhaseFlow",
   title: {
-    default: "Motor Repair Shop Software, Work Orders, Leads & Inventory | IQMotorBase",
-    template: "%s | IQMotorBase",
+    default: "Motor Repair Shop Software, Work Orders, Leads & Inventory | 3PhaseFlow",
+    template: "%s | 3PhaseFlow",
   },
   description:
     "Manage work orders, leads, inventory, and invoicing for your electric motor repair shop, all in one platform. Book a free demo today.",
@@ -53,13 +53,13 @@ export const metadata = {
     "motor repair leads",
     "industrial motor repair",
   ],
-  authors: [{ name: "IQMotorBase.com" }],
-  creator: "IQMotorBase.com",
+  authors: [{ name: "3PhaseFlow.com" }],
+  creator: "3PhaseFlow.com",
   manifest: "/manifest.webmanifest",
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
-    title: "IQMotorBase",
+    title: "3PhaseFlow",
   },
   icons: {
     icon: [
@@ -71,8 +71,8 @@ export const metadata = {
   openGraph: {
     type: "website",
     locale: "en_US",
-    siteName: "IQMotorBase.com",
-    title: "Motor Repair Shop Software | Work Orders, Leads & Inventory | IQMotorBase",
+    siteName: "3PhaseFlow.com",
+    title: "Motor Repair Shop Software | Work Orders, Leads & Inventory | 3PhaseFlow",
     description:
       "Manage work orders, leads, inventory, and invoicing for your electric motor repair shop, all in one platform. Book a free demo today.",
     images: [
@@ -80,13 +80,13 @@ export const metadata = {
         url: "/og-image.png",
         width: 1200,
         height: 630,
-        alt: "IQMotorBase.com to Motor Repair Center Software",
+        alt: "3PhaseFlow.com to Motor Repair Center Software",
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "Motor Repair Shop Software | Work Orders, Leads & Inventory | IQMotorBase",
+    title: "Motor Repair Shop Software | Work Orders, Leads & Inventory | 3PhaseFlow",
     description:
       "Manage work orders, leads, inventory, and invoicing for your electric motor repair shop, all in one platform. Book a free demo today.",
     images: ["/og-image.png"],

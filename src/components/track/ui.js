@@ -2,7 +2,7 @@
 
 import Badge from "@/components/ui/badge";
 
-/** Card wrapper used by every IQMotorTrack panel so spacing stays identical. */
+/** Card wrapper used by every 3PhaseTrack panel so spacing stays identical. */
 export function TrackCard({ title, action, children, className = "" }) {
   return (
     <section className={`rounded-2xl border border-border bg-card p-4 ${className}`.trim()}>

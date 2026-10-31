@@ -756,7 +756,7 @@ export default function CustomersPanel({ createNonce = 0 }) {
       return "No customers yet. Click Add New to create one.";
     }
     if (showingBaseLeads && totalCount === 0) {
-      return "No IQMotorBase website leads assigned to this shop yet.";
+      return "No 3PhaseFlow website leads assigned to this shop yet.";
     }
     if (totalCount === 0) return "No customers or leads yet.";
     return "No customers or leads yet.";
@@ -765,12 +765,12 @@ export default function CustomersPanel({ createNonce = 0 }) {
   const leadSourceTabs = [
     {
       id: LEAD_SOURCE_BASE,
-      label: "IQMotorBase Leads",
+      label: "3PhaseFlow Leads",
       count: baseLeadTotalCount,
     },
     {
       id: LEAD_SOURCE_TRACK,
-      label: "IQMotorTrack Leads",
+      label: "3PhaseTrack Leads",
       count: trackLeadTotalCount,
     },
   ];

@@ -31,32 +31,32 @@ function escHtmlEmail(v) {
   return v == null ? "" : String(v).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 }
 
-/** Replace legacy motorswinding.com domain in outgoing email HTML (templates, env URLs, DB content). */
+/** Replace legacy brand domains in outgoing email HTML (templates, env URLs, DB content). */
 function sanitizeEmailBodyHtml(html) {
   if (!html) return html;
   return String(html)
-    .replace(/(?:https?:\/\/)?(?:www\.)?motorswinding\.com/gi, (match) =>
-      /^https?:\/\//i.test(match) ? "https://iqmotorbase.com" : "iqmotorbase.com"
+    .replace(/(?:https?:\/\/)?(?:www\.)?(?:motorswinding|iqmotorbase)\.com/gi, (match) =>
+      /^https?:\/\//i.test(match) ? "https://3phaseflow.com" : "3phaseflow.com"
     )
-    .replace(/@(?:www\.)?motorswinding\.com/gi, "@iqmotorbase.com");
+    .replace(/@(?:www\.)?(?:motorswinding|iqmotorbase)\.com/gi, "@3phaseflow.com");
 }
 
-/** IQ Motorbase header for platform / admin emails (logo from `public/logo.png`). */
+/** 3PhaseFlow header for platform / admin emails (logo from brand wordmark). */
 function wrapPlatformBrandedHtml(bodyHtml) {
   const site = getPublicSiteUrl();
   const logoUrl = getBrandLogoAbsoluteUrl();
   if (!logoUrl.startsWith("http")) return bodyHtml;
-  const header = `<div style="margin:0 0 24px 0;padding-bottom:16px;border-bottom:1px solid #e5e7eb"><a href="${escHtmlEmail(site)}" style="text-decoration:none;display:inline-block"><img src="${escHtmlEmail(logoUrl)}" alt="IQ Motorbase" width="280" style="max-width:100%;width:280px;height:auto;display:block;border:0" /></a></div>`;
+  const header = `<div style="margin:0 0 24px 0;padding-bottom:16px;border-bottom:1px solid #e5e7eb"><a href="${escHtmlEmail(site)}" style="text-decoration:none;display:inline-block"><img src="${escHtmlEmail(logoUrl)}" alt="3PhaseFlow" width="280" style="max-width:100%;width:280px;height:auto;display:block;border:0" /></a></div>`;
   return header + bodyHtml;
 }
 
 export async function sendListingApproved(to, companyName) {
-  const subject = "Congratulations! Your listing is live on IQMotorBase.com";
+  const subject = "Congratulations! Your listing is live on 3PhaseFlow.com";
   const html = `
     <p>Congratulations${companyName ? ` from ${companyName}` : ""}!</p>
-    <p>Your repair center listing on IQMotorBase.com has been <strong>approved</strong> and is now live on our website. Your company is listed in the directory so customers in your area can find and contact you.</p>
-    <p>Thank you for being part of IQMotorBase.com.</p>
-    <p>,  IQMotorBase.com</p>
+    <p>Your repair center listing on 3PhaseFlow.com has been <strong>approved</strong> and is now live on our website. Your company is listed in the directory so customers in your area can find and contact you.</p>
+    <p>Thank you for being part of 3PhaseFlow.com.</p>
+    <p>,  3PhaseFlow.com</p>
   `;
   return sendEmail(to, subject, wrapPlatformBrandedHtml(html));
 }
@@ -70,63 +70,63 @@ export async function sendListingPremiumPartnerEmail({ to, companyName, publicLi
     v == null ? "" : String(v).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
   const company = (companyName && String(companyName).trim()) || "";
   const greet = company ? ` ${esc(company)}` : "";
-  const subject = "Congratulations! You are a Premium Partner on IQMotorBase.com";
+  const subject = "Congratulations! You are a Premium Partner on 3PhaseFlow.com";
   const html = `
     <p>Congratulations${greet}!</p>
-    <p>Your repair center listing is now a <strong>Premium Partner</strong> on IQMotorBase.com.</p>
+    <p>Your repair center listing is now a <strong>Premium Partner</strong> on 3PhaseFlow.com.</p>
     <p>That means your shop appears at the top of directory search and location results, with a Premium Partner badge on your listing card and detail page so buyers can spot you quickly.</p>
     ${
       publicListingUrl
         ? `<p><strong>Your public listing:</strong> <a href="${esc(publicListingUrl)}">${esc(publicListingUrl)}</a></p>`
         : ""
     }
-    <p>Thank you for partnering with IQMotorBase.com. We are glad to help more industrial buyers find your shop.</p>
+    <p>Thank you for partnering with 3PhaseFlow.com. We are glad to help more industrial buyers find your shop.</p>
     <p>If you have questions about your Premium Partner placement, reply to this email or contact us anytime.</p>
-    <p>The IQMotorBase.com team</p>
+    <p>The 3PhaseFlow.com team</p>
   `;
   return sendEmail(to, subject, wrapPlatformBrandedHtml(html));
 }
 
 export async function sendListingRejected(to, companyName, reason) {
-  const subject = "Update on your IQMotorBase.com listing submission";
+  const subject = "Update on your 3PhaseFlow.com listing submission";
   const html = `
     <p>Hi${companyName ? ` from ${companyName}` : ""},</p>
-    <p>Thank you for submitting your repair center to IQMotorBase.com. After review, we are unable to approve your listing at this time.</p>
+    <p>Thank you for submitting your repair center to 3PhaseFlow.com. After review, we are unable to approve your listing at this time.</p>
     ${reason ? `<p><strong>Reason for rejection:</strong> ${reason}</p>` : "<p>No specific reason was provided.</p>"}
     <p>If you have questions or would like to resubmit with updates, please reply to this email or contact us.</p>
-    <p>,  IQMotorBase.com</p>
+    <p>,  3PhaseFlow.com</p>
   `;
   return sendEmail(to, subject, wrapPlatformBrandedHtml(html));
 }
 
 export async function sendNewReviewNotification(to, companyName, reviewerName, rating, reviewBody) {
-  const subject = `New customer review on IQMotorBase.com to ${companyName}`;
+  const subject = `New customer review on 3PhaseFlow.com to ${companyName}`;
   const stars = "★".repeat(Math.round(rating)) + "☆".repeat(5 - Math.round(rating));
   const html = `
     <p>Hi,</p>
-    <p>A customer left a new review for <strong>${companyName}</strong> on IQMotorBase.com.</p>
+    <p>A customer left a new review for <strong>${companyName}</strong> on 3PhaseFlow.com.</p>
     <p><strong>Rating:</strong> ${stars} (${rating}/5)</p>
     <p><strong>From:</strong> ${reviewerName}</p>
     <p><strong>Review:</strong></p>
     <p>${reviewBody.replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/\n/g, "<br />")}</p>
-    <p>,  IQMotorBase.com</p>
+    <p>,  3PhaseFlow.com</p>
   `;
   return sendEmail(to, subject, wrapPlatformBrandedHtml(html));
 }
 
 /** Rewind calculator RFQ, override with REWIND_CALCULATOR_RFQ_EMAIL if needed. */
 const rewindCalculatorRfqEmail = () =>
-  process.env.REWIND_CALCULATOR_RFQ_EMAIL?.trim() || "contact@IQMotorBase.com";
+  process.env.REWIND_CALCULATOR_RFQ_EMAIL?.trim() || "contact@3PhaseFlow.com";
 
 /**
- * Notify IQMotorBase when a visitor submits an RFQ after using the public rewind ballpark calculator.
+ * Notify 3PhaseFlow when a visitor submits an RFQ after using the public rewind ballpark calculator.
  * @param {{ leadName: string, leadEmail: string, leadPhone?: string, leadCity?: string, leadZip?: string, problemDescription?: string, htmlRows: string }} params
  */
 export async function sendRewindCalculatorRfqToAdmin(params) {
   const to = rewindCalculatorRfqEmail();
   const esc = (v) =>
     v == null ? "" : String(v).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
-  const subject = "Rewind calculator RFQ, IQMotorBase.com";
+  const subject = "Rewind calculator RFQ, 3PhaseFlow.com";
   const html = `
     <p>A visitor used the <strong>electric motor rewinding cost calculator</strong> and requested quotes from shops in their area.</p>
     <table style="border-collapse:collapse;margin-top:12px;">
@@ -141,13 +141,13 @@ export async function sendRewindCalculatorRfqToAdmin(params) {
     <p style="margin-top:16px;"><strong>Calculator summary</strong></p>
     <table style="border-collapse:collapse;">${params.htmlRows}</table>
     ${params.problemDescription ? `<p style="margin-top:16px;"><strong>Message / notes</strong></p><p>${esc(params.problemDescription).replace(/\n/g, "<br/>")}</p>` : ""}
-    <p>,  IQMotorBase.com (automated)</p>
+    <p>,  3PhaseFlow.com (automated)</p>
   `;
   return sendEmail(to, subject, wrapPlatformBrandedHtml(html));
 }
 
 /**
- * Notify IQMotorBase when a visitor downloads a calculator estimate PDF (price enquiry).
+ * Notify 3PhaseFlow when a visitor downloads a calculator estimate PDF (price enquiry).
  * @param {{
  *   leadName: string,
  *   leadEmail: string,
@@ -166,7 +166,7 @@ export async function sendCalculatorPriceEnquiryToAdmin(params) {
     v == null ? "" : String(v).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
   const subject = "Price Enquiry";
   const html = `
-    <p>A visitor downloaded a <strong>motor rewind cost calculator estimate PDF</strong> from IQMotorBase.com.</p>
+    <p>A visitor downloaded a <strong>motor rewind cost calculator estimate PDF</strong> from 3PhaseFlow.com.</p>
     ${params.pdfBuffer ? "<p><strong>The detailed estimate PDF is attached to this email.</strong></p>" : ""}
     <table style="border-collapse:collapse;margin-top:12px;">
       <tbody>
@@ -180,7 +180,7 @@ export async function sendCalculatorPriceEnquiryToAdmin(params) {
     </table>
     <p style="margin-top:16px;"><strong>Calculator configuration &amp; estimate</strong></p>
     <table style="border-collapse:collapse;">${params.htmlRows}</table>
-    <p>,  IQMotorBase.com (automated)</p>
+    <p>,  3PhaseFlow.com (automated)</p>
   `;
   return sendEmail(to, subject, wrapPlatformBrandedHtml(html), {
     attachments: calculatorEstimatePdfAttachments(params.pdfBuffer, params.pdfFilename),
@@ -191,7 +191,7 @@ function calculatorEstimatePdfAttachments(pdfBuffer, pdfFilename) {
   if (!pdfBuffer || !Buffer.isBuffer(pdfBuffer)) return undefined;
   return [
     {
-      filename: pdfFilename || "IQMotorBase-Motor-Rewind-Estimate.pdf",
+      filename: pdfFilename || "3PhaseFlow-Motor-Rewind-Estimate.pdf",
       content: pdfBuffer,
       contentType: "application/pdf",
     },
@@ -220,14 +220,14 @@ export async function sendCalculatorEstimatePdfToCustomer(params) {
     ? `<p>Your ballpark planning range: <strong>${esc(params.estimateRange)}</strong> (US typical rewind shop pricing).</p>`
     : "";
 
-  const subject = "Your motor rewind cost estimate to IQMotorBase.com";
+  const subject = "Your motor rewind cost estimate to 3PhaseFlow.com";
   const html = `
     <p>Hi ${name},</p>
-    <p>Thank you for using the <strong>IQMotorBase.com motor rewind cost calculator</strong>. Your detailed estimate PDF is attached.</p>
+    <p>Thank you for using the <strong>3PhaseFlow.com motor rewind cost calculator</strong>. Your detailed estimate PDF is attached.</p>
     ${rangeLine}
     <p>The PDF includes your motor configuration, ballpark range, cost breakdown, and how the estimate was calculated. This is planning guidance only, not a binding shop quote. Final pricing depends on inspection and shop scope.</p>
     <p>When you are ready for written quotes from qualified repair shops, visit <a href="${esc(site)}">${esc(site)}</a>.</p>
-    <p>,  IQMotorBase.com</p>
+    <p>,  3PhaseFlow.com</p>
   `;
 
   return sendEmail(to, subject, wrapPlatformBrandedHtml(html), {
@@ -235,10 +235,10 @@ export async function sendCalculatorEstimatePdfToCustomer(params) {
   });
 }
 
-/** Notify contact@IQMotorBase.com when a user has no listings in their area (near-me page). */
+/** Notify contact@3PhaseFlow.com when a user has no listings in their area (near-me page). */
 export async function sendNoListingsNearMeNotification(city, state, zip, extra = {}) {
-  const to = "contact@IQMotorBase.com";
-  const subject = "IQMotorBase.com to No repair shops in this area (near-me page)";
+  const to = "contact@3PhaseFlow.com";
+  const subject = "3PhaseFlow.com to No repair shops in this area (near-me page)";
   const esc = (v) =>
     v == null ? "" : String(v).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
   const lat = Number(extra?.lat);
@@ -262,25 +262,25 @@ export async function sendNoListingsNearMeNotification(city, state, zip, extra =
     </ul>
     <p><strong>Summary:</strong> ${esc(locationLine)}</p>
     <p>Please look for motor repair shops in this area and encourage them to list on the directory.</p>
-    <p>,  IQMotorBase.com (automated)</p>
+    <p>,  3PhaseFlow.com (automated)</p>
   `;
   return sendEmail(to, subject, wrapPlatformBrandedHtml(html));
 }
 
 /** Notify a user who signed up for "notify me when there's a listing" that repair shops are now in their area. Links to our site only; no direct shop contact info in the email. */
 export async function sendAreaListedNotification(toEmail, locationLabel, shopListingsPageUrl) {
-  const subject = "repair shops are now in your area to IQMotorBase.com";
+  const subject = "repair shops are now in your area to 3PhaseFlow.com";
   const html = `
     <p>Good news!</p>
-    <p>We've added repair shops near <strong>${locationLabel || "your area"}</strong> on IQMotorBase.com.</p>
+    <p>We've added repair shops near <strong>${locationLabel || "your area"}</strong> on 3PhaseFlow.com.</p>
     <p>You asked to be notified when new listings are available in your area. View the full list and details on our site:</p>
     <p><a href="${shopListingsPageUrl}">View repair shops in your area</a></p>
-    <p>,  IQMotorBase.com</p>
+    <p>,  3PhaseFlow.com</p>
   `;
   return sendEmail(toEmail, subject, wrapPlatformBrandedHtml(html));
 }
 
-/** Send demo request to admin as plain HTML table. Subject: RFQ - IQMotorBase Shop Management System Demo. */
+/** Send demo request to admin as plain HTML table. Subject: RFQ - 3PhaseFlow Shop Management System Demo. */
 export async function sendDemoRequestToAdmin(fields) {
   const esc = (v) => (v == null ? "" : String(v).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;"));
   const rows = [
@@ -308,15 +308,15 @@ export async function sendDemoRequestToAdmin(fields) {
     <table style="border-collapse:collapse;margin-top:12px;">
       <tbody>${rows}</tbody>
     </table>
-    <p style="margin-top:16px;">,  IQMotorBase.com (contact form)</p>
+    <p style="margin-top:16px;">,  3PhaseFlow.com (contact form)</p>
   `;
-  return sendEmail("contact@IQMotorBase.com", "RFQ - IQMotorBase Shop Management System Demo.", wrapPlatformBrandedHtml(html));
+  return sendEmail("contact@3PhaseFlow.com", "RFQ - 3PhaseFlow Shop Management System Demo.", wrapPlatformBrandedHtml(html));
 }
 
 /** Send thank-you email to client after demo request. */
 export async function sendDemoRequestThankYou(toName, toEmail, availability = {}) {
   const name = toName ? ` ${toName}` : "";
-  const subject = "We received your demo request to IQMotorBase.com";
+  const subject = "We received your demo request to 3PhaseFlow.com";
   const esc = (v) => (v == null ? "" : String(v).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;"));
   const preferDate = String(availability?.preferDate || "").trim();
   const preferTime = String(availability?.preferTime || "").trim();
@@ -328,11 +328,11 @@ export async function sendDemoRequestThankYou(toName, toEmail, availability = {}
       : "";
   const html = `
     <p>Hi${name},</p>
-    <p>Thank you for requesting a demo of IQMotorBase.com.</p>
+    <p>Thank you for requesting a demo of 3PhaseFlow.com.</p>
     ${preferenceLine}
     <p>To schedule your meeting, please <strong>reply to this email</strong> with a few dates and times that work for you (include your timezone). We&apos;ll send a calendar invite for a slot that fits your schedule.</p>
     <p>In the meantime, feel free to explore our <a href="${getPublicSiteUrl()}/electric-motor-repair-shops-listings">repair center directory</a> or learn more about <a href="${getPublicSiteUrl()}/features">our features</a>.</p>
-    <p>,  The IQMotorBase.com team</p>
+    <p>,  The 3PhaseFlow.com team</p>
   `;
   return sendEmail(toEmail, subject, wrapPlatformBrandedHtml(html));
 }
@@ -341,7 +341,7 @@ export async function sendDemoRequestThankYou(toName, toEmail, availability = {}
 const listingNotifyEmail = () =>
   process.env.NOTIFY_LISTING_EMAIL?.trim() ||
   process.env.ADMIN_EMAIL?.trim() ||
-  "contact@IQMotorBase.com";
+  "contact@3PhaseFlow.com";
 
 /** Notify admin when someone submits a new listing from list-your-electric-motor-services. */
 export async function sendNewListingSubmittedToAdmin(doc) {
@@ -368,9 +368,9 @@ export async function sendNewListingSubmittedToAdmin(doc) {
     <table style="border-collapse:collapse;margin-top:12px;">
       <tbody>${rows}</tbody>
     </table>
-    <p style="margin-top:16px;">,  IQMotorBase.com (automated)</p>
+    <p style="margin-top:16px;">,  3PhaseFlow.com (automated)</p>
   `;
-  return sendEmail(to, "New listing submitted to IQMotorBase.com", wrapPlatformBrandedHtml(html));
+  return sendEmail(to, "New listing submitted to 3PhaseFlow.com", wrapPlatformBrandedHtml(html));
 }
 
 /** Notify admin when a listing is approved and the shop is now listed on the website. */
@@ -383,9 +383,9 @@ export async function sendShopListedNotificationToAdmin(doc) {
     <p><strong>${(doc.companyName || "").replace(/</g, "&lt;").replace(/>/g, "&gt;")}</strong><br />
     Email: ${(doc.email || "").replace(/</g, "&lt;")} | ${[doc.city, doc.state, doc.zipCode].filter(Boolean).join(", ") || ", "}</p>
     <p><a href="${siteUrl}/admin/listings">View in admin</a> | <a href="${siteUrl}/electric-motor-repair-shops-listings">Public directory</a></p>
-    <p style="margin-top:16px;">,  IQMotorBase.com (automated)</p>
+    <p style="margin-top:16px;">,  3PhaseFlow.com (automated)</p>
   `;
-  return sendEmail(to, "Shop listed on website to IQMotorBase.com", wrapPlatformBrandedHtml(html));
+  return sendEmail(to, "Shop listed on website to 3PhaseFlow.com", wrapPlatformBrandedHtml(html));
 }
 
 /**
@@ -404,21 +404,21 @@ export async function sendNewWebsiteLeadNotificationToShop({
   const leadsUrl = `${base}/dashboards?tab=customers`;
   const loginUrl = `${base}/login`;
   const fromLine = [esc(leadContactName || "Someone"), leadContactCompany ? ` (${esc(leadContactCompany)})` : ""].join("");
-  const subject = `New lead for ${listingCompanyName || "your shop"} to IQMotorBase.com`;
+  const subject = `New lead for ${listingCompanyName || "your shop"} to 3PhaseFlow.com`;
   const html = `
     <p>Hello,</p>
-    <p>You received a new repair inquiry (RFQ) from your <strong>IQMotorBase.com</strong> directory listing.</p>
+    <p>You received a new repair inquiry (RFQ) from your <strong>3PhaseFlow.com</strong> directory listing.</p>
     <p><strong>From:</strong> ${fromLine || "A visitor"}</p>
     <p>Log in to your shop dashboard to view full contact details and respond in your Shop Management System:</p>
     <p><a href="${esc(leadsUrl)}" style="display:inline-block;padding:10px 20px;background:#9a5d33;color:#fff;text-decoration:none;border-radius:6px;">Open Leads in Shop Management System</a></p>
     <p style="font-size:13px;color:#555;">If you are not signed in, use <a href="${esc(loginUrl)}">Log in</a> first with your shop email, then open <strong>Leads</strong>.</p>
-    <p>,  IQMotorBase.com</p>
+    <p>,  3PhaseFlow.com</p>
   `;
   return sendEmail(to, subject, wrapPlatformBrandedHtml(html));
 }
 
 /**
- * Platform nurture for non-paying directory / IQMotorTrack shops after a repair lead.
+ * Platform nurture for non-paying directory / 3PhaseTrack shops after a repair lead.
  */
 export async function sendLeadPlatformNurtureEmail({ to, name, bookingUrl, unsubscribeUrl }) {
   const esc = (v) =>
@@ -426,21 +426,21 @@ export async function sendLeadPlatformNurtureEmail({ to, name, bookingUrl, unsub
   const displayName = String(name || "there").trim() || "there";
   const cal = String(bookingUrl || "https://cal.com/iqmotorbase/30min").trim();
   const unsub = String(unsubscribeUrl || "").trim();
-  const subject = "You received a repair lead from IQMotorBase: here is how to get more";
+  const subject = "You received a repair lead from 3PhaseFlow: here is how to get more";
   const html = `
     <p>Hi ${esc(displayName)},</p>
-    <p>Your shop received a repair inquiry through IQMotorBase recently. A buyer in your area found your listing and submitted a request.</p>
+    <p>Your shop received a repair inquiry through 3PhaseFlow recently. A buyer in your area found your listing and submitted a request.</p>
     <p>That lead came through our free directory listing. The platform can do a lot more than that.</p>
-    <p>IQMotorBase is a shop management system built specifically for electric motor repair, not adapted from auto repair software, not a generic CRM. Work orders with full motor nameplate data, job tracking from intake to test bench, customer and motor history, invoicing, accounts receivable, inventory, QuickBooks sync, and more repair leads from our directory.</p>
+    <p>3PhaseFlow is a shop management system built specifically for electric motor repair, not adapted from auto repair software, not a generic CRM. Work orders with full motor nameplate data, job tracking from intake to test bench, customer and motor history, invoicing, accounts receivable, inventory, QuickBooks sync, and more repair leads from our directory.</p>
     <p>I wanted to reach out personally because your shop is already in our network and already receiving inquiries. You are not starting from scratch.</p>
     <p>We are currently offering founder pricing to the first 10 shops, a permanently locked discounted rate. One spot is already taken. If you want to see the platform before the founder spots are gone, I can show you everything in 30 minutes.</p>
     <p><a href="${esc(cal)}" style="display:inline-block;padding:12px 22px;background:#9a5d33;color:#fff;text-decoration:none;border-radius:6px;font-weight:600;">Book a free 30-min demo</a></p>
     <p>Book a time here: <a href="${esc(cal)}">${esc(cal)}</a></p>
     <p>Or just reply to this email and we will find a time that works.</p>
-    <p>Raj<br>+1 (385) 386-3860<br><a href="https://iqmotorbase.com">IQMotorBase.com</a></p>
+    <p>Raj<br>+1 (385) 386-3860<br><a href="https://3phaseflow.com">3PhaseFlow.com</a></p>
     ${
       unsub
-        ? `<p style="margin-top:28px;padding-top:16px;border-top:1px solid #e5e7eb;font-size:12px;color:#64748b;line-height:1.5;">You received this because your shop received a repair lead through IQMotorBase. <a href="${esc(unsub)}" style="color:#64748b;">Unsubscribe</a> from these emails.</p>`
+        ? `<p style="margin-top:28px;padding-top:16px;border-top:1px solid #e5e7eb;font-size:12px;color:#64748b;line-height:1.5;">You received this because your shop received a repair lead through 3PhaseFlow. <a href="${esc(unsub)}" style="color:#64748b;">Unsubscribe</a> from these emails.</p>`
         : ""
     }
   `;
@@ -462,28 +462,28 @@ export async function sendContactUnlockNotificationToShop({
   const leadsUrl = `${base}/dashboards?tab=customers`;
   const loginUrl = `${base}/login`;
   const fromLine = esc(leadContactName || "Someone");
-  const subject = `Contact info viewed for ${listingCompanyName || "your shop"} to IQMotorBase.com`;
+  const subject = `Contact info viewed for ${listingCompanyName || "your shop"} to 3PhaseFlow.com`;
   const html = `
     <p>Hello,</p>
-    <p><strong>${fromLine}</strong> viewed your contact information on your <strong>IQMotorBase.com</strong> directory listing.</p>
+    <p><strong>${fromLine}</strong> viewed your contact information on your <strong>3PhaseFlow.com</strong> directory listing.</p>
     <p>This is a softer lead than a full repair request, they may follow up directly or submit an RFQ later.</p>
     <p>Log in to your shop dashboard to view their contact details:</p>
     <p><a href="${esc(leadsUrl)}" style="display:inline-block;padding:10px 20px;background:#9a5d33;color:#fff;text-decoration:none;border-radius:6px;">Open Leads in Shop Management System</a></p>
     <p style="font-size:13px;color:#555;">If you are not signed in, use <a href="${esc(loginUrl)}">Log in</a> first with your shop email, then open <strong>Leads</strong>.</p>
-    <p>,  IQMotorBase.com</p>
+    <p>,  3PhaseFlow.com</p>
   `;
   return sendEmail(to, subject, wrapPlatformBrandedHtml(html));
 }
 
 /** Send verification code for list-your-electric-motor-services email verification. */
 export async function sendVerificationCodeEmail(to, code) {
-  const subject = "Your IQMotorBase.com verification code";
+  const subject = "Your 3PhaseFlow.com verification code";
   const html = `
-    <p>Your verification code for listing your center on IQMotorBase.com is:</p>
+    <p>Your verification code for listing your center on 3PhaseFlow.com is:</p>
     <p style="font-size:24px;font-weight:bold;letter-spacing:4px;font-family:monospace">${code}</p>
     <p>Enter this code on the website to continue. The code expires in 15 minutes.</p>
     <p>If you didn't request this, you can ignore this email.</p>
-    <p>,  IQMotorBase.com</p>
+    <p>,  3PhaseFlow.com</p>
   `;
   return sendEmail(to, subject, wrapPlatformBrandedHtml(html));
 }
@@ -557,11 +557,11 @@ export async function sendListingFeaturedAccountEmail({
   const esc = (v) =>
     v == null ? "" : String(v).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
   const company = (shopName && String(shopName).trim()) || "your business";
-  const subject = "Your Shop Is Live on IQMotorBase: Leads Coming Your Way";
+  const subject = "Your Shop Is Live on 3PhaseFlow: Leads Coming Your Way";
   const html = `
     <p>Hi ${esc(company)},</p>
-    <p>We have added <strong>${esc(company)}</strong> to the IQMotorBase.com public repair shop directory. Customers searching for motor repair and rewinding services in your area will now find your listing and can contact you directly.</p>
-    <p><strong>What this means for you:</strong> IQMotorBase is already receiving motor repair service requests from industrial buyers in your region. Your shop will appear in those results and receive incoming leads routed directly to your account.</p>
+    <p>We have added <strong>${esc(company)}</strong> to the 3PhaseFlow.com public repair shop directory. Customers searching for motor repair and rewinding services in your area will now find your listing and can contact you directly.</p>
+    <p><strong>What this means for you:</strong> 3PhaseFlow is already receiving motor repair service requests from industrial buyers in your region. Your shop will appear in those results and receive incoming leads routed directly to your account.</p>
     ${publicListingUrl ? `<p><strong>Your public listing:</strong> <a href="${esc(publicListingUrl)}">${esc(publicListingUrl)}</a></p>` : ""}
     <p>Use the credentials below to log in to your shop dashboard. Once inside, review your <a href="${esc(leadsUrl)}"><strong>Leads</strong></a> and update your <a href="${esc(directoryUrl)}"><strong>Directory listing</strong></a> to make sure all information is accurate. Incomplete listings receive fewer leads. Take 5 minutes to verify your services, contact details, and service area.</p>
     <table style="border-collapse:collapse;margin:16px 0;">
@@ -574,7 +574,7 @@ export async function sendListingFeaturedAccountEmail({
     <p><a href="${esc(loginUrl)}" style="display:inline-block;padding:10px 20px;background:#9a5d33;color:#fff;text-decoration:none;border-radius:6px;">Log in to your dashboard</a></p>
     <p><strong>Security:</strong> Change your password after signing in under Settings &gt; Account.</p>
     <p><strong>Want more leads?</strong> Unlock the full Shop Management System including quotes, job tracking, billing, inventory, and unlimited leads. <a href="${esc(contactUrl)}">Contact us</a> to learn about our paid plans.</p>
-    <p>IQMotorBase.com</p>
+    <p>3PhaseFlow.com</p>
   `;
   return sendEmail(to, subject, wrapPlatformBrandedHtml(html));
 }
@@ -594,14 +594,14 @@ export async function sendActiveClientFeedbackOutreachEmail({ to, contactName, s
   const pricingUrl = `${site}/pricing`;
   const subscriptionUrl = `${site}/dashboards/settings?section=subscription`;
   const contactUrl = `${site}/contact`;
-  const subject = "How is IQMotorBase working for your shop?";
+  const subject = "How is 3PhaseFlow working for your shop?";
   const html = `
     <p>Hi ${greeting},</p>
-    <p>Thank you for using <strong>IQMotorBase.com</strong>${shopName?.trim() ? ` at <strong>${esc(shopName.trim())}</strong>` : ""}. We hope the portal is helping you manage jobs, quotes, and customer communication.</p>
+    <p>Thank you for using <strong>3PhaseFlow.com</strong>${shopName?.trim() ? ` at <strong>${esc(shopName.trim())}</strong>` : ""}. We hope the portal is helping you manage jobs, quotes, and customer communication.</p>
     <p>We would love your feedback:</p>
     <ul>
       <li>What is working well for your shop today?</li>
-      <li>What features or workflows would make IQMotorBase more useful?</li>
+      <li>What features or workflows would make 3PhaseFlow more useful?</li>
       <li>Is there anything confusing or missing from your day-to-day use?</li>
     </ul>
     <p>Simply reply to this email with your thoughts, even a few sentences help us prioritize improvements.</p>
@@ -612,8 +612,8 @@ export async function sendActiveClientFeedbackOutreachEmail({ to, contactName, s
       <li><a href="${esc(contactUrl)}">Contact us for a demo or custom quote</a></li>
     </ul>
     <p>Reply here or reach out through the contact page if you would like to discuss a paid plan for your shop.</p>
-    <p>Thank you for being part of IQMotorBase.com.</p>
-    <p>,  IQMotorBase.com</p>
+    <p>Thank you for being part of 3PhaseFlow.com.</p>
+    <p>,  3PhaseFlow.com</p>
   `;
   return sendMarketingEmail(to, subject, html);
 }
@@ -645,10 +645,10 @@ export async function sendListingStatsOutreachEmail({
   const pricingUrl = `${site}/pricing`;
   const subscriptionUrl = `${site}/dashboards/settings?section=subscription`;
   const contactUrl = `${site}/contact`;
-  const subject = `Your IQMotorBase listing stats, ${esc(companyName || "repair center")}`;
+  const subject = `Your 3PhaseFlow listing stats, ${esc(companyName || "repair center")}`;
   const html = `
     <p>Hello${companyName?.trim() ? ` from <strong>${esc(companyName.trim())}</strong>` : ""},</p>
-    <p>Your repair center is listed on <strong>IQMotorBase.com</strong> and customers are finding you online. Here is a snapshot of your listing performance:</p>
+    <p>Your repair center is listed on <strong>3PhaseFlow.com</strong> and customers are finding you online. Here is a snapshot of your listing performance:</p>
     <table style="border-collapse:collapse;margin:16px 0;">
       <tbody>
         <tr><td style="padding:8px 12px;border:1px solid #ddd;font-weight:600;">${esc(monthName)} page visits</td><td style="padding:8px 12px;border:1px solid #ddd;">${esc(String(visitsThisMonth ?? 0))}</td></tr>
@@ -660,12 +660,12 @@ export async function sendListingStatsOutreachEmail({
     <p><strong>What you receive for free today</strong></p>
     <ul>
       <li>A searchable directory profile so buyers can find your shop by location and services</li>
-      <li>Visibility on IQMotorBase.com when customers search for motor repair and rewinding</li>
+      <li>Visibility on 3PhaseFlow.com when customers search for motor repair and rewinding</li>
       <li>Quote requests routed to your shop when visitors inquire from your listing page</li>
       <li>Ongoing exposure as our directory and SEO content grow, at no listing fee</li>
     </ul>
     <p><strong>Run your whole shop in one place</strong></p>
-    <p>Many shops start with a free directory listing, then move to <strong>IQMotorBase shop management software</strong> to handle work orders, quotes, inventory, job tracking, customer communication, and more, without juggling spreadsheets and disconnected tools.</p>
+    <p>Many shops start with a free directory listing, then move to <strong>3PhaseFlow shop management software</strong> to handle work orders, quotes, inventory, job tracking, customer communication, and more, without juggling spreadsheets and disconnected tools.</p>
     <ul>
       <li><a href="${esc(softwareUrl)}">Motor repair shop management software</a></li>
       <li><a href="${esc(pricingUrl)}">View plans &amp; pricing</a></li>
@@ -673,8 +673,8 @@ export async function sendListingStatsOutreachEmail({
       <li><a href="${esc(contactUrl)}">Contact us for a demo</a></li>
     </ul>
     <p>Reply to this email if you have questions about your stats or want help choosing a plan for your shop.</p>
-    <p>Thank you for being part of IQMotorBase.com.</p>
-    <p>,  IQMotorBase.com</p>
+    <p>Thank you for being part of 3PhaseFlow.com.</p>
+    <p>,  3PhaseFlow.com</p>
   `;
   return sendMarketingEmail(to, subject, html);
 }
@@ -702,8 +702,8 @@ export async function sendSubscriptionPlanAttachedEmail({
       ? `${esc(currency || "USD")} ${Number(customPrice).toFixed(2)}`
       : "";
   const subject = isPaypal
-    ? `Subscription plan attached, ${esc(planName || "IQMotorBase")}`
-    : `Your IQMotorBase.com plan: ${esc(planName || "Free Ultimate")}`;
+    ? `Subscription plan attached, ${esc(planName || "3PhaseFlow")}`
+    : `Your 3PhaseFlow.com plan: ${esc(planName || "Free Ultimate")}`;
   const approvalBlock =
     isPaypal && approvalUrl
       ? `<p><strong>Complete setup in PayPal:</strong> your administrator assigned a paid plan. Open this link to approve billing (you can also find it under <a href="${esc(subUrl)}">Shop Management System → Subscription</a>):</p>
@@ -711,7 +711,7 @@ export async function sendSubscriptionPlanAttachedEmail({
       : "";
   const html = `
     <p>Hello${shopName ? ` from <strong>${esc(shopName)}</strong>` : ""},</p>
-    <p>A subscription plan has been attached to your IQMotorBase.com account.</p>
+    <p>A subscription plan has been attached to your 3PhaseFlow.com account.</p>
     <table style="border-collapse:collapse;margin:16px 0;">
       <tbody>
         <tr><td style="padding:8px 12px;border:1px solid #ddd;font-weight:600;">Plan</td><td style="padding:8px 12px;border:1px solid #ddd;">${esc(planName || ", ")}</td></tr>
@@ -722,7 +722,7 @@ export async function sendSubscriptionPlanAttachedEmail({
     </table>
     ${approvalBlock}
     <p>Manage subscription anytime: <a href="${esc(subUrl)}">${esc(subUrl)}</a></p>
-    <p>,  IQMotorBase.com</p>
+    <p>,  3PhaseFlow.com</p>
   `;
   return sendEmail(to, subject, wrapPlatformBrandedHtml(html));
 }
@@ -783,7 +783,7 @@ export async function sendMarketingEmail(to, subject, html) {
   return sendEmail(to, subject, wrapPlatformBrandedHtml(html), { from: marketingFrom });
 }
 
-/** Send quote to customer with link to approve/reject. Uses electric motor shop name in subject and signature (no IQMotorBase.com). */
+/** Send quote to customer with link to approve/reject. Uses electric motor shop name in subject and signature (no 3PhaseFlow.com). */
 export async function sendQuoteToCustomer(
   toEmail,
   customerName,
@@ -932,7 +932,7 @@ export async function sendWorkOrderPdfToRecipient(
 }
 
 /* ------------------------------------------------------------------ *
- * IQMotorTrack <-> IQMotorBase integration emails (§11)
+ * 3PhaseTrack <-> 3PhaseFlow integration emails (§11)
  * ------------------------------------------------------------------ */
 
 function trackShopActionButton(label, url) {
@@ -952,7 +952,7 @@ function trackDetailRows(rows) {
 }
 
 /**
- * E1 - a new IQMotorTrack RFQ reaches a shop. In-app shops get a dashboard link,
+ * E1 - a new 3PhaseTrack RFQ reaches a shop. In-app shops get a dashboard link,
  * email-only shops get a secure single-use response link (§9.7).
  */
 export async function sendTrackRfqToShop({
@@ -992,38 +992,38 @@ export async function sendTrackRfqToShop({
   const html = `
     ${emergencyBanner}
     <p>Hello,</p>
-    <p>A plant using <strong>IQMotorTrack</strong> has a motor down and sent you a request for quote.</p>
+    <p>A plant using <strong>3PhaseTrack</strong> has a motor down and sent you a request for quote.</p>
     ${rows}
     ${failureDescription ? `<p><strong>What happened:</strong><br/>${escHtmlEmail(failureDescription).replace(/\n/g, "<br/>")}</p>` : ""}
     ${trackShopActionButton(actionLabel || "Open the RFQ", actionUrl)}
     ${closing}
-    <p>,  IQMotorBase.com</p>
+    <p>,  3PhaseFlow.com</p>
   `;
   return sendEmail(to, subject, wrapPlatformBrandedHtml(html));
 }
 
 /** E2 - the plant added failure details or photos to an open RFQ. */
 export async function sendTrackRfqUpdatedToShop({ to, facilityName, motorSummary, note, actionUrl }) {
-  const subject = `RFQ updated by ${facilityName || "the plant"} to IQMotorBase.com`;
+  const subject = `RFQ updated by ${facilityName || "the plant"} to 3PhaseFlow.com`;
   const html = `
     <p>Hello,</p>
     <p><strong>${escHtmlEmail(facilityName || "The plant")}</strong> updated the motor down RFQ you were invited to.</p>
     ${trackDetailRows([["Motor", motorSummary]])}
     ${note ? `<p><strong>Update:</strong><br/>${escHtmlEmail(note).replace(/\n/g, "<br/>")}</p>` : ""}
     ${trackShopActionButton("View the updated RFQ", actionUrl)}
-    <p>,  IQMotorBase.com</p>
+    <p>,  3PhaseFlow.com</p>
   `;
   return sendEmail(to, subject, wrapPlatformBrandedHtml(html));
 }
 
 /** E3 - the plant cancelled the RFQ. */
 export async function sendTrackRfqCancelledToShop({ to, facilityName, motorSummary, reason }) {
-  const subject = `RFQ cancelled by ${facilityName || "the plant"} to IQMotorBase.com`;
+  const subject = `RFQ cancelled by ${facilityName || "the plant"} to 3PhaseFlow.com`;
   const html = `
     <p>Hello,</p>
     <p><strong>${escHtmlEmail(facilityName || "The plant")}</strong> cancelled the motor down RFQ you were invited to. No proposal is needed.</p>
     ${trackDetailRows([["Motor", motorSummary], ["Reason", reason]])}
-    <p>,  IQMotorBase.com</p>
+    <p>,  3PhaseFlow.com</p>
   `;
   return sendEmail(to, subject, wrapPlatformBrandedHtml(html));
 }
@@ -1037,7 +1037,7 @@ export async function sendTrackAwardedToShop({
   turnaroundLabel,
   actionUrl,
 }) {
-  const subject = `You won the job: ${facilityName || "plant"} awarded your proposal to IQMotorBase.com`;
+  const subject = `You won the job: ${facilityName || "plant"} awarded your proposal to 3PhaseFlow.com`;
   const html = `
     <p>Congratulations,</p>
     <p><strong>${escHtmlEmail(facilityName || "The plant")}</strong> awarded your proposal for the motor below.</p>
@@ -1048,7 +1048,7 @@ export async function sendTrackAwardedToShop({
     ])}
     ${trackShopActionButton("Open the Service Proposal", actionUrl)}
     <p style="font-size:13px;color:#555;">Convert the proposal to a JOB when you start work. Datasheet values you save on this job flow back to the plant's motor record with your shop credited.</p>
-    <p>,  IQMotorBase.com</p>
+    <p>,  3PhaseFlow.com</p>
   `;
   return sendEmail(to, subject, wrapPlatformBrandedHtml(html));
 }
@@ -1057,7 +1057,7 @@ export async function sendTrackAwardedToShop({
  * E10 - this shop was not selected. Never discloses the winning shop or price (§8.3, §12).
  */
 export async function sendTrackNotSelectedToShop({ to, facilityName, motorSummary, responded }) {
-  const subject = `RFQ closed by ${facilityName || "the plant"} to IQMotorBase.com`;
+  const subject = `RFQ closed by ${facilityName || "the plant"} to 3PhaseFlow.com`;
   const line = responded
     ? "Your proposal was not selected this time. The plant awarded the job to another shop."
     : "The plant has closed this RFQ. No proposal was received from your shop.";
@@ -1066,7 +1066,7 @@ export async function sendTrackNotSelectedToShop({ to, facilityName, motorSummar
     <p>${escHtmlEmail(line)}</p>
     ${trackDetailRows([["Motor", motorSummary]])}
     <p style="font-size:13px;color:#555;">Thank you for your time. Keeping your listing capabilities and turnaround up to date helps you rank higher on the next request.</p>
-    <p>,  IQMotorBase.com</p>
+    <p>,  3PhaseFlow.com</p>
   `;
   return sendEmail(to, subject, wrapPlatformBrandedHtml(html));
 }
@@ -1079,26 +1079,26 @@ export async function sendTrackFacilityNotification({
   rows = [],
   bodyNote = "",
   actionUrl,
-  actionLabel = "Open IQMotorTrack",
+  actionLabel = "Open 3PhaseTrack",
 }) {
-  const subject = `${headline} to IQMotorTrack`;
+  const subject = `${headline} to 3PhaseTrack`;
   const html = `
     <p>Hello,</p>
     <p>${escHtmlEmail(headline)}.</p>
     ${trackDetailRows([["Motor", motorSummary], ...rows])}
     ${bodyNote ? `<p>${escHtmlEmail(bodyNote).replace(/\n/g, "<br/>")}</p>` : ""}
     ${actionUrl ? trackShopActionButton(actionLabel, actionUrl) : ""}
-    <p>,  IQMotorTrack</p>
+    <p>,  3PhaseTrack</p>
   `;
   return sendEmail(to, subject, wrapPlatformBrandedHtml(html));
 }
 
-/** Platform admin alert when an IQMotorTrack delivery is out of retries (§11, §14.11). */
+/** Platform admin alert when an 3PhaseTrack delivery is out of retries (§11, §14.11). */
 export async function sendTrackDeliveryFailureToAdmin({ eventType, rfqRequestId, listingId, lastError, attempts }) {
   const to = listingNotifyEmail();
   if (!to) return { ok: true };
   const html = `
-    <p>An IQMotorTrack integration delivery failed after ${escHtmlEmail(String(attempts))} attempts.</p>
+    <p>An 3PhaseTrack integration delivery failed after ${escHtmlEmail(String(attempts))} attempts.</p>
     ${trackDetailRows([
       ["Event", eventType],
       ["RFQ", rfqRequestId],
@@ -1106,34 +1106,34 @@ export async function sendTrackDeliveryFailureToAdmin({ eventType, rfqRequestId,
       ["Last error", lastError],
     ])}
     ${trackShopActionButton("Open the integration log", `${getPublicSiteUrl()}/admin/iqmotortrack`)}
-    <p>,  IQMotorBase.com (automated)</p>
+    <p>,  3PhaseFlow.com (automated)</p>
   `;
-  return sendEmail(to, "IQMotorTrack delivery failed after retries", wrapPlatformBrandedHtml(html));
+  return sendEmail(to, "3PhaseTrack delivery failed after retries", wrapPlatformBrandedHtml(html));
 }
 
-/** Password reset for an IQMotorTrack facility account. */
+/** Password reset for an 3PhaseTrack facility account. */
 export async function sendTrackPasswordResetEmail({ to, contactName, resetUrl }) {
-  const subject = "Reset your IQMotorTrack password";
+  const subject = "Reset your 3PhaseTrack password";
   const html = `
     <p>Hello ${escHtmlEmail(contactName || "there")},</p>
-    <p>Use the link below to set a new IQMotorTrack password. It expires in 60 minutes and can be used once.</p>
+    <p>Use the link below to set a new 3PhaseTrack password. It expires in 60 minutes and can be used once.</p>
     ${trackShopActionButton("Set a new password", resetUrl)}
     <p style="font-size:13px;color:#555;">If you did not ask for this, you can ignore this email. Your password stays unchanged.</p>
-    <p>,  IQMotorTrack</p>
+    <p>,  3PhaseTrack</p>
   `;
   return sendEmail(to, subject, wrapPlatformBrandedHtml(html));
 }
 
-/** Email verification for a new IQMotorTrack facility account. */
+/** Email verification for a new 3PhaseTrack facility account. */
 export async function sendTrackVerifyEmail({ to, contactName, verifyUrl, code }) {
-  const subject = "Verify your IQMotorTrack email";
+  const subject = "Verify your 3PhaseTrack email";
   const html = `
     <p>Hello ${escHtmlEmail(contactName || "there")},</p>
-    <p>Confirm this address to finish setting up your IQMotorTrack facility account.</p>
+    <p>Confirm this address to finish setting up your 3PhaseTrack facility account.</p>
     ${trackShopActionButton("Verify my email", verifyUrl)}
     <p>Or enter this code in the app: <strong style="font-size:18px;letter-spacing:2px;">${escHtmlEmail(code)}</strong></p>
     <p style="font-size:13px;color:#555;">The code expires in 24 hours.</p>
-    <p>,  IQMotorTrack</p>
+    <p>,  3PhaseTrack</p>
   `;
   return sendEmail(to, subject, wrapPlatformBrandedHtml(html));
 }

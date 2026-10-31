@@ -125,7 +125,7 @@ function PaypalCheckoutInner({ clientId, paypalPlanId, checkoutToken }) {
 
   return (
     <main className="mx-auto flex min-h-[70vh] max-w-lg flex-col items-center justify-center px-6 py-16 text-center">
-      <h1 className="text-2xl font-bold text-title">Subscribe to IQMotorTrack Pro</h1>
+      <h1 className="text-2xl font-bold text-title">Subscribe to 3PhaseTrack Pro</h1>
       <p className="mt-3 text-sm text-secondary">
         ${Number(IQMOTORTRACK_MONTHLY_USD).toFixed(2)} / month. Unlimited motors. Pay with PayPal, then return to the
         app.

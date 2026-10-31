@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef } from "react";
 import { FiBookmark } from "react-icons/fi";
 
-const PREFERRED_SOURCE_DEEPLINK = "https://www.google.com/preferences/source?q=iqmotorbase.com";
+const PREFERRED_SOURCE_DEEPLINK = "https://www.google.com/preferences/source?q=3phaseflow.com";
 
 /** Official-style multicolor Google "G" mark (SVG). */
 function GoogleLogoMark({ className = "h-5 w-5", title = "Google" }) {
@@ -99,7 +99,7 @@ function NoscriptLink({ className = "" }) {
 }
 
 export default function PreferredSourceButton({
-  title = "Get IQMotorBase first in Google Search",
+  title = "Get 3PhaseFlow first in Google Search",
   description = "Add us as a preferred source, see our repair guides & shop listings before generic results.",
   variant = "prominent",
   className = "",
@@ -110,7 +110,7 @@ export default function PreferredSourceButton({
     return (
       <aside
         className={`w-full border-b border-primary/80 bg-primary ${className}`}
-        aria-label="Add IQMotorBase as a preferred source in Google Search"
+        aria-label="Add 3PhaseFlow as a preferred source in Google Search"
       >
         {/* Mobile: single CTA button only */}
         <div className="mx-auto flex max-w-[86.4rem] items-center justify-center px-3 py-2 sm:hidden">
@@ -160,7 +160,7 @@ export default function PreferredSourceButton({
   return (
     <aside
       className={`rounded-xl border-2 border-primary/40 bg-gradient-to-br from-primary/[0.14] via-card to-primary/[0.05] p-4 shadow-md ring-1 ring-primary/15 sm:p-5 ${className}`}
-      aria-label="Add IQMotorBase as a preferred source in Google Search"
+      aria-label="Add 3PhaseFlow as a preferred source in Google Search"
     >
       <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between lg:gap-6">
         <div className="flex min-w-0 gap-3 sm:gap-4">

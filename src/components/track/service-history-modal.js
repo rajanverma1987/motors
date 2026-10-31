@@ -42,7 +42,7 @@ function emptyForm() {
 
 /**
  * §6.7 - manual service history entry for work done outside the platform.
- * Entries created from IQMotorBase job events arrive automatically instead.
+ * Entries created from 3PhaseFlow job events arrive automatically instead.
  */
 export default function TrackServiceHistoryModal({ open, motorId, onClose, onSaved }) {
   const toast = useToast();
@@ -99,7 +99,7 @@ export default function TrackServiceHistoryModal({ open, motorId, onClose, onSav
           label="Shop"
           value={form.shopName}
           onChange={setField("shopName")}
-          help="Free text for shops outside IQMotorBase."
+          help="Free text for shops outside 3PhaseFlow."
         />
         <Input label="Job number" value={form.jobNumber} onChange={setField("jobNumber")} />
         <Input label="Invoice number" value={form.invoiceNumber} onChange={setField("invoiceNumber")} />

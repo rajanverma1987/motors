@@ -43,7 +43,7 @@ const TRACK_OWNED_KEYS = [
 ];
 
 /**
- * Drop server-owned IQMotorTrack link fields from a client payload.
+ * Drop server-owned 3PhaseTrack link fields from a client payload.
  * @param {Record<string, unknown>} payload
  */
 export function stripTrackOwnedFields(payload) {

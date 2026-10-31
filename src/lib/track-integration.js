@@ -1,5 +1,5 @@
 /**
- * IQMotorTrack <-> IQMotorBase integration (§9).
+ * 3PhaseTrack <-> 3PhaseFlow integration (§9).
  *
  * Both products ship inside the same Next.js deployment, so delivery is an
  * in-process server-side write rather than an HTTP hop. The contract the spec
@@ -216,7 +216,7 @@ function leadPayloadForInvitation({ rfq, invitation, facility, motorSnapshot }) 
       0,
       20
     ),
-    message: `Motor down RFQ from IQMotorTrack. ${motorSummaryLine(motorSnapshot)}`.slice(0, 2000),
+    message: `Motor down RFQ from 3PhaseTrack. ${motorSummaryLine(motorSnapshot)}`.slice(0, 2000),
     sourceListingId: String(invitation.listingId || ""),
     assignedListingIds: [String(invitation.listingId || "")].filter(Boolean),
     leadSource: "iqmotortrack",
@@ -592,7 +592,7 @@ async function notifyFacility(rfq, { headline, rows = [], bodyNote = "" }) {
       rows,
       bodyNote,
       actionUrl: `${siteBase()}/Track`,
-      actionLabel: "Open IQMotorTrack",
+      actionLabel: "Open 3PhaseTrack",
     });
   } catch (err) {
     console.warn("Track facility notification failed:", err?.message || err);
@@ -662,7 +662,7 @@ export async function applyTrackConvertedToProposal(lead, proposalId) {
  */
 export async function applyTrackProposalSent(lead, response) {
   const found = await loadInvitationByLead(lead);
-  if (!found) throw new Error("This RFQ is no longer open in IQMotorTrack.");
+  if (!found) throw new Error("This RFQ is no longer open in 3PhaseTrack.");
   const { rfq, invitation } = found;
   if (["cancelled"].includes(rfq.status)) {
     throw new Error("The plant cancelled this RFQ.");
@@ -1002,7 +1002,7 @@ export async function applyTrackJobCompleted({ proposalId, jobNumber, descriptio
   await notifyFacility(rfq, {
     headline: `${invitation.shopName || "The shop"} completed the job`,
     rows: [["Job number", jobNumber || ""]],
-    bodyNote: "Confirm the motor is back in service in IQMotorTrack to close this RFQ.",
+    bodyNote: "Confirm the motor is back in service in 3PhaseTrack to close this RFQ.",
   });
   await markEventDelivered(event);
   return { ok: true };

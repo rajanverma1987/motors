@@ -14,7 +14,7 @@ const CALC_SIDEBAR_SCROLLABLE =
 
 export const metadata = {
   title: {
-    absolute: "Who Offers Industrial Motor Rewinding & Repair? | IQMotorBase Directory",
+    absolute: "Who Offers Industrial Motor Rewinding & Repair? | 3PhaseFlow Directory",
   },
   description:
     "Find industrial motor repair and rewinding shops near you. Large-frame AC rewinding, DC armature rewinds, high-voltage stator rewinding, and emergency service. Submit a requirement, matched to qualified shops.",
@@ -36,19 +36,19 @@ export const metadata = {
     "industrial motor testing",
     "who offers industrial motor rewinding",
   ],
-  authors: [{ name: "IQMotorBase.com" }],
+  authors: [{ name: "3PhaseFlow.com" }],
   openGraph: {
-    title: "Industrial Motor Rewinding & Repair Shops | IQMotorBase",
+    title: "Industrial Motor Rewinding & Repair Shops | 3PhaseFlow",
     description:
       "Find industrial motor repair and rewinding shops. Large-frame, HV, AC/DC armature rewinding. Submit a requirement, matched to shops near you.",
     url: path,
     type: "article",
-    siteName: "IQMotorBase.com",
+    siteName: "3PhaseFlow.com",
     locale: "en_US",
   },
   twitter: {
     card: "summary_large_image",
-    title: "Who Offers Industrial Motor Rewinding & Repair? | IQMotorBase",
+    title: "Who Offers Industrial Motor Rewinding & Repair? | 3PhaseFlow",
     description:
       "Find industrial motor repair and rewinding shops. Large-frame, HV, AC/DC armature rewinding. Submit a requirement, matched to shops near you.",
   },
@@ -70,7 +70,7 @@ const faqItems = [
   {
     question: "How much does industrial motor repair cost?",
     answer:
-      "Cost scales with horsepower, voltage class, copper and insulation work, mechanical damage, and testing scope. Small industrial jobs may start in the low thousands; large rewinds and medium-voltage work often reach tens of thousands. Use IQMotorBase.com’s motor rewind cost calculator for a US ballpark range, then obtain written quotes after physical inspection, see the motor repair cost guide for pricing tables and line-item comparisons.",
+      "Cost scales with horsepower, voltage class, copper and insulation work, mechanical damage, and testing scope. Small industrial jobs may start in the low thousands; large rewinds and medium-voltage work often reach tens of thousands. Use 3PhaseFlow.com’s motor rewind cost calculator for a US ballpark range, then obtain written quotes after physical inspection, see the motor repair cost guide for pricing tables and line-item comparisons.",
   },
   {
     question: "Is rewinding or replacing better for an industrial motor?",
@@ -85,7 +85,7 @@ const faqItems = [
   {
     question: "How do I find industrial motor repair near me?",
     answer:
-      "Search by city or ZIP in the IQMotorBase.com repair center directory, filter by services and voltage class where listed, and contact two or three shops with your nameplate data and photos. The near-me page and quote request form help route RFQs to shops that can respond with scope and pricing.",
+      "Search by city or ZIP in the 3PhaseFlow.com repair center directory, filter by services and voltage class where listed, and contact two or three shops with your nameplate data and photos. The near-me page and quote request form help route RFQs to shops that can respond with scope and pricing.",
   },
   {
     question: "What certifications matter for industrial motor repair?",
@@ -95,7 +95,7 @@ const faqItems = [
   {
     question: "Can I get a rush or emergency industrial motor repair?",
     answer:
-      "Many shops offer expedited diagnostics and overtime rewinds at a premium. Document failure symptoms, arrange safe transport or field removal, and ask about parallel paths (loaner, spare, swap) while the primary unit is in the shop. Emergency timelines and premiums are covered in IQMotorBase.com’s emergency motor repair guide.",
+      "Many shops offer expedited diagnostics and overtime rewinds at a premium. Document failure symptoms, arrange safe transport or field removal, and ask about parallel paths (loaner, spare, swap) while the primary unit is in the shop. Emergency timelines and premiums are covered in 3PhaseFlow.com’s emergency motor repair guide.",
   },
 ];
 
@@ -146,7 +146,7 @@ function IndustrialMotorRepairWebPageJsonLd({ pageUrl, site }) {
     name: "Who offers industrial motor rewinding and repair?",
     description:
       "Find industrial motor repair and rewinding shops in your area. Submit a requirement, matched to shops near you.",
-    isPartOf: { "@type": "WebSite", name: "IQMotorBase.com", url: site },
+    isPartOf: { "@type": "WebSite", name: "3PhaseFlow.com", url: site },
     about: [
       { "@type": "Thing", name: "Industrial motor repair" },
       { "@type": "Thing", name: "Motor rewinding" },
@@ -240,7 +240,7 @@ export default function IndustrialMotorRepairPage() {
             and processing lines running when drives fail. Unlike light commercial work, plant motors often involve
             higher horsepower, medium voltage, severe-duty enclosures, and documentation requirements that only
             experienced rewinding shops can handle. Use this page to understand what qualified shops do, what drives
-            price, and how to reach them through IQMotorBase.com&apos;s{" "}
+            price, and how to reach them through 3PhaseFlow.com&apos;s{" "}
             <Link href="/electric-motor-repair-shops-listings" className="text-primary font-medium hover:underline">
               repair center directory
             </Link>{" "}

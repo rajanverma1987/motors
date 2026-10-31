@@ -3,7 +3,7 @@ import { marketingPageMetadata } from "@/lib/marketing-page-metadata";
 export const metadata = marketingPageMetadata({
   path: "/register",
   title: "Contact us",
-  description: "Contact IQMotorBase.com to get your center account.",
+  description: "Contact 3PhaseFlow.com to get your center account.",
   index: false,
   follow: false,
 });

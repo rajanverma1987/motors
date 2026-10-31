@@ -1,11 +1,11 @@
 import { getPublicSiteUrl } from "@/lib/public-site-url";
 
-/** Marketing site logo served from `public/logo.png`. */
-export const BRAND_LOGO_PUBLIC_PATH = "/logo.png";
+/** Marketing site logo served from `public/logo-3phaseflow.png`. */
+export const BRAND_LOGO_PUBLIC_PATH = "/logo-3phaseflow.png";
 
-/** Intrinsic pixel size of `public/logo.png` (update if the file is replaced). */
-export const BRAND_LOGO_WIDTH = 1363;
-export const BRAND_LOGO_HEIGHT = 183;
+/** Intrinsic pixel size of the brand wordmark file (update if the file is replaced). */
+export const BRAND_LOGO_WIDTH = 1330;
+export const BRAND_LOGO_HEIGHT = 187;
 
 /**
  * Absolute URL for email clients and JSON-LD (always https production host when env is localhost).

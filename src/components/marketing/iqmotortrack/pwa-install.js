@@ -60,7 +60,7 @@ export default async function IqMotorTrackPwaInstall({ headingId = "install-head
       <div className="mx-auto grid max-w-[86.4rem] items-center gap-10 px-4 sm:px-6 lg:grid-cols-2">
         <div>
           <h2 id={headingId} className="text-2xl font-bold tracking-tight text-title sm:text-3xl">
-            Scan to open IQMotorTrack on your phone
+            Scan to open 3PhaseTrack on your phone
           </h2>
           <p className="mt-3 max-w-xl text-base leading-relaxed text-secondary">
             Point your camera at the QR code. It opens the motor maintenance and repair app in your browser. Then add
@@ -75,7 +75,7 @@ export default async function IqMotorTrackPwaInstall({ headingId = "install-head
                 iPhone (Safari)
               </p>
               <p className="mt-1 text-sm leading-relaxed text-secondary">
-                Open the app URL. Tap Share. Tap Add to Home Screen. Tap Add. The IQMotorTrack icon appears on your
+                Open the app URL. Tap Share. Tap Add to Home Screen. Tap Add. The 3PhaseTrack icon appears on your
                 home screen.
               </p>
             </li>
@@ -108,7 +108,7 @@ export default async function IqMotorTrackPwaInstall({ headingId = "install-head
               height={400}
               className="mx-auto h-72 w-72 sm:h-80 sm:w-80 lg:h-96 lg:w-96"
             />
-            <figcaption className="mt-4 text-sm text-secondary">Scan to open IQMotorTrack</figcaption>
+            <figcaption className="mt-4 text-sm text-secondary">Scan to open 3PhaseTrack</figcaption>
           </figure>
         </div>
       </div>

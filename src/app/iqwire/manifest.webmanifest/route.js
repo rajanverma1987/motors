@@ -5,8 +5,8 @@ export async function GET() {
   const startUrl = `${IQWIRECALCULATOR_APP_PATH}?source=pwa`;
   const manifest = {
     id: IQWIRECALCULATOR_APP_PATH,
-    name: "IQWireCalculator",
-    short_name: "IQWireCalc",
+    name: "3PhaseWire",
+    short_name: "3PhaseWire",
     description: "CM Best Match circular mils calculator for motor rewind shops.",
     start_url: startUrl,
     scope: IQWIRECALCULATOR_APP_PATH,

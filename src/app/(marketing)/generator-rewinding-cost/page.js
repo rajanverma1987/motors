@@ -6,7 +6,7 @@ import { getPublicSiteUrl } from "@/lib/public-site-url";
 const path = "/generator-rewinding-cost";
 
 export const metadata = {
-  title: "Generator Rewinding Cost: What It Costs in 2026 | IQMotorBase",
+  title: "Generator Rewinding Cost: What It Costs in 2026 | 3PhaseFlow",
   description:
     "Generator rewinding typically costs $1,500 to $15,000 depending on KW rating, winding type, and urgency. Get matched to certified generator rewind shops in your area.",
   keywords: [
@@ -16,19 +16,19 @@ export const metadata = {
     "alternator rewind cost",
     "generator stator rewind",
   ],
-  authors: [{ name: "IQMotorBase.com" }],
+  authors: [{ name: "3PhaseFlow.com" }],
   openGraph: {
-    title: "Generator Rewinding Cost | 2026 Price Guide | IQMotorBase",
+    title: "Generator Rewinding Cost | 2026 Price Guide | 3PhaseFlow",
     description:
       "How much does it cost to rewind a generator? $1,500 to $15,000 depending on KW and winding type. Find a certified shop near you.",
     url: path,
     type: "article",
-    siteName: "IQMotorBase.com",
+    siteName: "3PhaseFlow.com",
     locale: "en_US",
   },
   twitter: {
     card: "summary_large_image",
-    title: "Generator Rewinding Cost: What It Costs in 2026 | IQMotorBase",
+    title: "Generator Rewinding Cost: What It Costs in 2026 | 3PhaseFlow",
     description: "Cost guide for generator rewinding by KW rating, winding type, and urgency.",
   },
   alternates: { canonical: path },

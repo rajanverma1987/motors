@@ -27,7 +27,7 @@ const documentSchema = new mongoose.Schema(
 );
 
 /**
- * IQMotorTrack motor register (plant-owned).
+ * 3PhaseTrack motor register (plant-owned).
  */
 const trackMotorSchema = new mongoose.Schema(
   {

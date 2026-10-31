@@ -12,7 +12,7 @@ import Button from "@/components/ui/button";
 export default function TalentShareButtons({
   profileUrl,
   shareTitle = "My electric motor shop talent profile",
-  shareText = "Check out my free electric motor shop talent profile on IQMotorBase.",
+  shareText = "Check out my free electric motor shop talent profile on 3PhaseFlow.",
   compact = false,
 }) {
   const [copied, setCopied] = useState(false);

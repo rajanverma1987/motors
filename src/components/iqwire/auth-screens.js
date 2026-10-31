@@ -53,7 +53,7 @@ function LoginScreen({ onCreate }) {
   return (
     <div className="flex min-h-[100dvh] flex-col bg-bg">
       <AuthHero
-        title="IQWireCalculator"
+        title="3PhaseWire"
         subtitle="3-day free trial, then $11.99/month or $119/year. Cancel anytime."
       />
       <div className="flex-1 px-4 py-5">
@@ -142,7 +142,7 @@ function RegisterScreen({ onBack }) {
           <FiArrowLeft className="h-4 w-4 shrink-0" aria-hidden />
           Sign in
         </button>
-        <h1 className="text-2xl font-extrabold text-title">Join IQWireCalculator</h1>
+        <h1 className="text-2xl font-extrabold text-title">Join 3PhaseWire</h1>
         <p className="mt-1 text-sm text-secondary">3-day free trial. Not tied to a shop login.</p>
       </div>
       <div className="flex-1 overflow-y-auto px-4 py-5">

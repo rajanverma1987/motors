@@ -1,5 +1,5 @@
-/* IQMotorBase PWA service worker — installability + network-only (no stale app cache). */
-const SW_VERSION = "iqmotorbase-pwa-v5";
+/* 3PhaseFlow PWA service worker — installability + network-only (no stale app cache). */
+const SW_VERSION = "3phaseflow-pwa-v1";
 
 self.addEventListener("install", (event) => {
   event.waitUntil(self.skipWaiting());
@@ -10,7 +10,9 @@ self.addEventListener("activate", (event) => {
     (async () => {
       const keys = await caches.keys();
       await Promise.all(
-        keys.filter((key) => key.startsWith("iqmotorbase-pwa-")).map((key) => caches.delete(key))
+        keys
+          .filter((key) => key.startsWith("3phaseflow-pwa-") || key.startsWith("iqmotorbase-pwa-"))
+          .map((key) => caches.delete(key))
       );
       await self.clients.claim();
     })()
@@ -31,7 +33,7 @@ self.addEventListener("fetch", (event) => {
   if (event.request.method !== "GET") return;
   event.respondWith(
     fetch(event.request).catch(() =>
-      new Response("You are offline. Reconnect to use IQMotorBase.", {
+      new Response("You are offline. Reconnect to use 3PhaseFlow.", {
         status: 503,
         statusText: "Offline",
         headers: { "Content-Type": "text/plain; charset=utf-8" },

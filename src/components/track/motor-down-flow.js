@@ -341,7 +341,7 @@ export default function TrackMotorDownFlow({ open, motor, onClose, onSent }) {
                       </div>
                       {shop.respondsBy === "email" ? (
                         <p className="mt-1.5 text-[10px] text-secondary">
-                          This shop has no IQMotorBase account yet, so datasheet write-back is not possible until
+                          This shop has no 3PhaseFlow account yet, so datasheet write-back is not possible until
                           it claims its listing.
                         </p>
                       ) : null}

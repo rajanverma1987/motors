@@ -190,7 +190,7 @@ export default function TrackShopResponseClient({ rfqId, invitationId }) {
     <div className="mx-auto max-w-3xl space-y-4 px-4 py-8">
       <header>
         <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-primary">
-          Motor repair request via IQMotorTrack
+          Motor repair request via 3PhaseTrack
         </p>
         <h1 className="mt-1 text-2xl font-extrabold text-title">{rfq.motorTitle}</h1>
         <p className="mt-1 text-sm text-secondary">

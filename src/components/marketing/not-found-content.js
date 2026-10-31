@@ -48,7 +48,7 @@ const POPULAR_LINKS = [
   {
     href: getDemoBookingUrl(),
     label: "Book a demo",
-    description: "30-minute walkthrough of IQMotorBase for shop owners.",
+    description: "30-minute walkthrough of 3PhaseFlow for shop owners.",
     icon: FiMail,
     external: true,
   },
@@ -74,7 +74,7 @@ export default function NotFoundContent() {
             This page could not be found
           </h1>
           <p className="mt-4 text-base leading-relaxed text-secondary sm:text-lg">
-            The link may be outdated, mistyped, or the page was moved. IQMotorBase is still here: find a
+            The link may be outdated, mistyped, or the page was moved. 3PhaseFlow is still here: find a
             motor repair shop, check rewinding costs, or explore shop management software below.
           </p>
           <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-center">
@@ -96,7 +96,7 @@ export default function NotFoundContent() {
 
       <section className="mx-auto max-w-4xl px-4 py-12 sm:px-6 sm:py-16" aria-labelledby="not-found-links-heading">
         <h2 id="not-found-links-heading" className="text-center text-xl font-bold text-title sm:text-2xl">
-          Popular pages on IQMotorBase
+          Popular pages on 3PhaseFlow
         </h2>
         <p className="mt-2 text-center text-sm text-secondary sm:text-base">
           For industrial buyers and motor repair shop owners.

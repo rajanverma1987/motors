@@ -102,7 +102,7 @@ export default function Navbar() {
             <Link
               href="/"
               className="min-w-0 shrink-0 touch-manipulation transition-opacity hover:opacity-90"
-              aria-label="IQ Motorbase, home"
+              aria-label="3PhaseFlow, home"
             >
               <BrandLogo
                 plain

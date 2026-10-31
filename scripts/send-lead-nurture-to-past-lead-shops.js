@@ -1,7 +1,7 @@
 /**
- * One-shot: send the IQMotorBase platform nurture email to every shop that has
- * already received a website or IQMotorTrack repair lead and is not a paying
- * IQMotorBase customer.
+ * One-shot: send the 3PhaseFlow platform nurture email to every shop that has
+ * already received a website or 3PhaseTrack repair lead and is not a paying
+ * 3PhaseFlow customer.
  *
  * Skips: paying shops, opted-out emails, contact_view leads,
  * shops that already received this nurture email.

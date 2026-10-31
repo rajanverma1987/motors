@@ -26,7 +26,7 @@ function provenanceText(entry) {
 }
 
 /**
- * §6.5 - datasheet on the motor record, using the IQMotorBase field keys so
+ * §6.5 - datasheet on the motor record, using the 3PhaseFlow field keys so
  * values round-trip losslessly. Every value shows where it came from.
  */
 export default function TrackDatasheetPanel({ motor, onChanged }) {

@@ -97,8 +97,8 @@ function Row({ label, value }) {
 }
 
 /**
- * §9.4 / §14 - the shop's view of IQMotorTrack Motor Down RFQs, with Convert to
- * Service Proposal, Decline to Quote and Send Proposal to IQMotorTrack.
+ * §9.4 / §14 - the shop's view of 3PhaseTrack Motor Down RFQs, with Convert to
+ * Service Proposal, Decline to Quote and Send Proposal to 3PhaseTrack.
  * When `embedded`, renders without the outer Simple screen shell (for Customers → Leads).
  */
 export default function TrackRfqsPanel({ embedded = false }) {
@@ -283,7 +283,7 @@ export default function TrackRfqsPanel({ embedded = false }) {
         sortable: false,
         render: () => (
           <Badge variant="primary" className="rounded-full px-2.5 py-0.5 text-xs">
-            From IQMotorTrack
+            From 3PhaseTrack
           </Badge>
         ),
       },
@@ -361,7 +361,7 @@ export default function TrackRfqsPanel({ embedded = false }) {
           loading={loading}
           stickyHeader
           dense
-          emptyMessage="No IQMotorTrack requests yet. Plants that pick your shop appear here."
+          emptyMessage="No 3PhaseTrack requests yet. Plants that pick your shop appear here."
         />
       </div>
 
@@ -406,7 +406,7 @@ export default function TrackRfqsPanel({ embedded = false }) {
                   {canAct ? (
                     <Button type="button" size="sm" onClick={() => setSendOpen(true)}>
                       <FiSend className="h-4 w-4 shrink-0" aria-hidden />
-                      {rfqState?.responseVersion ? "Send revised proposal" : "Send Proposal to IQMotorTrack"}
+                      {rfqState?.responseVersion ? "Send revised proposal" : "Send Proposal to 3PhaseTrack"}
                     </Button>
                   ) : null}
                 </>
@@ -421,7 +421,7 @@ export default function TrackRfqsPanel({ embedded = false }) {
           <div className="space-y-4">
             <div className="flex flex-wrap gap-1.5">
               <Badge variant="primary" className="rounded-full px-2.5 py-0.5 text-xs">
-                From IQMotorTrack
+                From 3PhaseTrack
               </Badge>
               <Badge
                 variant={String(lead.urgencyLevel).toLowerCase() === "emergency" ? "danger" : "default"}
@@ -560,7 +560,7 @@ export default function TrackRfqsPanel({ embedded = false }) {
 
             {lead.datasheetGroups.length ? (
               <section className="rounded-xl border border-border bg-card p-4">
-                <h3 className="font-bold text-title">Datasheet from IQMotorTrack</h3>
+                <h3 className="font-bold text-title">Datasheet from 3PhaseTrack</h3>
                 {lead.datasheetProvenance ? (
                   <p className="mt-0.5 text-xs text-secondary">{lead.datasheetProvenance}</p>
                 ) : null}
@@ -579,7 +579,7 @@ export default function TrackRfqsPanel({ embedded = false }) {
                 </div>
                 <p className="mt-2 text-xs text-secondary">
                   Converting pre-fills your {lead.motorPowerType} datasheet with these values, marked as
-                  coming from IQMotorTrack. You can accept or correct each one.
+                  coming from 3PhaseTrack. You can accept or correct each one.
                 </p>
               </section>
             ) : null}
@@ -618,7 +618,7 @@ export default function TrackRfqsPanel({ embedded = false }) {
                 <Row label="Job status" value={lead.proposal.jobStatus} />
                 <p className="mt-2 text-xs text-secondary">
                   Saving the proposal does not send anything to the customer. Use Send Proposal to
-                  IQMotorTrack when you are ready.
+                  3PhaseTrack when you are ready.
                 </p>
               </section>
             ) : null}
@@ -664,7 +664,7 @@ export default function TrackRfqsPanel({ embedded = false }) {
       <Modal
         open={sendOpen}
         onClose={() => setSendOpen(false)}
-        title="Send proposal to IQMotorTrack"
+        title="Send proposal to 3PhaseTrack"
         size="lg"
         actions={
           <Button type="submit" form="track-send-form" size="sm" disabled={busy}>

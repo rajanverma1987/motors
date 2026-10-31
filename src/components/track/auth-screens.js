@@ -59,7 +59,7 @@ function LoginScreen({ onCreate }) {
   return (
     <div className="flex min-h-0 flex-col bg-bg">
       <AuthHero
-        title="IQMotorTrack"
+        title="3PhaseTrack"
         subtitle={`Motor maintenance and repair for plants. Free for ${IQMOTORTRACK_FREE_MOTOR_LIMIT} motors. Pro $${IQMOTORTRACK_MONTHLY_USD}/mo.`}
       />
       <div className="flex-1 px-4 py-5">

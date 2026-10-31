@@ -5,7 +5,7 @@ import NotFoundContent from "@/components/marketing/not-found-content";
 export const metadata = {
   title: "Page not found",
   description:
-    "The page you requested is not on IQMotorBase. Find motor repair shops, rewinding cost guides, or shop management software from here.",
+    "The page you requested is not on 3PhaseFlow. Find motor repair shops, rewinding cost guides, or shop management software from here.",
   robots: {
     index: false,
     follow: true,

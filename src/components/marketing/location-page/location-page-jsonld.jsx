@@ -47,7 +47,7 @@ export default function LocationPageJsonLd({ pageUrl, page, areaLabel, faqItems,
     description:
       page.metaDescription ||
       `Find motor repair and rewinding shops in ${areaLabel}. Compare capabilities and request quotes.`,
-    isPartOf: { "@type": "WebSite", name: "IQMotorBase.com", url: site },
+    isPartOf: { "@type": "WebSite", name: "3PhaseFlow.com", url: site },
     about: { "@type": "Thing", name: `Electric motor repair in ${areaLabel}` },
   };
 

@@ -1,5 +1,5 @@
 /**
- * Create or update IQWireCalculator PayPal billing plans:
+ * Create or update 3PhaseWire PayPal billing plans:
  *   monthly $11.99 (slug: mobile-app)
  *   yearly  $119   (slug: mobile-app-yearly)
  *

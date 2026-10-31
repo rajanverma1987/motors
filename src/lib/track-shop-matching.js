@@ -1,5 +1,5 @@
 /**
- * Ranks IQMotorBase directory listings for the IQMotorTrack shop selection screen (§7.3, §14.10).
+ * Ranks 3PhaseFlow directory listings for the 3PhaseTrack shop selection screen (§7.3, §14.10).
  *
  * Ranking inputs, in the order the spec requires:
  *   1. Proximity to the facility (city, then state / stated coverage, then everything else).

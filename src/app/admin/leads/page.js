@@ -648,7 +648,7 @@ export default function AdminLeadsPage() {
           >
             <p className="text-sm text-secondary">
               Sends two emails at once: a shop check-in on the lead, and a customer check-in on connection plus an
-              IQMotorBase rating. Edit either draft before sending.
+              3PhaseFlow rating. Edit either draft before sending.
             </p>
             {mailingLead ? (
               <p className="text-xs text-secondary">
@@ -698,7 +698,7 @@ export default function AdminLeadsPage() {
               <section className="flex min-w-0 flex-col gap-3 rounded-lg border border-border p-3">
                 <h3 className="text-sm font-semibold text-title">Email to lead</h3>
                 <p className="text-xs text-secondary">
-                  Asks if the shop connected with them, and how they would rate IQMotorBase.
+                  Asks if the shop connected with them, and how they would rate 3PhaseFlow.
                 </p>
                 <Input
                   label="To"

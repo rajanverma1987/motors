@@ -11,11 +11,11 @@ export const metadata = {
     "Actionable ways electric motor repair and rewinding shops attract more industrial buyers: visibility, speed, proof, and follow-up, without gimmicks.",
   keywords: ["motor repair shop customers", "motor rewinding leads", "industrial motor repair marketing"],
   openGraph: {
-    title: "How to Get More Customers for a Motor Repair Shop | IQMotorBase.com",
+    title: "How to Get More Customers for a Motor Repair Shop | 3PhaseFlow.com",
     description: "Visibility, response discipline, and trust signals that win quotes.",
     url: path,
     type: "article",
-    siteName: "IQMotorBase.com",
+    siteName: "3PhaseFlow.com",
     locale: "en_US",
   },
   alternates: { canonical: path },

@@ -241,7 +241,7 @@ export default function AdminMarketingPage() {
   const [templates, setTemplates] = useState([]);
   const [activeTemplateKey, setActiveTemplateKey] = useState("initial");
   const [savingTemplates, setSavingTemplates] = useState(false);
-  const [testEmail, setTestEmail] = useState("contact@iqmotorbase.com");
+  const [testEmail, setTestEmail] = useState("contact@3phaseflow.com");
   const [sendingTest, setSendingTest] = useState(false);
   const [dailyLimitOverride, setDailyLimitOverride] = useState("100");
   const [cardFilter, setCardFilter] = useState("");
@@ -740,7 +740,7 @@ export default function AdminMarketingPage() {
                     type="email"
                     value={testEmail}
                     onChange={(e) => setTestEmail(e.target.value)}
-                    placeholder="contact@iqmotorbase.com"
+                    placeholder="contact@3phaseflow.com"
                   />
                 </div>
                 <Button

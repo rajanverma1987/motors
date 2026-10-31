@@ -3,7 +3,7 @@ import { marketingPageMetadata } from "@/lib/marketing-page-metadata";
 export const metadata = marketingPageMetadata({
   path: "/login",
   title: "Log in",
-  description: "Log in to your IQMotorBase.com center portal.",
+  description: "Log in to your 3PhaseFlow.com center portal.",
   index: false,
   follow: false,
 });

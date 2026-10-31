@@ -105,7 +105,7 @@ export function SharePhoneMock() {
         <p className="mt-1 text-[11px] text-secondary">Name it, reopen later from Saved results.</p>
       </Card>
       <p className="mt-2 text-[10px] leading-relaxed text-secondary">
-        IQWireCalculator · landscape PDF with original takeoff, target CM, and the full mix table.
+        3PhaseWire · landscape PDF with original takeoff, target CM, and the full mix table.
       </p>
     </PhoneShell>
   );

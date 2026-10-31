@@ -94,10 +94,10 @@ export default function BlogPageLayout({
         url: articleUrl,
         mainEntityOfPage: { "@type": "WebPage", "@id": articleUrl },
         dateModified: MARKETING_CONTENT_DATE,
-        author: { "@type": "Organization", name: "IQMotorBase.com", url: origin },
+        author: { "@type": "Organization", name: "3PhaseFlow.com", url: origin },
         publisher: {
           "@type": "Organization",
-          name: "IQMotorBase.com",
+          name: "3PhaseFlow.com",
           url: origin,
           logo: {
             "@type": "ImageObject",

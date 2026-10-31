@@ -32,7 +32,7 @@ function PaypalCompleteContent() {
         {ok
           ? activated === false
             ? "PayPal has not finished billing yet. Return to the app and it will refresh access shortly."
-            : "You can return to IQWireCalculator. Access updates automatically."
+            : "You can return to 3PhaseWire. Access updates automatically."
           : "No charge was made. You can try again from the app when you are ready."}
       </p>
       <Link

@@ -11,8 +11,8 @@ import { FOUNDER_SPOTS_TOTAL } from "./pricing-cards-client";
 
 const FAQS = [
   {
-    q: "How much does IQMotorBase cost?",
-    a: "IQMotorBase costs $349/month on the monthly plan or $3,235/year on the annual plan (equivalent to $269/month, saving $983/year). Both plans include unlimited users and full platform access.",
+    q: "How much does 3PhaseFlow cost?",
+    a: "3PhaseFlow costs $349/month on the monthly plan or $3,235/year on the annual plan (equivalent to $269/month, saving $983/year). Both plans include unlimited users and full platform access.",
   },
   {
     q: "What is included in the price?",
@@ -24,7 +24,7 @@ const FAQS = [
   },
   {
     q: "What is founder pricing?",
-    a: "Founder pricing is a permanently locked discounted rate for the first 10 shops that join IQMotorBase. Your rate never increases as long as you stay subscribed, no matter what the standard price becomes. Contact us to check if spots are still available.",
+    a: "Founder pricing is a permanently locked discounted rate for the first 10 shops that join 3PhaseFlow. Your rate never increases as long as you stay subscribed, no matter what the standard price becomes. Contact us to check if spots are still available.",
   },
   {
     q: "How many users are included?",
@@ -122,7 +122,7 @@ export default function PricingContactFaqClient() {
         <p className="mt-2 max-w-2xl text-sm leading-relaxed text-secondary">
           {contactForm.requestType === "founder"
             ? `You're requesting access to our founder pricing: a permanently locked rate for the first ${FOUNDER_SPOTS_TOTAL} shops. We'll confirm your rate and availability within a few hours.`
-            : "Ask us anything: pricing, features, onboarding, or whether IQMotorBase fits your shop. We respond within a few hours."}
+            : "Ask us anything: pricing, features, onboarding, or whether 3PhaseFlow fits your shop. We respond within a few hours."}
         </p>
 
         <div className="mt-4 flex flex-wrap gap-2">
@@ -204,7 +204,7 @@ export default function PricingContactFaqClient() {
               placeholder={
                 contactForm.requestType === "founder"
                   ? "Location, how many jobs per month, anything that helps us understand your shop."
-                  : "What would you like to know about IQMotorBase?"
+                  : "What would you like to know about 3PhaseFlow?"
               }
             />
             {submitError ? (
@@ -247,7 +247,7 @@ export default function PricingContactFaqClient() {
             <p className="mt-2 text-sm text-secondary">
               {contactForm.requestType === "founder"
                 ? "We'll confirm your founder rate and availability within a few hours. In the meantime, book a demo to see the platform:"
-                : "While you wait, book a free demo to see IQMotorBase in action:"}
+                : "While you wait, book a free demo to see 3PhaseFlow in action:"}
             </p>
             <DemoBookingLink className="mt-4 inline-flex min-h-11 items-center justify-center rounded-md bg-primary px-5 py-2.5 text-sm font-semibold text-white hover:opacity-90">
               Book a free 30-minute demo

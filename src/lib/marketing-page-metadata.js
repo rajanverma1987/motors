@@ -49,7 +49,7 @@ export function marketingPageMetadata({
       title: socialTitle,
       description: socialDescription,
       url: canonical,
-      siteName: "IQMotorBase.com",
+      siteName: "3PhaseFlow.com",
       type: "website",
       locale: "en_US",
       images: [
@@ -57,7 +57,7 @@ export function marketingPageMetadata({
           url: ogImage,
           width: 1200,
           height: 630,
-          alt: socialTitle || "IQMotorBase.com",
+          alt: socialTitle || "3PhaseFlow.com",
         },
       ],
     },

@@ -13,7 +13,7 @@ const COST_SIDEBAR_CALC_SCROLLABLE =
 
 export const metadata = {
   title: {
-    absolute: "Motor Rewinding Cost: $400 to $9,000 | Full Price Guide | IQMotorBase",
+    absolute: "Motor Rewinding Cost: $400 to $9,000 | Full Price Guide | 3PhaseFlow",
   },
   description:
     "Motor rewinding costs by HP: $400 to $900 for small motors, $1,200 to $3,500 for 10 to 50 HP, $3,000 to $9,000 for 50 to 200 HP. AC, DC, armature, and stator rewind price ranges. Get a quote.",
@@ -44,20 +44,20 @@ export const metadata = {
     "motor repair vs rewind cost",
     "shop minimum motor repair charge",
   ],
-  authors: [{ name: "IQMotorBase.com" }],
+  authors: [{ name: "3PhaseFlow.com" }],
   openGraph: {
-    title: "Motor Rewinding Cost Guide: $400 to $9,000 by HP | IQMotorBase",
+    title: "Motor Rewinding Cost Guide: $400 to $9,000 by HP | 3PhaseFlow",
     description:
       "Motor rewinding price ranges by HP, AC, DC, armature, and stator rewinds. Get matched to certified shops for a real quote.",
     url: path,
     type: "article",
-    siteName: "IQMotorBase.com",
+    siteName: "3PhaseFlow.com",
     locale: "en_US",
     modifiedTime: "2026-06-25",
   },
   twitter: {
     card: "summary_large_image",
-    title: "Motor Rewinding Cost: $400 to $9,000 | IQMotorBase",
+    title: "Motor Rewinding Cost: $400 to $9,000 | 3PhaseFlow",
     description:
       "Motor rewinding price guide by HP. AC, DC, armature, and stator rewinds. Get a quote.",
   },
@@ -74,12 +74,12 @@ const faqItems = [
   {
     question: "Is rewinding cheaper than buying a new motor?",
     answer:
-      "Sometimes yes, especially for large or long-lead specialty motors, but not always. Compare the rewind quote to replacement cost, downtime, and efficiency. Use a structured repair vs. replace comparison (such as the IQMotorBase.com guide on when to repair or replace an electric motor) to decide when each option makes economic sense.",
+      "Sometimes yes, especially for large or long-lead specialty motors, but not always. Compare the rewind quote to replacement cost, downtime, and efficiency. Use a structured repair vs. replace comparison (such as the 3PhaseFlow.com guide on when to repair or replace an electric motor) to decide when each option makes economic sense.",
   },
   {
     question: "Why do motor repair quotes vary between shops?",
     answer:
-      "Shops differ in labor rates, material sources, testing included, warranty terms, and how they scope hidden damage. Always compare line items (labor, materials, testing, rush fees) and ask what is included. A practical checklist for vetting shops is available on IQMotorBase.com under how to choose an electric motor repair shop.",
+      "Shops differ in labor rates, material sources, testing included, warranty terms, and how they scope hidden damage. Always compare line items (labor, materials, testing, rush fees) and ask what is included. A practical checklist for vetting shops is available on 3PhaseFlow.com under how to choose an electric motor repair shop.",
   },
   {
     question: "What is usually included in a motor repair or rewind quote?",
@@ -89,7 +89,7 @@ const faqItems = [
   {
     question: "How can I get an accurate motor rewind cost estimate?",
     answer:
-      "Send photos, nameplate data (HP/kW, voltage, frame, RPM), and failure symptoms, but expect the final price after physical inspection. Use IQMotorBase.com to request quotes or browse repair shops by location and contact shops directly.",
+      "Send photos, nameplate data (HP/kW, voltage, frame, RPM), and failure symptoms, but expect the final price after physical inspection. Use 3PhaseFlow.com to request quotes or browse repair shops by location and contact shops directly.",
   },
   {
     question: "What happens to the information I submit in quote requests?",
@@ -114,7 +114,7 @@ const faqItems = [
   {
     question: "Does emergency or after-hours motor repair cost more?",
     answer:
-      "Usually yes. Rush diagnostics, overtime labor, expedited materials, and weekend or holiday callouts are often billed at a premium. If uptime is costly, discuss expedite pricing and parallel paths (loaner, spare, swap) up front, see IQMotorBase.com emergency motor repair guidance.",
+      "Usually yes. Rush diagnostics, overtime labor, expedited materials, and weekend or holiday callouts are often billed at a premium. If uptime is costly, discuss expedite pricing and parallel paths (loaner, spare, swap) up front, see 3PhaseFlow.com emergency motor repair guidance.",
   },
   {
     question: "Is motor rewinding worth it for energy efficiency or upgrading to inverter duty?",
@@ -187,15 +187,15 @@ function CostPageSpeakableJsonLd({ pageUrl, site }) {
       dateModified,
       author: {
         "@type": "Organization",
-        name: "IQMotorBase",
+        name: "3PhaseFlow",
         url: site,
       },
       publisher: {
         "@type": "Organization",
-        name: "IQMotorBase",
+        name: "3PhaseFlow",
         logo: {
           "@type": "ImageObject",
-          url: `${site}/logo.png`,
+          url: `${site}/logo-3phaseflow.png`,
         },
       },
       description:
@@ -223,7 +223,7 @@ function CostPageWebPageJsonLd({ pageUrl, site }) {
     description:
       "US motor rewinding costs by horsepower: ballpark pricing tables ($250 to $60k+), free rewind calculator, cost drivers, and FAQs for comparing shop quotes.",
     dateModified: "2026-06-25",
-    isPartOf: { "@type": "WebSite", name: "IQMotorBase.com", url: site },
+    isPartOf: { "@type": "WebSite", name: "3PhaseFlow.com", url: site },
     about: [
       { "@type": "Thing", name: "Electric motor repair" },
       { "@type": "Thing", name: "Motor rewinding" },
@@ -401,7 +401,7 @@ export default function CostOfMotorRepairPage() {
             <p className="mt-4 text-sm leading-relaxed text-secondary sm:text-base">
               The following ranges reflect US motor repair shop pricing at standard (non-emergency) turnaround. Prices
               vary by region, motor complexity, and shop. Emergency surcharges of 25 to 50% apply for rush work. Source:
-              IQMotorBase shop network pricing data.
+              3PhaseFlow shop network pricing data.
             </p>
             <div className="mt-6 overflow-x-auto rounded-xl border border-border bg-card shadow-sm">
               <table className="cost-table">
@@ -529,7 +529,7 @@ export default function CostOfMotorRepairPage() {
                 <dd>
                   Motors that cannot be transported locally must be shipped to a repair facility. Freight costs for
                   motors under 500 lbs typically run $150 to $400 for ground shipping. Motors above 500 lbs require flatbed
-                  or LTL freight, $300 to $800 or more depending on distance. Many shops in the IQMotorBase directory
+                  or LTL freight, $300 to $800 or more depending on distance. Many shops in the 3PhaseFlow directory
                   offer pickup and delivery within their service region.
                 </dd>
               </div>
@@ -806,7 +806,7 @@ export default function CostOfMotorRepairPage() {
             <p className="mt-6 text-secondary">
               You can also{" "}
               <Link href="/contact" className="text-primary font-medium hover:underline">
-                contact IQMotorBase.com
+                contact 3PhaseFlow.com
               </Link>{" "}
               with your requirement so we can help route you to centers that quote your type of work.
             </p>
@@ -876,7 +876,7 @@ export default function CostOfMotorRepairPage() {
               </li>
               <li>
                 <Link href="/contact" className="text-primary hover:underline">
-                  → Request a quote via IQMotorBase.com
+                  → Request a quote via 3PhaseFlow.com
                 </Link>
               </li>
             </ul>

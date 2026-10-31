@@ -119,7 +119,7 @@ export default function CalculatorPaywallModal({
           </>
         ) : !mounted || !user ? (
           <>
-            <p>Log in before payment. Your subscription is linked to your IQMotorBase account email.</p>
+            <p>Log in before payment. Your subscription is linked to your 3PhaseFlow account email.</p>
             <div className="flex flex-wrap gap-2">
               <Link href={loginUrl}>
                 <Button type="button" variant="primary" size="sm">

@@ -56,7 +56,7 @@ export default function TrackDashboardScreen({ onOpenMotor, onOpenRfq, onAddMoto
     return (
       <div className="px-4 pb-8 pt-3">
         <TrackEmpty
-          title="Welcome to IQMotorTrack"
+          title="Welcome to 3PhaseTrack"
           message="Add your first motor. Snap the nameplate, record the location, and you are ready to send an RFQ the moment it goes down."
         >
           <Button type="button" onClick={onAddMotor}>

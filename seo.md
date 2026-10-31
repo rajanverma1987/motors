@@ -1,4 +1,4 @@
-# IQMotorBase.com — Pricing Page + AI Optimization
+# 3PhaseFlow.com — Pricing Page + AI Optimization
 
 # File 1 of 2
 
@@ -37,22 +37,22 @@ import type { Metadata } from 'next';
 import PricingClient from './PricingClient';
 
 export const metadata: Metadata = {
-  title: 'Pricing — Motor Repair Shop Software | IQMotorBase',
+  title: 'Pricing — Motor Repair Shop Software | 3PhaseFlow',
   description:
-    'IQMotorBase shop management software starts at $349/month. ' +
+    '3PhaseFlow shop management software starts at $349/month. ' +
     'Work orders, leads, inventory, invoicing, and QuickBooks sync — ' +
     'built exclusively for electric motor repair shops. ' +
     '10 founder spots available at a permanently locked rate.',
   alternates: {
-    canonical: 'https://iqmotorbase.com/pricing',
+    canonical: 'https://3phaseflow.com/pricing',
   },
   openGraph: {
-    title: 'Pricing — Motor Repair Shop Software | IQMotorBase',
+    title: 'Pricing — Motor Repair Shop Software | 3PhaseFlow',
     description:
-      'IQMotorBase starts at $349/month. Built exclusively for electric ' +
+      '3PhaseFlow starts at $349/month. Built exclusively for electric ' +
       'motor repair shops. 10 founder spots available.',
-    url: 'https://iqmotorbase.com/pricing',
-    siteName: 'IQMotorBase.com',
+    url: 'https://3phaseflow.com/pricing',
+    siteName: '3PhaseFlow.com',
     type: 'website',
   },
 };
@@ -61,8 +61,8 @@ export const metadata: Metadata = {
 const pricingSchema = {
   '@context': 'https://schema.org',
   '@type': 'SoftwareApplication',
-  name: 'IQMotorBase',
-  url: 'https://iqmotorbase.com',
+  name: '3PhaseFlow',
+  url: 'https://3phaseflow.com',
   applicationCategory: 'BusinessApplication',
   operatingSystem: 'Web, iOS, Android',
   description:
@@ -100,11 +100,11 @@ const faqSchema = {
   mainEntity: [
     {
       '@type': 'Question',
-      name: 'How much does IQMotorBase cost?',
+      name: 'How much does 3PhaseFlow cost?',
       acceptedAnswer: {
         '@type': 'Answer',
         text:
-          'IQMotorBase costs $349/month on the monthly plan or $3,235/year ' +
+          '3PhaseFlow costs $349/month on the monthly plan or $3,235/year ' +
           'on the annual plan (equivalent to $269/month, saving $983/year). ' +
           'Both plans include unlimited users and full platform access — ' +
           'work orders, lead generation, inventory, invoicing, accounts ' +
@@ -113,7 +113,7 @@ const faqSchema = {
     },
     {
       '@type': 'Question',
-      name: 'What is included in IQMotorBase pricing?',
+      name: 'What is included in 3PhaseFlow pricing?',
       acceptedAnswer: {
         '@type': 'Answer',
         text:
@@ -121,17 +121,17 @@ const faqSchema = {
           'work order tracking, customer and motor history registry, shop ' +
           'inventory management, invoicing and accounts receivable, vendor ' +
           'purchase orders, QuickBooks Online sync, lead generation from the ' +
-          'IQMotorBase directory, marketplace listings, careers/job board, ' +
+          '3PhaseFlow directory, marketplace listings, careers/job board, ' +
           'and API access. Technician mobile app coming soon.',
       },
     },
     {
       '@type': 'Question',
-      name: 'Does IQMotorBase offer a free trial?',
+      name: 'Does 3PhaseFlow offer a free trial?',
       acceptedAnswer: {
         '@type': 'Answer',
         text:
-          'IQMotorBase offers a free demo rather than a self-serve trial. ' +
+          '3PhaseFlow offers a free demo rather than a self-serve trial. ' +
           'Book a 20-minute demo to see the full platform and get your ' +
           'questions answered before committing.',
       },
@@ -150,11 +150,11 @@ const faqSchema = {
     },
     {
       '@type': 'Question',
-      name: 'What is IQMotorBase founder pricing?',
+      name: 'What is 3PhaseFlow founder pricing?',
       acceptedAnswer: {
         '@type': 'Answer',
         text:
-          'IQMotorBase is offering a permanently locked discounted rate to ' +
+          '3PhaseFlow is offering a permanently locked discounted rate to ' +
           'the first 10 shops that join the platform. Founder pricing is ' +
           'locked for life — your rate never increases as long as you stay ' +
           'subscribed. Contact us to check if founder spots are still available.',
@@ -212,7 +212,7 @@ export default function PricingPage() {
           <h2 id="included-heading">Everything included in every plan</h2>
           <p>
             No add-ons. No per-user fees. No surprise charges.
-            Every plan includes the full IQMotorBase platform:
+            Every plan includes the full 3PhaseFlow platform:
           </p>
 
           <dl className="pricing-features">
@@ -275,7 +275,7 @@ export default function PricingPage() {
             <div>
               <dt>Lead generation directory</dt>
               <dd>
-                Your shop is listed in the IQMotorBase public directory —
+                Your shop is listed in the 3PhaseFlow public directory —
                 indexed on Google, reaching industrial buyers searching for
                 motor repair in your area. Leads land in your dashboard.
               </dd>
@@ -283,7 +283,7 @@ export default function PricingPage() {
             <div>
               <dt>Marketplace and careers board</dt>
               <dd>
-                List surplus parts and equipment on the IQMotorBase marketplace.
+                List surplus parts and equipment on the 3PhaseFlow marketplace.
                 Post open technician and winder positions on the careers board —
                 reaching the right candidates in the motor repair trade.
               </dd>
@@ -317,7 +317,7 @@ export default function PricingPage() {
           <h2 id="contact-pricing-heading">Have a question before you book?</h2>
           <p>
             Ask us anything — pricing, features, onboarding, or whether
-            IQMotorBase is the right fit for your shop size and workflow.
+            3PhaseFlow is the right fit for your shop size and workflow.
           </p>
         </section>
 
@@ -346,8 +346,8 @@ const FOUNDER_SPOTS_LEFT = FOUNDER_SPOTS_TOTAL - FOUNDER_SPOTS_TAKEN;
 
 const faqs = [
   {
-    q: 'How much does IQMotorBase cost?',
-    a: 'IQMotorBase costs $349/month on the monthly plan or $3,235/year on the annual plan (equivalent to $269/month, saving $983/year). Both plans include unlimited users and full platform access.',
+    q: 'How much does 3PhaseFlow cost?',
+    a: '3PhaseFlow costs $349/month on the monthly plan or $3,235/year on the annual plan (equivalent to $269/month, saving $983/year). Both plans include unlimited users and full platform access.',
   },
   {
     q: 'What is included in the price?',
@@ -359,7 +359,7 @@ const faqs = [
   },
   {
     q: 'What is founder pricing?',
-    a: 'Founder pricing is a permanently locked discounted rate for the first 10 shops that join IQMotorBase. Your rate never increases as long as you stay subscribed — no matter what the standard price becomes. Contact us to check if spots are still available.',
+    a: 'Founder pricing is a permanently locked discounted rate for the first 10 shops that join 3PhaseFlow. Your rate never increases as long as you stay subscribed — no matter what the standard price becomes. Contact us to check if spots are still available.',
   },
   {
     q: 'How many users are included?',
@@ -503,7 +503,7 @@ export default function PricingClient() {
             </p>
             <p className="pricing-card-desc">
               A significantly discounted rate locked in for life for the
-              first {FOUNDER_SPOTS_TOTAL} shops that join IQMotorBase.
+              first {FOUNDER_SPOTS_TOTAL} shops that join 3PhaseFlow.
               Contact us to check availability and get your exclusive rate.
             </p>
           </div>
@@ -568,7 +568,7 @@ export default function PricingClient() {
           <p>
             {contactForm.requestType === 'founder'
               ? `You're requesting access to our founder pricing — a permanently locked rate for the first ${FOUNDER_SPOTS_TOTAL} shops. We'll confirm your rate and availability within a few hours.`
-              : 'Ask us anything — pricing, features, onboarding, or whether IQMotorBase fits your shop. We respond within a few hours.'}
+              : 'Ask us anything — pricing, features, onboarding, or whether 3PhaseFlow fits your shop. We respond within a few hours.'}
           </p>
 
           {/* Toggle between founder and general */}
@@ -625,7 +625,7 @@ export default function PricingClient() {
               <div className="pricing-form-field">
                 <label>Your question</label>
                 <textarea
-                  placeholder="What would you like to know about IQMotorBase?"
+                  placeholder="What would you like to know about 3PhaseFlow?"
                   rows={4}
                   value={contactForm.message}
                   onChange={(e) => setField('message', e.target.value)}
@@ -681,7 +681,7 @@ export default function PricingClient() {
             <p>
               {contactForm.requestType === 'founder'
                 ? `We'll confirm your founder rate and availability within a few hours. In the meantime, book a demo to see the platform:`
-                : 'While you wait, book a free demo to see IQMotorBase in action:'}
+                : 'While you wait, book a free demo to see 3PhaseFlow in action:'}
             </p>
             <a href="/contact" className="pricing-cta-primary" style={{ display: 'inline-block', marginTop: '12px' }}>
               Book a free 20-minute demo →

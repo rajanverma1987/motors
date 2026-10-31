@@ -115,7 +115,7 @@ export function getWorkspaceSmtpDeliveryNotice(mergedSettings) {
   return {
     status: "not_configured",
     message:
-      "Workspace SMTP is not set up. This email will be sent from IQMotorBase. Go to Settings → Email Settings to send from your shop address.",
+      "Workspace SMTP is not set up. This email will be sent from 3PhaseFlow. Go to Settings → Email Settings to send from your shop address.",
     canSend: true,
   };
 }

@@ -14,12 +14,12 @@ import {
 
 const path = SEO_SOFTWARE_COMPARISON_PATH;
 
-// The root layout applies a "%s | IQMotorBase" template, so the brand suffix is
+// The root layout applies a "%s | 3PhaseFlow" template, so the brand suffix is
 // omitted here; SOCIAL_TITLE carries it because og:/twitter: titles skip the template.
 const TITLE = "Best Software for Electric Motor Repair Shops (2026)";
-const SOCIAL_TITLE = `${TITLE} | IQMotorBase`;
+const SOCIAL_TITLE = `${TITLE} | 3PhaseFlow`;
 const DESCRIPTION =
-  "Compare electric motor repair shop software for 2026: IQMotorBase, Spring Point, Aptean, and auto-shop tools. Built for rewind shops, not motorcycle dealers.";
+  "Compare electric motor repair shop software for 2026: 3PhaseFlow, Spring Point, Aptean, and auto-shop tools. Built for rewind shops, not motorcycle dealers.";
 
 export const metadata = {
   title: TITLE,
@@ -27,14 +27,14 @@ export const metadata = {
   keywords: [
     "best motor repair software",
     "motor repair shop software comparison",
-    "IQMotorBase vs Spring Point",
+    "3PhaseFlow vs Spring Point",
   ],
   openGraph: {
     title: SOCIAL_TITLE,
     description: DESCRIPTION,
     url: path,
     type: "article",
-    siteName: "IQMotorBase.com",
+    siteName: "3PhaseFlow.com",
     locale: "en_US",
   },
   twitter: {
@@ -49,15 +49,15 @@ export const metadata = {
 const faqItems = [
   {
     q: "What is the best software for an electric motor repair shop in 2026?",
-    a: "There is no single best tool for every shop. IQMotorBase fits shops that want Job Write-Up → quote → work order → inventory → invoice on one job number, plus directory and local SEO leads that convert into customers without a second Shop Management System. Shops that want a larger ops ERP without a lead marketplace often evaluate Spring Point (MotorBase) or Aptean Service Repair Traverse Edition, both publicly positioned for electro-mechanical / apparatus repair shops.",
+    a: "There is no single best tool for every shop. 3PhaseFlow fits shops that want Job Write-Up → quote → work order → inventory → invoice on one job number, plus directory and local SEO leads that convert into customers without a second Shop Management System. Shops that want a larger ops ERP without a lead marketplace often evaluate Spring Point (MotorBase) or Aptean Service Repair Traverse Edition, both publicly positioned for electro-mechanical / apparatus repair shops.",
   },
   {
-    q: "How is IQMotorBase different from auto repair shop software?",
-    a: "Auto-shop tools are built for vehicle repair orders. IQMotorBase is built for electric motor and rewind work: motor and customer registries with serial numbers, specs, service history, and test results; work orders from the job’s primary final quote; Tag QR mobile floor updates; and parts reservation when a quote is approved.",
+    q: "How is 3PhaseFlow different from auto repair shop software?",
+    a: "Auto-shop tools are built for vehicle repair orders. 3PhaseFlow is built for electric motor and rewind work: motor and customer registries with serial numbers, specs, service history, and test results; work orders from the job’s primary final quote; Tag QR mobile floor updates; and parts reservation when a quote is approved.",
   },
   {
-    q: "Does IQMotorBase generate leads for the shop?",
-    a: "Yes. Leads come from the IQMotorBase public directory and local SEO pages. Shops can choose shared leads (sent to multiple shops) or exclusive leads (one shop). Credits deduct when a lead is delivered. A won lead converts into a customer and Job Write-Up without retyping into a separate Shop Management System.",
+    q: "Does 3PhaseFlow generate leads for the shop?",
+    a: "Yes. Leads come from the 3PhaseFlow public directory and local SEO pages. Shops can choose shared leads (sent to multiple shops) or exclusive leads (one shop). Credits deduct when a lead is delivered. A won lead converts into a customer and Job Write-Up without retyping into a separate Shop Management System.",
   },
 ];
 
@@ -67,7 +67,7 @@ export default function BlogBestSoftware2026Page() {
       <SoftwareSeoFaqJsonLd items={faqItems} />
       <BlogPageLayout
         title="Best software for electric motor repair shops (2026 comparison)"
-        description="Most “motor repair software” results are built for auto shops. Here is an honest look at the small set of options electric motor and rewind shops actually weigh, including when IQMotorBase is the right fit and when another tool might be."
+        description="Most “motor repair software” results are built for auto shops. Here is an honest look at the small set of options electric motor and rewind shops actually weigh, including when 3PhaseFlow is the right fit and when another tool might be."
         breadcrumbLink={{ href: "/blog", label: "Blog" }}
         canonicalPath={path}
         sidebarTitle="Book a demo"
@@ -80,7 +80,7 @@ export default function BlogBestSoftware2026Page() {
               If you search for motor repair software in 2026, a large share of the results are still auto repair
               platforms, built for cars, consumer ROs, and tire packages. Electric motor and rewind shops are a smaller
               market. The real shortlist is usually a motor-focused shop system, a broader industrial/service ERP
-              edition, or “make do” with spreadsheets plus a generic tool. This page compares IQMotorBase against that
+              edition, or “make do” with spreadsheets plus a generic tool. This page compares 3PhaseFlow against that
               landscape without pretending every cell in a competitor column is verified.
             </p>
             <p className="mt-4 text-secondary leading-relaxed">
@@ -98,7 +98,7 @@ export default function BlogBestSoftware2026Page() {
                 <thead>
                   <tr className="border-b border-border text-title">
                     <th className="py-2 pr-3 font-semibold">Capability</th>
-                    <th className="py-2 pr-3 font-semibold">IQMotorBase</th>
+                    <th className="py-2 pr-3 font-semibold">3PhaseFlow</th>
                     <th className="py-2 pr-3 font-semibold">Spring Point</th>
                     <th className="py-2 pr-3 font-semibold">Aptean Service Repair (Traverse)</th>
                     <th className="py-2 font-semibold">Generic auto-shop tools</th>
@@ -197,7 +197,7 @@ export default function BlogBestSoftware2026Page() {
               </table>
             </div>
             <p className="mt-4 text-secondary leading-relaxed">
-              IQMotorBase columns above are limited to product facts from our own ground truth: Job Write-Up, quotes
+              3PhaseFlow columns above are limited to product facts from our own ground truth: Job Write-Up, quotes
               linked to the job, work orders from the primary final quote, job board, Tag QR mobile updates, customer
               and motor registry, parts catalog with reservation and ship-time consumption, vendor POs, invoicing and
               AR, API sync for customers/work orders/quotes, data import at onboarding, and directory-driven leads. For
@@ -237,7 +237,7 @@ export default function BlogBestSoftware2026Page() {
             </p>
             <p className="mt-4 text-secondary leading-relaxed">
               Competitor cells above stick to what those vendors state publicly (springpt.com; Aptean Service Repair
-              Traverse Edition industry pages). IQMotorBase cells are limited to what the product does: Job Write-Up,
+              Traverse Edition industry pages). 3PhaseFlow cells are limited to what the product does: Job Write-Up,
               quotes linked to the job, work orders from the primary final quote, configurable job board columns, Tag
               QR mobile updates, customer and motor registry, on-hand/reserved inventory with ship-time consumption,
               vendor POs, invoicing and aging, API sync for customers/work orders/quotes, import at onboarding, and
@@ -253,9 +253,9 @@ export default function BlogBestSoftware2026Page() {
           </section>
 
           <section>
-            <h2 className="text-2xl font-bold text-title sm:text-3xl mt-10">When IQMotorBase is the right fit</h2>
+            <h2 className="text-2xl font-bold text-title sm:text-3xl mt-10">When 3PhaseFlow is the right fit</h2>
             <p className="mt-4 text-secondary leading-relaxed">
-              IQMotorBase is a strong fit when the shop’s pain is fragmented tools: a WIP spreadsheet, a separate
+              3PhaseFlow is a strong fit when the shop’s pain is fragmented tools: a WIP spreadsheet, a separate
               quoting habit, inventory that is not reserved against approved quotes, invoices that re-key from a PDF,
               and leads sitting in email. If you want one job number from intake through work order and invoice, motor
               history that returns with the serial number, Tag QR updates from the floor, and leads from the same
@@ -263,7 +263,7 @@ export default function BlogBestSoftware2026Page() {
             </p>
             <p className="mt-4 text-secondary leading-relaxed">
               It is also the right conversation when lead generation matters. Most shop-management tools stop at
-              operations. IQMotorBase’s differentiator is originating shared and exclusive leads with a credit balance
+              operations. 3PhaseFlow’s differentiator is originating shared and exclusive leads with a credit balance
               that deducts on delivery, not promising a free unlimited inbox of work.
             </p>
           </section>
@@ -286,7 +286,7 @@ export default function BlogBestSoftware2026Page() {
             </p>
             <p className="mt-4 text-secondary leading-relaxed">
               Also be honest about change capacity. If the shop cannot staff onboarding or will not import customers
-              and motors from the current spreadsheet, any system, including IQMotorBase, will underperform. Migration
+              and motors from the current spreadsheet, any system, including 3PhaseFlow, will underperform. Migration
               support from spreadsheets or other systems is offered at onboarding; use it. A comparison that ignores
               data move-in is incomplete.
             </p>
@@ -307,7 +307,7 @@ export default function BlogBestSoftware2026Page() {
           <section>
             <h2 className="text-2xl font-bold text-title sm:text-3xl mt-10">Book a demo</h2>
             <p className="mt-4 text-secondary leading-relaxed">
-              IQMotorBase pricing is custom, monthly, yearly, or one-time, matched to the shop’s workflow. Use the form
+              3PhaseFlow pricing is custom, monthly, yearly, or one-time, matched to the shop’s workflow. Use the form
               to book a demo, or see{" "}
               <Link href="/pricing" className="text-primary font-medium hover:underline">
                 pricing

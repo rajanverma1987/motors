@@ -61,7 +61,7 @@ function AppShell() {
   if (loading) {
     return (
       <div className="flex min-h-[100dvh] flex-col items-center justify-center bg-bg">
-        <p className="text-sm text-secondary">Loading IQMotorTrack…</p>
+        <p className="text-sm text-secondary">Loading 3PhaseTrack…</p>
         <div className="fixed inset-x-0 bottom-0 mx-auto max-w-md">
           <TrackBrandFooter className="pb-[max(0.35rem,env(safe-area-inset-bottom))]" />
         </div>
@@ -108,7 +108,7 @@ function AppShell() {
       ) : (
         <>
           <header className="border-b border-border bg-card px-4 pb-3 pt-[max(0.75rem,env(safe-area-inset-top))]">
-            <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-primary">IQMotorTrack</p>
+            <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-primary">3PhaseTrack</p>
             <h1 className="mt-0.5 text-lg font-extrabold text-title">{activeTab.title}</h1>
           </header>
           <TrackVerifyBanner />

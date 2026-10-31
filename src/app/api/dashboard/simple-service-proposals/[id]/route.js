@@ -28,7 +28,7 @@ import { getListingIdsForUser } from "@/lib/dashboard-leads-scope";
 import Listing from "@/models/Listing";
 import { actorFromPortalUser, activityChanges, recordActivity } from "@/lib/activity-log";
 
-/** Company name and listing id used when reporting back to IQMotorTrack (§9.8). */
+/** Company name and listing id used when reporting back to 3PhaseTrack (§9.8). */
 async function trackShopIdentity(email) {
   const listingIds = await getListingIdsForUser(email);
   if (listingIds.length === 0) return { shopName: email, listingId: "" };
@@ -166,7 +166,7 @@ export async function PUT(request, context) {
         changes,
       });
     }
-    if (String(doc.sourceSystem || "") === "IQMotorTrack") {
+    if (String(doc.sourceSystem || "") === "3PhaseTrack") {
       const [identity, mergedSettings] = await Promise.all([
         trackShopIdentity(email),
         loadMergedSettingsForEmail(email),

@@ -108,7 +108,7 @@ export async function generateMetadata({ params }) {
       description,
       type: "website",
       url: canonicalUrl,
-      siteName: "IQMotorBase.com",
+      siteName: "3PhaseFlow.com",
       locale: "en_US",
       images: ogImage
         ? [{ url: ogImage, alt: `${listing.companyName}, electric motor repair` }]
@@ -684,7 +684,7 @@ export default async function ListingDetailPage({ params }) {
             <div className="mt-6 rounded-lg border border-border bg-muted/25 px-4 py-3 sm:px-5">
               <p className="text-sm text-secondary">
                 <span className="font-medium text-title">Is this your business?</span> Sign in to
-                your IQMotorBase account to update this directory listing, services, service area,
+                your 3PhaseFlow account to update this directory listing, services, service area,
                 photos, and contact details, whenever they change.{" "}
                 <Link
                   href={`/login?next=${encodeURIComponent("/dashboards/settings?section=directory-listing")}`}

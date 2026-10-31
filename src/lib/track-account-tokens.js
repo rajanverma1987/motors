@@ -1,5 +1,5 @@
 /**
- * Single-use, expiring tokens for IQMotorTrack email verification and password reset (§6.2).
+ * Single-use, expiring tokens for 3PhaseTrack email verification and password reset (§6.2).
  * Only hashes are stored, so a database read never yields a usable link.
  */
 

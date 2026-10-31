@@ -1,8 +1,8 @@
 import mongoose from "mongoose";
 
 /**
- * Opt-out / send cooldown for post-lead IQMotorBase platform nurture emails
- * (directory / IQMotorTrack leads to non-paying shops).
+ * Opt-out / send cooldown for post-lead 3PhaseFlow platform nurture emails
+ * (directory / 3PhaseTrack leads to non-paying shops).
  */
 const leadNurtureOptOutSchema = new mongoose.Schema(
   {

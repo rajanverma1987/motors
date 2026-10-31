@@ -1,5 +1,5 @@
 /**
- * Server-side RFQ orchestration for IQMotorTrack (§7, §8).
+ * Server-side RFQ orchestration for 3PhaseTrack (§7, §8).
  */
 
 import mongoose from "mongoose";

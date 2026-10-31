@@ -23,7 +23,7 @@ export const SIMPLE_TAB_CALCULATORS = "calculators";
 /** @deprecated Use SIMPLE_TAB_INVOICES */
 export const SIMPLE_TAB_ACCOUNTS_RECEIVABLE = SIMPLE_TAB_INVOICES;
 
-/** Deep-link Customers → Leads → IQMotorTrack. */
+/** Deep-link Customers → Leads → 3PhaseTrack. */
 export const SIMPLE_CUSTOMERS_LEADS_HREF = `${SIMPLE_PORTAL_PATH}?tab=${SIMPLE_TAB_CUSTOMERS}&filter=Lead&leadSource=track`;
 
 export const SIMPLE_TAB_IDS = [

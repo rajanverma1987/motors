@@ -49,14 +49,14 @@ export default function CalculatorsSubscriptionPageClient() {
   return (
     <div className="mx-auto max-w-[67.2rem] px-4 py-10 sm:px-6 sm:py-14">
       <div className="rounded-2xl border border-primary/30 bg-gradient-to-b from-primary/[0.12] to-transparent p-6 sm:p-8">
-        <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary">IQMotorBase calculators</p>
+        <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary">3PhaseFlow calculators</p>
         <h1 className="mt-2 text-3xl font-bold tracking-tight text-title sm:text-4xl">
           Shop &amp; field calculator subscription
         </h1>
         <p className="mt-3 max-w-2xl text-secondary">
           Professional motor-shop calculators, rewind cost ballparks, CM Best Match, FLA, torque, speed, and bench
           electrical helpers. Sign up for a <strong className="text-title">calculators-only account</strong> (not full
-          Shop Management System), then subscribe monthly. After login you use only the Calculators area of IQMotorBase.
+          Shop Management System), then subscribe monthly. After login you use only the Calculators area of 3PhaseFlow.
         </p>
 
         <CalculatorAccountGate pricing={access.pricing} onRegistered={() => setPaywallOpen(true)}>

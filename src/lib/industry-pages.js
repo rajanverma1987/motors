@@ -37,7 +37,7 @@ export const industryPages = [
     slug: "electric-motor-repair-manufacturing",
     industry: "Manufacturing",
     industryTag: "manufacturing",
-    title: "Electric Motor Repair for Manufacturing Facilities | IQMotorBase",
+    title: "Electric Motor Repair for Manufacturing Facilities | 3PhaseFlow",
     metaDescription:
       "Find electric motor repair shops experienced in manufacturing, conveyors, compressors, HVAC, and production line motors. Submit a repair request and get matched to shops in your area.",
     h1: "Electric motor repair for manufacturing",
@@ -108,7 +108,7 @@ export const industryPages = [
       {
         question: "How do I find a motor repair shop experienced in manufacturing applications?",
         answer:
-          "Use the IQMotorBase directory and filter by the \"Manufacturing\" industry tag on shop profiles. You can also submit a repair request through this page, we tag your request with manufacturing industry context so shops with manufacturing experience are matched first.",
+          "Use the 3PhaseFlow directory and filter by the \"Manufacturing\" industry tag on shop profiles. You can also submit a repair request through this page, we tag your request with manufacturing industry context so shops with manufacturing experience are matched first.",
       },
       {
         question: "What is the typical turnaround for a manufacturing motor repair?",
@@ -133,7 +133,7 @@ export const industryPages = [
     slug: "electric-motor-repair-water-treatment",
     industry: "Water Treatment",
     industryTag: "water-treatment",
-    title: "Electric Motor Repair for Water Treatment Plants | IQMotorBase",
+    title: "Electric Motor Repair for Water Treatment Plants | 3PhaseFlow",
     metaDescription:
       "Find electric motor repair shops experienced in water and wastewater treatment, pumps, blowers, aerators, and submersible motors. Submit a repair request matched to shops in your area.",
     h1: "Electric motor repair for water treatment",
@@ -224,7 +224,7 @@ export const industryPages = [
     slug: "electric-motor-repair-oil-gas",
     industry: "Oil & Gas",
     industryTag: "oil-gas",
-    title: "Electric Motor Repair for Oil & Gas | Hazardous Location Specialists | IQMotorBase",
+    title: "Electric Motor Repair for Oil & Gas | Hazardous Location Specialists | 3PhaseFlow",
     metaDescription:
       "Find motor repair shops experienced in oil and gas applications, hazardous location, explosion-proof, and high-voltage motors. Submit a repair request matched to qualified shops.",
     h1: "Electric motor repair for oil and gas",
@@ -315,7 +315,7 @@ export const industryPages = [
     slug: "electric-motor-repair-food-processing",
     industry: "Food Processing",
     industryTag: "food-processing",
-    title: "Electric Motor Repair for Food Processing Facilities | IQMotorBase",
+    title: "Electric Motor Repair for Food Processing Facilities | 3PhaseFlow",
     metaDescription:
       "Find motor repair shops experienced in food processing, washdown-duty, stainless, and USDA/FDA-compliant motor repair. Submit a repair request matched to qualified shops near you.",
     h1: "Electric motor repair for food processing",
@@ -402,7 +402,7 @@ export const industryPages = [
     slug: "electric-motor-repair-mining",
     industry: "Mining",
     industryTag: "mining",
-    title: "Electric Motor Repair for Mining Operations | IQMotorBase",
+    title: "Electric Motor Repair for Mining Operations | 3PhaseFlow",
     metaDescription:
       "Find motor repair shops experienced in mining, large frame, high-voltage, explosion-proof, and severe-duty motor repair. Submit a repair request matched to qualified shops near you.",
     h1: "Electric motor repair for mining operations",

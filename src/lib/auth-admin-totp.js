@@ -31,7 +31,7 @@ export function verifyAdminTotpCode(code) {
 
 export function buildAdminTotpUri(email, secret) {
   return generateURI({
-    issuer: "IQMotorBase Admin",
+    issuer: "3PhaseFlow Admin",
     label: email,
     secret,
   });

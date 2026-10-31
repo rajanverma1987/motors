@@ -261,7 +261,7 @@ export default function QuickBooksSetting({ draft, updateDraft, disabled = false
     <FormContainer>
       <FormSectionTitle as="h2">QuickBooks Online</FormSectionTitle>
       <p className="mb-4 text-sm text-secondary">
-        When a job reaches your selected closed status, IQMotorBase syncs customers, invoices, payments,
+        When a job reaches your selected closed status, 3PhaseFlow syncs customers, invoices, payments,
         and vendor purchase orders to QuickBooks — so you do not re-key data between the shop floor and
         your books.
       </p>

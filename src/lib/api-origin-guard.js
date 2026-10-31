@@ -76,8 +76,10 @@ function buildAllowedApiHosts(request) {
     addHostVariants(allowed, hostFromUrlLike(entry));
   }
 
-  // Legacy domain still redirecting to IQMotorBase
+  // Canonical + legacy domains still redirecting to 3phaseflow.com
+  addHostVariants(allowed, "3phaseflow.com");
   addHostVariants(allowed, "motorswinding.com");
+  addHostVariants(allowed, "iqmotorbase.com");
 
   return allowed;
 }

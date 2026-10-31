@@ -63,7 +63,7 @@ export default async function IqwirePwaInstall({ headingId = "install-heading" }
             Scan to open the app on your phone
           </h2>
           <p className="mt-3 max-w-xl text-base leading-relaxed text-secondary">
-            Point your camera at the QR code. It opens IQWireCalculator in your browser. Then add it to your home
+            Point your camera at the QR code. It opens 3PhaseWire in your browser. Then add it to your home
             screen so it launches like a native app.
           </p>
           <ol className="mt-6 space-y-4">
@@ -75,7 +75,7 @@ export default async function IqwirePwaInstall({ headingId = "install-heading" }
                 iPhone (Safari)
               </p>
               <p className="mt-1 text-sm leading-relaxed text-secondary">
-                Open the app URL. Tap the Share button. Tap Add to Home Screen. Tap Add. The IQWireCalculator icon
+                Open the app URL. Tap the Share button. Tap Add to Home Screen. Tap Add. The 3PhaseWire icon
                 appears on your home screen.
               </p>
             </li>
@@ -108,7 +108,7 @@ export default async function IqwirePwaInstall({ headingId = "install-heading" }
               height={400}
               className="mx-auto h-72 w-72 sm:h-80 sm:w-80 lg:h-96 lg:w-96"
             />
-            <figcaption className="mt-4 text-sm text-secondary">Scan to open IQWireCalculator</figcaption>
+            <figcaption className="mt-4 text-sm text-secondary">Scan to open 3PhaseWire</figcaption>
           </figure>
         </div>
       </div>

@@ -14,7 +14,7 @@ import {
   FEATURES_WINDERS_TABLET_HEIGHT,
 } from "@/lib/hero-dashboard-seo";
 
-const HOME_TITLE = "Motor Repair Shop Software, Work Orders, Leads & Inventory | IQMotorBase";
+const HOME_TITLE = "Motor Repair Shop Software, Work Orders, Leads & Inventory | 3PhaseFlow";
 const HOME_DESCRIPTION =
   "Manage service proposals, work orders, purchase orders, inventory, invoicing, and QuickBooks Online sync for your electric motor repair shop. Install the Simple dashboard as a phone or tablet app. Book a free demo today.";
 
@@ -28,7 +28,7 @@ export const metadata = {
     description: HOME_DESCRIPTION,
     url: "/",
     type: "website",
-    siteName: "IQMotorBase.com",
+    siteName: "3PhaseFlow.com",
     locale: "en_US",
     images: [heroOg],
   },
@@ -144,12 +144,12 @@ const managementFeatures = [
   {
     title: "QuickBooks Online integration",
     detail:
-      "Connect QuickBooks Online from Settings → Accounts. When a job reaches your chosen closed status, IQMotorBase syncs customers, invoices, payments, and vendor purchase orders into QBO, so the shop floor and your books stay aligned without re-keying line items.",
+      "Connect QuickBooks Online from Settings → Accounts. When a job reaches your chosen closed status, 3PhaseFlow syncs customers, invoices, payments, and vendor purchase orders into QBO, so the shop floor and your books stay aligned without re-keying line items.",
   },
   {
     title: "API and Shop Management System integrations",
     detail:
-      "An API is available to integrate IQMotorBase.com with any other Shop Management System or business system. Sync customers, work orders, and quotes with your existing tools, build custom workflows, or connect to accounting and ERP, alongside the built-in QuickBooks Online sync, so you can keep one source of truth while using the apps your team already relies on.",
+      "An API is available to integrate 3PhaseFlow.com with any other Shop Management System or business system. Sync customers, work orders, and quotes with your existing tools, build custom workflows, or connect to accounting and ERP, alongside the built-in QuickBooks Online sync, so you can keep one source of truth while using the apps your team already relies on.",
   },
   {
     title: "Upload your existing data",
@@ -158,7 +158,7 @@ const managementFeatures = [
   {
     title: "Public marketplace listings",
     detail:
-      "Publish spare parts, surplus motors, and tools to the IQMotorBase.com marketplace from your dashboard. Each listing gets its own SEO-friendly page; buyers submit a request (no checkout on our site) and you manage follow-up and fulfillment from your Shop Management System alongside work orders and invoices.",
+      "Publish spare parts, surplus motors, and tools to the 3PhaseFlow.com marketplace from your dashboard. Each listing gets its own SEO-friendly page; buyers submit a request (no checkout on our site) and you manage follow-up and fulfillment from your Shop Management System alongside work orders and invoices.",
   },
   {
     title: "Employee job postings (public careers)",
@@ -170,7 +170,7 @@ const managementFeatures = [
 const leadFeatures = [
   {
     title: "Lead capture from directory and local SEO",
-    detail: "Repair inquiries come from the IQMotorBase.com directory and from local search pages (e.g. “electric motor repair Houston” or “emergency motor repair near me”). All leads land in one inbox so you don’t chase inquiries across multiple sites or email threads, you see and respond from a single place.",
+    detail: "Repair inquiries come from the 3PhaseFlow.com directory and from local search pages (e.g. “electric motor repair Houston” or “emergency motor repair near me”). All leads land in one inbox so you don’t chase inquiries across multiple sites or email threads, you see and respond from a single place.",
   },
   {
     title: "Shared and exclusive lead distribution",
@@ -487,7 +487,7 @@ export default function HomePage() {
               Lead generation network
             </h3>
             <p className="mt-3 max-w-[50.4rem] text-secondary">
-              Get repair inquiries from the IQMotorBase.com directory and local SEO pages. Choose shared or exclusive leads, manage your lead credit balance, and convert won leads into customers and repair jobs in Job Write-Up, so new work flows into the same system you already use. Below is how capture, distribution, credits, and conversion work together to grow your pipeline without extra tools.
+              Get repair inquiries from the 3PhaseFlow.com directory and local SEO pages. Choose shared or exclusive leads, manage your lead credit balance, and convert won leads into customers and repair jobs in Job Write-Up, so new work flows into the same system you already use. Below is how capture, distribution, credits, and conversion work together to grow your pipeline without extra tools.
             </p>
             <ul className="mt-8 space-y-6">
               {leadFeatures.map((item) => (
@@ -666,7 +666,7 @@ export default function HomePage() {
                   List your repair company in the directory - Free to list
                 </h2>
                 <p className="mt-3 max-w-[43.2rem] text-secondary">
-                  Add your company to the IQMotorBase.com network. Get found by customers searching for motor repair and rewinding in your area. Free to list, submit your details and we’ll review and publish your listing. With Shop Management System access you can also{" "}
+                  Add your company to the 3PhaseFlow.com network. Get found by customers searching for motor repair and rewinding in your area. Free to list, submit your details and we’ll review and publish your listing. With Shop Management System access you can also{" "}
                   <Link href="/careers" className="font-medium text-primary hover:underline">
                     post employee job openings
                   </Link>{" "}
@@ -689,7 +689,7 @@ export default function HomePage() {
       <section className="border-t border-border bg-primary py-16 sm:py-24">
         <div className="mx-auto max-w-[86.4rem] px-4 text-center sm:px-6">
           <h2 className="text-3xl font-bold tracking-tight text-white sm:text-4xl">
-            See IQMotorBase in 30 minutes
+            See 3PhaseFlow in 30 minutes
           </h2>
           <p className="mx-auto mt-4 max-w-[43.2rem] text-lg text-white/80">
             Book a free demo call. We will show you the full platform, answer every question you have, and

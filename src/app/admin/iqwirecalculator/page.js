@@ -23,7 +23,7 @@ function formatDate(val) {
 
 function typeVariant(type, banned) {
   if (banned) return "danger";
-  if (type === "IQWireCalculator") return "success";
+  if (type === "3PhaseWire") return "success";
   if (type === "Trial") return "warning";
   if (type === "Past due") return "warning";
   if (type === "Cancelled" || type === "Expired") return "default";
@@ -56,7 +56,7 @@ function AccountDetailModal({ account, open, onClose }) {
     { label: "App access", value: account.unlocked ? "Unlocked" : "Locked" },
   ];
   return (
-    <Modal open={open} onClose={onClose} title="IQWireCalculator client" size="md">
+    <Modal open={open} onClose={onClose} title="3PhaseWire client" size="md">
       <div className="space-y-4">
         {fields.map(({ label, value }) => (
           <div key={label}>
@@ -118,7 +118,7 @@ export default function AdminIqWireCalculatorPage() {
       setAccounts(data.accounts || []);
       setTotalCount(Number(data.totalCount) || 0);
     } catch (e) {
-      toast.error(e.message || "Failed to load IQWireCalculator clients");
+      toast.error(e.message || "Failed to load 3PhaseWire clients");
       setAccounts([]);
       setTotalCount(0);
     } finally {
@@ -231,7 +231,7 @@ export default function AdminIqWireCalculatorPage() {
   const removeAccess = async (row) => {
     const first = await confirm({
       title: "Remove access",
-      message: `Lock IQWireCalculator for ${row.email}? Their trial/subscription ends immediately. They can still sign in.`,
+      message: `Lock 3PhaseWire for ${row.email}? Their trial/subscription ends immediately. They can still sign in.`,
       confirmLabel: "Remove access",
       cancelLabel: "Cancel",
       variant: "danger",
@@ -416,7 +416,7 @@ export default function AdminIqWireCalculatorPage() {
       <div className="shrink-0 border-b border-border pb-4">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-0 flex-1">
-            <h1 className="text-2xl font-bold text-title">IQWireCalculator clients</h1>
+            <h1 className="text-2xl font-bold text-title">3PhaseWire clients</h1>
             <p className="mt-1 text-sm text-secondary">
               Mobile app accounts (not shop management system). Remove access locks the app; ban blocks sign-in.
             </p>
@@ -451,7 +451,7 @@ export default function AdminIqWireCalculatorPage() {
           data={accounts}
           rowKey="id"
           loading={loading}
-          emptyMessage="No IQWireCalculator clients yet."
+          emptyMessage="No 3PhaseWire clients yet."
           responsive
           sortState={tableSort}
           onSort={onTableSort}
@@ -508,7 +508,7 @@ export default function AdminIqWireCalculatorPage() {
         onClose={() => {
           if (!createSaving) setCreateOpen(false);
         }}
-        title="Add IQWireCalculator account"
+        title="Add 3PhaseWire account"
         size="md"
         actions={
           <Button type="submit" form="iqwire-account-create-form" variant="primary" size="sm" disabled={createSaving}>
@@ -576,7 +576,7 @@ export default function AdminIqWireCalculatorPage() {
             onChange={(e) => setCreateForm((f) => ({ ...f, trialDays: e.target.value }))}
           />
           <p className="text-xs text-secondary">
-            They sign in to the IQWireCalculator app with this email and password. Copy the password before you close
+            They sign in to the 3PhaseWire app with this email and password. Copy the password before you close
             this dialog.
           </p>
         </Form>

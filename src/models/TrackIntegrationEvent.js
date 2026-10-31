@@ -20,7 +20,7 @@ const EVENT_TYPES = [
 const STATUSES = ["pending", "delivered", "failed", "skipped"];
 
 /**
- * Integration delivery log for IQMotorTrack <-> IQMotorBase (§9.1, §14.11).
+ * Integration delivery log for 3PhaseTrack <-> 3PhaseFlow (§9.1, §14.11).
  * `idempotencyKey` is unique so replaying an event never duplicates work.
  */
 const trackIntegrationEventSchema = new mongoose.Schema(

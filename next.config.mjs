@@ -40,7 +40,13 @@ const nextConfig = {
       {
         source: "/:path*",
         has: [{ type: "host", value: "(?:www\\.)?motorswinding\\.com" }],
-        destination: "https://iqmotorbase.com/:path*",
+        destination: "https://3phaseflow.com/:path*",
+        permanent: true,
+      },
+      {
+        source: "/:path*",
+        has: [{ type: "host", value: "(?:www\\.)?iqmotorbase\\.com" }],
+        destination: "https://3phaseflow.com/:path*",
         permanent: true,
       },
       { source: "/motor-repair-near-me", destination: "/electric-motor-repair-near-me", permanent: true },

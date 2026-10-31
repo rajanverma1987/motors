@@ -22,7 +22,7 @@ export async function POST(request) {
     });
     if (!facility) {
       return NextResponse.json(
-        { error: "This checkout link expired. Open IQMotorTrack and try Subscribe again." },
+        { error: "This checkout link expired. Open 3PhaseTrack and try Subscribe again." },
         { status: 410 }
       );
     }

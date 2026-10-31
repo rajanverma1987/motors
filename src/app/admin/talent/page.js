@@ -16,7 +16,7 @@ import { TALENT_AVAILABILITY_LABELS, TALENT_STATUS } from "@/lib/talent-constant
 const INVITE_DEFAULT_SUBJECT = "You're invited: free electric motor shop talent profile";
 const INVITE_DEFAULT_BODY = `Hi,
 
-We're inviting you to create a free electric motor shop talent profile on IQMotorBase.
+We're inviting you to create a free electric motor shop talent profile on 3PhaseFlow.
 
 Shops hire winders, technicians, machinists, and field service pros through our Talent directory and Careers jobs. Sign in with a 6-digit email code (no password), add your skills and preferred states, and get location-matched job alerts.
 

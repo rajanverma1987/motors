@@ -9,8 +9,8 @@ const NAV_LINKS = [
   { href: "/motor-repair-marketplace", label: "For shops" },
   { href: "/careers", label: "Careers" },
   { href: "/talent", label: "Talent" },
-  { href: "/iqwirecalculator", label: "IQWireCalculator" },
-  { href: "/motor-maintenance-and-repair", label: "IQMotorTrack" },
+  { href: "/iqwirecalculator", label: "3PhaseWire" },
+  { href: "/motor-maintenance-and-repair", label: "3PhaseTrack" },
 ];
 
 function navLinkClass(pathname, href) {
@@ -33,7 +33,7 @@ export default function FooterNavLinks() {
   return (
     <nav
       className="flex flex-wrap items-center justify-center gap-1 sm:justify-start"
-      aria-label="Blog, marketplace, shops, careers, talent, IQWireCalculator, and IQMotorTrack"
+      aria-label="Blog, marketplace, shops, careers, talent, 3PhaseWire, and 3PhaseTrack"
     >
       {NAV_LINKS.map(({ href, label }) => (
         <Link key={href} href={href} className={navLinkClass(pathname, href)}>

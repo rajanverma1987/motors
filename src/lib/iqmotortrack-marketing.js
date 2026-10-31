@@ -1,11 +1,11 @@
-/** IQMotorTrack marketing + app path constants. */
+/** 3PhaseTrack marketing + app path constants. */
 
 export const IQMOTORTRACK_APP_PATH = "/Track";
 export const IQMOTORTRACK_MARKETING_PATH = "/motor-maintenance-and-repair";
 export const IQMOTORTRACK_MONTHLY_USD = 49;
 export const IQMOTORTRACK_FREE_MOTOR_LIMIT = 5;
 export const IQMOTORTRACK_PAGE_TITLE =
-  "Motor Maintenance and Repair Software for Plants | IQMotorTrack";
+  "Motor Maintenance and Repair Software for Plants | 3PhaseTrack";
 export const IQMOTORTRACK_META_DESCRIPTION =
   "Motor maintenance and repair tracking for plant managers. Register every electric motor, log service history, and send multi-shop RFQs when a motor goes down. Free for up to 5 motors. Pro $49/month.";
 
@@ -17,7 +17,7 @@ export const IQMOTORTRACK_KEYWORDS = [
   "facility motor tracking",
   "industrial motor maintenance app",
   "motor down work order",
-  "IQMotorTrack",
+  "3PhaseTrack",
 ];
 
 export const IQMOTORTRACK_PLANT_MANAGER_BENEFITS = [
@@ -43,7 +43,7 @@ export const IQMOTORTRACK_PLANT_MANAGER_BENEFITS = [
   },
   {
     title: "Works on the floor",
-    body: "Install as a phone app from the browser. No App Store account. Scan a QR on the marketing page and open IQMotorTrack on mobile.",
+    body: "Install as a phone app from the browser. No App Store account. Scan a QR on the marketing page and open 3PhaseTrack on mobile.",
   },
 ];
 
@@ -68,9 +68,9 @@ export const IQMOTORTRACK_OTHER_USER_BENEFITS = [
 
 export const IQMOTORTRACK_FAQS = [
   {
-    question: "What is IQMotorTrack?",
+    question: "What is 3PhaseTrack?",
     answer:
-      "IQMotorTrack is motor maintenance and repair software for plants and facilities. It is the plant’s system of record for electric motors: register, service history, maintenance logs, and RFQs to repair shops.",
+      "3PhaseTrack is motor maintenance and repair software for plants and facilities. It is the plant’s system of record for electric motors: register, service history, maintenance logs, and RFQs to repair shops.",
   },
   {
     question: "Is there a free tier?",
@@ -86,8 +86,8 @@ export const IQMOTORTRACK_FAQS = [
       "Scan the QR code on this page or open /Track in Safari or Chrome, then Add to Home Screen / Install app. It runs as a PWA.",
   },
   {
-    question: "Is this the same login as IQMotorBase shop software?",
+    question: "Is this the same login as 3PhaseFlow shop software?",
     answer:
-      "No. IQMotorTrack is a separate plant login. Shop users stay in IQMotorBase. Plants never log into the shop app.",
+      "No. 3PhaseTrack is a separate plant login. Shop users stay in 3PhaseFlow. Plants never log into the shop app.",
   },
 ];

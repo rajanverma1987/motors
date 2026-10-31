@@ -1,5 +1,5 @@
 /**
- * Whether a directory listing can respond to an IQMotorTrack RFQ inside the shop
+ * Whether a directory listing can respond to an 3PhaseTrack RFQ inside the shop
  * portal, or only by the emailed no-login link (§9.7).
  *
  * A listing counts as having an account when `crmUserId` is linked by admin

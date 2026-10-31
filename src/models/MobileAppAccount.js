@@ -3,7 +3,7 @@ import mongoose from "mongoose";
 const SUB_STATUSES = ["trial", "active", "cancelled", "past_due", "expired"];
 
 /**
- * Standalone IQWireCalculator app accounts (not shop CRM users).
+ * Standalone 3PhaseWire app accounts (not shop CRM users).
  */
 const mobileAppAccountSchema = new mongoose.Schema(
   {

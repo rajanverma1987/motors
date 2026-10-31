@@ -121,7 +121,7 @@ export default function SeoLeadLandingPage({
             </section>
 
             <section className="rounded-2xl border border-border bg-gradient-to-br from-primary/5 to-transparent p-6 sm:p-8">
-              <h2 className="text-xl font-bold text-title sm:text-2xl">What you get with IQMotorBase.com</h2>
+              <h2 className="text-xl font-bold text-title sm:text-2xl">What you get with 3PhaseFlow.com</h2>
               <p className="mt-3 text-sm text-secondary leading-relaxed">
                 Benefits span the full journey from discovery to payment, so you&apos;re not paying for a directory badge and
                 juggling the rest elsewhere.

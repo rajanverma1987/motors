@@ -15,7 +15,7 @@ export default function DashboardNotFound() {
           <Button variant="primary" className="w-full sm:w-auto">Go to dashboard</Button>
         </Link>
         <Link href="/">
-          <Button variant="outline" className="w-full sm:w-auto">IQMotorBase home</Button>
+          <Button variant="outline" className="w-full sm:w-auto">3PhaseFlow home</Button>
         </Link>
       </div>
     </div>

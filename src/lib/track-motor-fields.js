@@ -1,5 +1,5 @@
 /**
- * Shared IQMotorTrack motor vocabulary (§6.3, §9.11).
+ * Shared 3PhaseTrack motor vocabulary (§6.3, §9.11).
  * Imported by both the plant PWA and the server so labels never drift.
  */
 

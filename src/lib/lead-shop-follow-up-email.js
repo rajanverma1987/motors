@@ -49,12 +49,12 @@ export function buildLeadShopFollowUpDraft({ lead, shopNames = [] }) {
     line("Need", lead?.problemDescription || lead?.message),
   ].filter(Boolean);
 
-  const subject = `IQMotorBase lead follow-up (${dateLabel})`;
+  const subject = `3PhaseFlow lead follow-up (${dateLabel})`;
 
   const body = [
     greeting,
     "",
-    `On ${dateLabel} we sent your shop a customer lead from IQMotorBase.com. We are checking in to confirm you received it and to learn how it went.`,
+    `On ${dateLabel} we sent your shop a customer lead from 3PhaseFlow.com. We are checking in to confirm you received it and to learn how it went.`,
     "",
     "Lead details:",
     ...detailLines.map((l) => `- ${l}`),
@@ -64,17 +64,17 @@ export function buildLeadShopFollowUpDraft({ lead, shopNames = [] }) {
     "2. Were you able to connect with the customer?",
     "3. Was this a successful client conversion (quote, job, or paying work)?",
     "",
-    "Your feedback helps us send better-matched leads and shows the value of being listed on IQMotorBase. Reply to this email whenever you have a moment.",
+    "Your feedback helps us send better-matched leads and shows the value of being listed on 3PhaseFlow. Reply to this email whenever you have a moment.",
     "",
     "Thank you,",
-    "IQMotorBase.com",
+    "3PhaseFlow.com",
   ].join("\n");
 
   return { subject, body, dateLabel };
 }
 
 /**
- * Customer-facing follow-up: did the shop connect, and rate IQMotorBase.
+ * Customer-facing follow-up: did the shop connect, and rate 3PhaseFlow.
  * @param {{
  *   lead: object,
  *   shopNames?: string[],
@@ -92,21 +92,21 @@ export function buildLeadCustomerFollowUpDraft({ lead, shopNames = [] }) {
         ? names.join(", ")
         : "a motor repair shop";
 
-  const subject = `Quick check-in from IQMotorBase (${dateLabel})`;
+  const subject = `Quick check-in from 3PhaseFlow (${dateLabel})`;
 
   const body = [
     greeting,
     "",
-    `On ${dateLabel} you requested motor repair help through IQMotorBase.com, and we shared your request with ${shopLabel}.`,
+    `On ${dateLabel} you requested motor repair help through 3PhaseFlow.com, and we shared your request with ${shopLabel}.`,
     "",
     "We would appreciate a short reply on two points:",
     "1. Did the shop connect with you?",
-    "2. How would you rate IQMotorBase (1 to 5, or a short comment)?",
+    "2. How would you rate 3PhaseFlow (1 to 5, or a short comment)?",
     "",
     "Your feedback helps us improve matching for customers and shops. Simply reply to this email.",
     "",
     "Thank you,",
-    "IQMotorBase.com",
+    "3PhaseFlow.com",
   ].join("\n");
 
   return { subject, body, dateLabel };

@@ -127,7 +127,7 @@ function PaypalCheckoutInner({ clientId, paypalPlanId, checkoutToken, legacySid 
 
   return (
     <main className="mx-auto flex min-h-[70vh] max-w-lg flex-col items-center justify-center px-6 py-16 text-center">
-      <h1 className="text-2xl font-bold text-title">Subscribe to IQWireCalculator</h1>
+      <h1 className="text-2xl font-bold text-title">Subscribe to 3PhaseWire</h1>
       <p className="mt-3 text-sm text-secondary">
         Pay with PayPal. You can close this window after you finish and return to the app.
       </p>

@@ -5,8 +5,8 @@ export async function GET() {
   const startUrl = `${IQMOTORTRACK_APP_PATH}?source=pwa`;
   const manifest = {
     id: IQMOTORTRACK_APP_PATH,
-    name: "IQMotorTrack",
-    short_name: "IQMotorTrack",
+    name: "3PhaseTrack",
+    short_name: "3PhaseTrack",
     description: "Motor maintenance and repair tracking for plants and facilities.",
     start_url: startUrl,
     scope: IQMOTORTRACK_APP_PATH,

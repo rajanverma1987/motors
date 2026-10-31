@@ -36,10 +36,10 @@ function buildLocationSeoTitle(page, areaLabel) {
   const city = String(page?.city || "").trim();
   const state = String(page?.state || "").trim();
   const abbr = usStateToAbbreviation(state);
-  if (city && abbr) return `Motor Repair & Rewinding in ${city}, ${abbr} | IQMotorBase`;
-  if (city && state) return `Motor Repair & Rewinding in ${city}, ${state} | IQMotorBase`;
-  if (abbr || state) return `Motor Repair & Rewinding in ${abbr || state} | IQMotorBase`;
-  return `Motor Repair & Rewinding in ${areaLabel} | IQMotorBase`;
+  if (city && abbr) return `Motor Repair & Rewinding in ${city}, ${abbr} | 3PhaseFlow`;
+  if (city && state) return `Motor Repair & Rewinding in ${city}, ${state} | 3PhaseFlow`;
+  if (abbr || state) return `Motor Repair & Rewinding in ${abbr || state} | 3PhaseFlow`;
+  return `Motor Repair & Rewinding in ${areaLabel} | 3PhaseFlow`;
 }
 
 function buildLocationSeoDescription(areaLabel) {
@@ -62,7 +62,7 @@ export async function generateMetadata({ params, searchParams }) {
   const resolvedSearch = typeof searchParams?.then === "function" ? await searchParams : searchParams ?? {};
   const slug = resolvedParams?.slug;
   const page = await resolveLocationPage(slug);
-  if (!page) return { title: "Motor Repair & Rewinding Shops | IQMotorBase" };
+  if (!page) return { title: "Motor Repair & Rewinding Shops | 3PhaseFlow" };
   const baseUrl = getPublicSiteUrl().replace(/\/$/, "");
   // Filtered/paginated views are the same city page with a narrower list. Google was
   // crawling every match x capability x page combination and reporting them as
@@ -89,7 +89,7 @@ export async function generateMetadata({ params, searchParams }) {
       title: seoTitle,
       description: page.metaDescription?.trim() || buildLocationOgDescription(areaLabel),
       url,
-      siteName: "IQMotorBase.com",
+      siteName: "3PhaseFlow.com",
       type: "website",
     },
     twitter: {

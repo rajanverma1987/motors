@@ -26,7 +26,7 @@ export function SoftwareAppSchema() {
     "@graph": [
       {
         "@type": "SoftwareApplication",
-        name: "IQMotorBase",
+        name: "3PhaseFlow",
         url: siteUrl,
         applicationCategory: "BusinessApplication",
         operatingSystem: "Web, iOS, Android",
@@ -63,7 +63,7 @@ export function SoftwareAppSchema() {
       },
       {
         "@type": "Organization",
-        name: "IQMotorBase",
+        name: "3PhaseFlow",
         url: siteUrl,
         logo: getBrandLogoAbsoluteUrl(),
         contactPoint: {

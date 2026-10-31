@@ -17,17 +17,17 @@ export const metadata = {
     "motor rewinding status tracking",
   ],
   openGraph: {
-    title: "Track Motor Repair Jobs | IQMotorBase.com",
+    title: "Track Motor Repair Jobs | 3PhaseFlow.com",
     description:
       "See what’s on the floor, what’s waiting on parts, and what’s ready to invoice.",
     url: path,
     type: "article",
-    siteName: "IQMotorBase.com",
+    siteName: "3PhaseFlow.com",
     locale: "en_US",
   },
   twitter: {
     card: "summary_large_image",
-    title: "Track Motor Repair Jobs | IQMotorBase.com",
+    title: "Track Motor Repair Jobs | 3PhaseFlow.com",
     description: "WIP visibility for motor repair and rewinding shops.",
   },
   alternates: { canonical: path },

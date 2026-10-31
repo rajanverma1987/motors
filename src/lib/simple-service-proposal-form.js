@@ -386,7 +386,7 @@ export function cloneServiceProposalAsNewRfq(form) {
     generatorDatasheet: cloneSheet(source.generatorDatasheet),
     scopeDetails,
     otherItems,
-    // A copy is a fresh shop record: it is never linked to the source IQMotorTrack RFQ.
+    // A copy is a fresh shop record: it is never linked to the source 3PhaseTrack RFQ.
     sourceSystem: "",
     externalRef: "",
     trackLeadId: "",
@@ -819,7 +819,7 @@ export function simpleServiceProposalDocToForm(doc) {
       })
     : null;
 
-  // IQMotorTrack link, shown read-only on the form. The server owns these values.
+  // 3PhaseTrack link, shown read-only on the form. The server owns these values.
   next.sourceSystem = String(d.sourceSystem || "").trim();
   next.trackRfqRequestId = String(d.trackRfqRequestId || "").trim();
   next.trackInvitationId = String(d.trackInvitationId || "").trim();

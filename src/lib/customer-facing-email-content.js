@@ -3,7 +3,7 @@ import { SERVICE_PROPOSAL_DOCUMENT_TITLE_LOWER } from "@/lib/quote-document-labe
 import { shopEmailLogoInlineStyle } from "@/lib/logo-document-scale";
 import { getPublicSiteUrl } from "@/lib/public-site-url";
 
-const platformFrom = process.env.EMAIL_FROM || process.env.SMTP_USER || "IQMotorBase";
+const platformFrom = process.env.EMAIL_FROM || process.env.SMTP_USER || "3PhaseFlow";
 
 /** @param {unknown} v */
 export function escapeEmailHtml(v) {
@@ -18,7 +18,7 @@ export function escapeEmailHtml(v) {
  */
 export function dashboardOutboundEmailMarketingFooterHtml() {
   const site = escapeEmailHtml(getPublicSiteUrl());
-  return `<div style="margin-top:28px;padding-top:14px;border-top:1px solid #e5e7eb;text-align:center"><a href="${site}" style="font-size:11px;line-height:1.4;color:#9ca3af;text-decoration:underline" target="_blank" rel="noopener noreferrer">By IQMotorBase</a></div>`;
+  return `<div style="margin-top:28px;padding-top:14px;border-top:1px solid #e5e7eb;text-align:center"><a href="${site}" style="font-size:11px;line-height:1.4;color:#9ca3af;text-decoration:underline" target="_blank" rel="noopener noreferrer">By 3PhaseFlow</a></div>`;
 }
 
 /** @param {string} bodyHtml */

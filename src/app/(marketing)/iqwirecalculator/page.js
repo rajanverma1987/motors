@@ -43,7 +43,7 @@ export const metadata = {
     description: IQWIRECALCULATOR_META_DESCRIPTION,
     url: path,
     type: "website",
-    siteName: "IQMotorBase.com",
+    siteName: "3PhaseFlow.com",
     locale: "en_US",
   },
   twitter: {
@@ -115,7 +115,7 @@ function JsonLd() {
   const software = {
     "@context": "https://schema.org",
     "@type": "SoftwareApplication",
-    name: "IQWireCalculator",
+    name: "3PhaseWire",
     url: pageUrl,
     applicationCategory: "UtilitiesApplication",
     operatingSystem: "Web, iOS, Android",
@@ -135,7 +135,7 @@ function JsonLd() {
         description: `${IQWIRECALCULATOR_TRIAL_DAYS}-day free trial, then $${yearly} per year`,
       },
     ],
-    isPartOf: { "@type": "WebSite", name: "IQMotorBase.com", url: site },
+    isPartOf: { "@type": "WebSite", name: "3PhaseFlow.com", url: site },
   };
   const faq = {
     "@context": "https://schema.org",
@@ -149,7 +149,7 @@ function JsonLd() {
   const howTo = {
     "@context": "https://schema.org",
     "@type": "HowTo",
-    name: "How to use IQWireCalculator CM Best Match",
+    name: "How to use 3PhaseWire CM Best Match",
     description: "Find a parallel magnet-wire mix close to a target circular mils value.",
     step: steps.map((s, i) => ({
       "@type": "HowToStep",
@@ -177,13 +177,13 @@ export default function IqwireCalculatorMarketingPage() {
         <div className="relative z-10 mx-auto grid max-w-[86.4rem] items-center gap-10 px-4 sm:px-6 lg:grid-cols-2">
           <div>
             <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-primary">
-              IQWireCalculator · Phone app (PWA)
+              3PhaseWire · Phone app (PWA)
             </p>
             <h1 className="mt-3 text-3xl font-bold tracking-tight text-title sm:text-4xl lg:text-[2.75rem] lg:leading-tight">
               Stop Guessing Wire Substitutions on the Floor
             </h1>
             <p className="mt-4 max-w-xl text-base leading-relaxed text-secondary sm:text-lg">
-              IQWireCalculator’s CM Best Match finds parallel wire combinations within 5% of your target circular mils,
+              3PhaseWire’s CM Best Match finds parallel wire combinations within 5% of your target circular mils,
               ranked closest first, built for rewind shops, not electricians in general. Install it on your phone from
               the browser. No App Store or Google Play account required.
             </p>
@@ -219,7 +219,7 @@ export default function IqwireCalculatorMarketingPage() {
             Total CM of a wound path is each wire size’s circular mils times how many strands you put in hand, added
             together. When the original size is out of stock, or a voltage change needs a new target, shops have always
             done that by hand or in an old spreadsheet. That is slow. A missed count means a bad wind or a callback.
-            IQWireCalculator runs the mix search against sizes you actually stock so you leave the bench with a ranked
+            3PhaseWire runs the mix search against sizes you actually stock so you leave the bench with a ranked
             list, not a guess.
           </p>
         </div>
@@ -228,9 +228,9 @@ export default function IqwireCalculatorMarketingPage() {
       <section id="how-it-works" className="border-b border-border bg-card py-12 sm:py-16" aria-labelledby="how-heading">
         <div className="mx-auto max-w-[86.4rem] px-4 sm:px-6">
           <h2 id="how-heading" className="text-2xl font-bold tracking-tight text-title sm:text-3xl">
-            How IQWireCalculator works
+            How 3PhaseWire works
           </h2>
-          <p className="mt-3 max-w-2xl text-secondary">Four steps. Same math as the IQMotorBase shop tools.</p>
+          <p className="mt-3 max-w-2xl text-secondary">Four steps. Same math as the 3PhaseFlow shop tools.</p>
           <ol className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {steps.map((step) => (
               <li key={step.n} className="rounded-2xl border border-border bg-bg p-5">
@@ -273,7 +273,7 @@ export default function IqwireCalculatorMarketingPage() {
             ))}
           </ul>
           <p className="mt-6 text-sm text-secondary">
-            This is the standalone rewind calculator. It does not sync a shop catalog. Shops on IQMotorBase keep CM Best
+            This is the standalone rewind calculator. It does not sync a shop catalog. Shops on 3PhaseFlow keep CM Best
             Match in the{" "}
             <Link href="/dashboards?tab=calculators" className="font-medium text-primary hover:underline">
               dashboard calculators
@@ -309,9 +309,9 @@ export default function IqwireCalculatorMarketingPage() {
             Independent rewinders and small shops: full standalone tool, add your own sizes, save mixes, print from the
             truck. Shops already on{" "}
             <Link href="/motor-repair-shop-management-software" className="font-medium text-primary hover:underline">
-              IQMotorBase
+              3PhaseFlow
             </Link>
-            can also run the same CM engine in the dashboard. IQWireCalculator is for people who need the calculator
+            can also run the same CM engine in the dashboard. 3PhaseWire is for people who need the calculator
             without a full shop management login.
           </p>
         </div>
@@ -369,7 +369,7 @@ export default function IqwireCalculatorMarketingPage() {
           <p className="mt-8 text-center text-sm text-secondary">
             App help:{" "}
             <Link href="/support" className="font-medium text-primary hover:underline">
-              IQWireCalculator support
+              3PhaseWire support
             </Link>
             . Longer rewind write-up:{" "}
             <Link
@@ -380,7 +380,7 @@ export default function IqwireCalculatorMarketingPage() {
             </Link>
             . Shop Management System:{" "}
             <Link href="/" className="font-medium text-primary hover:underline">
-              IQMotorBase
+              3PhaseFlow
             </Link>
             .
           </p>

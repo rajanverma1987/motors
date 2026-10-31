@@ -13,7 +13,7 @@ import ContactRevealFaqLink from "@/components/marketing/contact-reveal-faq-link
 export default function ListingDetailFaqSection({
   items,
   heading = "Frequently asked questions",
-  description = "Common questions about this electric motor repair listing and how to use the IQMotorBase directory.",
+  description = "Common questions about this electric motor repair listing and how to use the 3PhaseFlow directory.",
   shopId = null,
 }) {
   if (!Array.isArray(items) || items.length === 0) return null;

@@ -1,5 +1,5 @@
 /**
- * Create or update IQMotorTrack Pro PayPal billing plan: $49/month (slug: iqmotortrack-pro)
+ * Create or update 3PhaseTrack Pro PayPal billing plan: $49/month (slug: iqmotortrack-pro)
  *
  * Usage:
  *   node scripts/ensure-iqmotortrack-paypal-plan.js
@@ -18,7 +18,7 @@ async function main() {
   });
   const { ensureTrackBillingPlan } = jiti(path.join(root, "src/lib/track-subscription.js"));
   const plan = await ensureTrackBillingPlan();
-  console.log("IQMotorTrack Pro:", plan);
+  console.log("3PhaseTrack Pro:", plan);
   process.exit(0);
 }
 

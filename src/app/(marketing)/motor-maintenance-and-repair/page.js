@@ -28,7 +28,7 @@ export const metadata = {
     description: IQMOTORTRACK_META_DESCRIPTION,
     url: path,
     type: "website",
-    siteName: "IQMotorBase.com",
+    siteName: "3PhaseFlow.com",
     locale: "en_US",
   },
   twitter: {
@@ -70,7 +70,7 @@ function JsonLd() {
   const software = {
     "@context": "https://schema.org",
     "@type": "SoftwareApplication",
-    name: "IQMotorTrack",
+    name: "3PhaseTrack",
     url: pageUrl,
     applicationCategory: "BusinessApplication",
     operatingSystem: "Web, iOS, Android",
@@ -90,7 +90,7 @@ function JsonLd() {
         description: `Pro $${monthly} per month, unlimited motors, PayPal subscription`,
       },
     ],
-    isPartOf: { "@type": "WebSite", name: "IQMotorBase.com", url: site },
+    isPartOf: { "@type": "WebSite", name: "3PhaseFlow.com", url: site },
   };
   const faq = {
     "@context": "https://schema.org",
@@ -104,7 +104,7 @@ function JsonLd() {
   const howTo = {
     "@context": "https://schema.org",
     "@type": "HowTo",
-    name: "How plant teams use IQMotorTrack for motor maintenance and repair",
+    name: "How plant teams use 3PhaseTrack for motor maintenance and repair",
     description: "Register motors, log service, and send multi-shop RFQs when a motor goes down.",
     step: steps.map((s, i) => ({
       "@type": "HowToStep",
@@ -131,13 +131,13 @@ export default function MotorMaintenanceAndRepairPage() {
         <HeroBackground />
         <div className="relative z-10 mx-auto max-w-[86.4rem] px-4 sm:px-6">
           <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-primary">
-            IQMotorTrack · Motor maintenance and repair
+            3PhaseTrack · Motor maintenance and repair
           </p>
           <h1 className="mt-3 max-w-3xl text-3xl font-bold tracking-tight text-title sm:text-4xl lg:text-[2.75rem] lg:leading-tight">
             Motor Maintenance and Repair Software Built for Plant Managers
           </h1>
           <p className="mt-4 max-w-2xl text-base leading-relaxed text-secondary sm:text-lg">
-            IQMotorTrack is the plant&apos;s system of record for every electric motor. Register assets, track service
+            3PhaseTrack is the plant&apos;s system of record for every electric motor. Register assets, track service
             history, and send multi-shop RFQs when a motor goes down. Free for {freeLimit} motors. Pro ${monthly}/month
             via PayPal for unlimited motors.
           </p>
@@ -146,7 +146,7 @@ export default function MotorMaintenanceAndRepairPage() {
               href={IQMOTORTRACK_APP_PATH}
               className="inline-flex items-center justify-center whitespace-nowrap rounded-md bg-primary px-5 py-2.5 text-sm font-semibold text-white hover:opacity-90"
             >
-              Open IQMotorTrack
+              Open 3PhaseTrack
             </Link>
             <a
               href="#pricing"
@@ -203,7 +203,7 @@ export default function MotorMaintenanceAndRepairPage() {
       <section id="how-it-works" className="border-b border-border bg-bg py-12 sm:py-16" aria-labelledby="how-heading">
         <div className="mx-auto max-w-[86.4rem] px-4 sm:px-6">
           <h2 id="how-heading" className="text-2xl font-bold tracking-tight text-title sm:text-3xl">
-            How motor maintenance and repair works in IQMotorTrack
+            How motor maintenance and repair works in 3PhaseTrack
           </h2>
           <ol className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {steps.map((step) => (
@@ -292,7 +292,7 @@ export default function MotorMaintenanceAndRepairPage() {
             href={IQMOTORTRACK_APP_PATH}
             className="mt-6 inline-flex items-center justify-center rounded-md bg-primary px-6 py-3 text-sm font-semibold text-white hover:opacity-90"
           >
-            Launch IQMotorTrack
+            Launch 3PhaseTrack
           </Link>
           <p className="mt-4 text-sm text-secondary">
             Deep dive:{" "}

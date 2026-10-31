@@ -213,7 +213,7 @@ export default function ReportsPanel() {
           blob,
           filename,
           title: catalog?.title || "Report",
-          text: `${catalog?.title || "Report"} PDF from IQMotorBase`,
+          text: `${catalog?.title || "Report"} PDF from 3PhaseFlow`,
         });
       } catch (err) {
         if (err?.name === "AbortError") return;

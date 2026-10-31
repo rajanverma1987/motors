@@ -25,7 +25,7 @@ export async function DELETE(request) {
     const subId = String(facility.paypalSubscriptionId || "").trim();
     if (subId) {
       try {
-        await cancelPaypalSubscription(subId, "Cancelled by facility from IQMotorTrack");
+        await cancelPaypalSubscription(subId, "Cancelled by facility from 3PhaseTrack");
       } catch (err) {
         console.warn("Track cancel paypal:", err.message);
       }

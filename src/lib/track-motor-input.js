@@ -1,5 +1,5 @@
 /**
- * Request-body validation for IQMotorTrack motor writes (§6.3).
+ * Request-body validation for 3PhaseTrack motor writes (§6.3).
  */
 
 import { clampString } from "@/lib/validation";

@@ -25,7 +25,7 @@ function num(value) {
 }
 
 /**
- * §9.6 - explicit Send Proposal to IQMotorTrack. Saving a proposal never sends
+ * §9.6 - explicit Send Proposal to 3PhaseTrack. Saving a proposal never sends
  * anything; this endpoint is the only path, and it takes the share choices the
  * shop confirmed in the share-selection step.
  */
@@ -46,7 +46,7 @@ export async function POST(request, context) {
     const linked = trackLinkedProposalContext(proposal);
     if (!linked) {
       return NextResponse.json(
-        { error: "This proposal is not linked to an IQMotorTrack request." },
+        { error: "This proposal is not linked to an 3PhaseTrack request." },
         { status: 400 }
       );
     }
@@ -56,7 +56,7 @@ export async function POST(request, context) {
       leadSource: "iqmotortrack",
     });
     if (!lead) {
-      return NextResponse.json({ error: "The linked IQMotorTrack request is gone." }, { status: 409 });
+      return NextResponse.json({ error: "The linked 3PhaseTrack request is gone." }, { status: 409 });
     }
 
     const body = await request.json().catch(() => ({}));
@@ -135,7 +135,7 @@ export async function POST(request, context) {
 
     return NextResponse.json({ ok: true, version: Number(result?.version) || 1 });
   } catch (err) {
-    console.error("Send proposal to IQMotorTrack error:", err);
+    console.error("Send proposal to 3PhaseTrack error:", err);
     return NextResponse.json({ error: err.message || "Failed to send" }, { status: 500 });
   }
 }

@@ -12,10 +12,10 @@ import {
 
 const path = SEO_SOFTWARE_WORK_ORDER_PATH;
 
-// The root layout applies a "%s | IQMotorBase" template, so the brand suffix is
+// The root layout applies a "%s | 3PhaseFlow" template, so the brand suffix is
 // omitted here; SOCIAL_TITLE carries it because og:/twitter: titles skip the template.
 const TITLE = "Work Order Software for Electric Motor Repair Shops";
-const SOCIAL_TITLE = `${TITLE} | IQMotorBase`;
+const SOCIAL_TITLE = `${TITLE} | 3PhaseFlow`;
 const DESCRIPTION =
   "Work orders that stay linked to the job number, the quote, and the parts reserved for it. See how motor repair shops track jobs from intake to delivery.";
 
@@ -33,7 +33,7 @@ export const metadata = {
     description: DESCRIPTION,
     url: path,
     type: "article",
-    siteName: "IQMotorBase.com",
+    siteName: "3PhaseFlow.com",
     locale: "en_US",
   },
   twitter: {
@@ -47,7 +47,7 @@ export const metadata = {
 
 const faqItems = [
   {
-    q: "How is a work order created in IQMotorBase?",
+    q: "How is a work order created in 3PhaseFlow?",
     a: "A work order is created from the job’s primary final quote, not typed up as a separate disconnected object. Motor details, customer, scope, and line items carry through automatically, and numbering stays aligned to the job number so the floor and office reference the same ID.",
   },
   {
@@ -60,7 +60,7 @@ const faqItems = [
   },
   {
     q: "How is this different from generic work order software?",
-    a: "Generic work order tools are built for broad repair-order forms. IQMotorBase work orders sit on the same job path as the Job Write-Up and quote, carry motor details and quote line items, support Tag QR floor updates with motor testing notes and values, and tie inventory reservation and consumption to delivery. That chain is built for electric motor and rewind shops.",
+    a: "Generic work order tools are built for broad repair-order forms. 3PhaseFlow work orders sit on the same job path as the Job Write-Up and quote, carry motor details and quote line items, support Tag QR floor updates with motor testing notes and values, and tie inventory reservation and consumption to delivery. That chain is built for electric motor and rewind shops.",
   },
 ];
 
@@ -86,7 +86,7 @@ export default function WorkOrderSoftwareForMotorRepairShopsPage() {
               the final quote settled. By the time the job ships, nobody can say which document was authoritative.
             </p>
             <p className="mt-4 text-secondary leading-relaxed">
-              That drift is the problem this page is about. IQMotorBase work orders are created from the job’s primary
+              That drift is the problem this page is about. 3PhaseFlow work orders are created from the job’s primary
               final quote, stay numbered to the same job as the Job Write-Up, carry motor details and line items
               through automatically, and sit on a job board the office and floor share. Inventory reservation and
               consumption follow that same quote-backed path through to delivery. If you want the full shop system
@@ -103,7 +103,7 @@ export default function WorkOrderSoftwareForMotorRepairShopsPage() {
               How a work order is created from the job’s primary final quote
             </h2>
             <p className="mt-4 text-secondary leading-relaxed">
-              Every repair in IQMotorBase starts as a Job Write-Up with its own job number. Intake, inspection notes,
+              Every repair in 3PhaseFlow starts as a Job Write-Up with its own job number. Intake, inspection notes,
               preliminary and final quotes, customer send, attachments, and shop actions live on that continuous
               record. Formal RFQs start from the Job Write-Up and stay linked to the same job number. You are not
               building a “work order job” in one tool and a “quote job” in another.
@@ -141,7 +141,7 @@ export default function WorkOrderSoftwareForMotorRepairShopsPage() {
               The job board: status columns the shop can see in real time
             </h2>
             <p className="mt-4 text-secondary leading-relaxed">
-              Once work orders exist, the shop still needs a shared picture of where each motor sits. IQMotorBase
+              Once work orders exist, the shop still needs a shared picture of where each motor sits. 3PhaseFlow
               includes a visual job board (shop floor board) with status columns. Example columns include Received,
               Inspection, Rewinding, Testing, and Ready, columns are configurable, so treat that list as a starting
               shape rather than a fixed plant layout. The point is not a pretty kanban for its own sake; it is one
@@ -168,7 +168,7 @@ export default function WorkOrderSoftwareForMotorRepairShopsPage() {
               Mobile and Tag QR: open the right work order from the floor
             </h2>
             <p className="mt-4 text-secondary leading-relaxed">
-              Paper travelers get lost. Verbal updates get paraphrased. IQMotorBase’s Tag QR workflow is built to cut
+              Paper travelers get lost. Verbal updates get paraphrased. 3PhaseFlow’s Tag QR workflow is built to cut
               that out. From the Job Write-Up, the shop prints a Tag QR that encodes the job number. That tag goes
               with the motor, on the rack, on the stand, wherever your shop already hangs identification. The encoding
               is the job number, not a separate WO alias that has to be crosswalked later.
@@ -210,7 +210,7 @@ export default function WorkOrderSoftwareForMotorRepairShopsPage() {
             <p className="mt-4 text-secondary leading-relaxed">
               Parts are where disconnected work orders quietly break shops. Someone quotes bearings and wire from the
               catalog. Another job gets promised the same physical stock because nothing reserved it. Or the job ships
-              and inventory still shows full on-hand because nobody subtracted what left with the motor. IQMotorBase
+              and inventory still shows full on-hand because nobody subtracted what left with the motor. 3PhaseFlow
               ties inventory to the quote-backed work order path instead of treating stock as a separate end-of-day
               chore.
             </p>
@@ -246,7 +246,7 @@ export default function WorkOrderSoftwareForMotorRepairShopsPage() {
               listing them as product labels.]
             </p>
             <p className="mt-4 text-secondary leading-relaxed">
-              IQMotorBase keeps that data on the motor-and-job path: technicians log testing notes and values from
+              3PhaseFlow keeps that data on the motor-and-job path: technicians log testing notes and values from
               mobile against the work order opened by Tag QR; the motor registry persists serial number, specs,
               service history, and test results across repeat visits. Work orders are not a blank RO, they are generated
               from the primary final quote with motor details, customer, scope, and line items already attached.

@@ -13,27 +13,27 @@ import {
   IQWIRECALCULATOR_YEARLY_USD,
 } from "@/lib/iqwirecalculator-marketing";
 
-const mailto = `mailto:${IQWIRECALCULATOR_SUPPORT_EMAIL}?subject=${encodeURIComponent("IQWireCalculator support")}`;
+const mailto = `mailto:${IQWIRECALCULATOR_SUPPORT_EMAIL}?subject=${encodeURIComponent("3PhaseWire support")}`;
 const price = IQWIRECALCULATOR_MONTHLY_USD.toFixed(2);
 const yearly = IQWIRECALCULATOR_YEARLY_USD.toFixed(2);
 
 export const metadata = marketingPageMetadata({
   path: IQWIRECALCULATOR_SUPPORT_PATH,
-  title: "IQWireCalculator Support",
+  title: "3PhaseWire Support",
   description:
-    "Help for the IQWireCalculator phone app: install the PWA, contact us, manage your PayPal subscription, request account deletion, and get answers about CM Best Match.",
+    "Help for the 3PhaseWire phone app: install the PWA, contact us, manage your PayPal subscription, request account deletion, and get answers about CM Best Match.",
   keywords: [
-    "IQWireCalculator support",
-    "IQWireCalculator help",
+    "3PhaseWire support",
+    "3PhaseWire help",
     "circular mils calculator app support",
-    "IQWireCalculator subscription",
+    "3PhaseWire subscription",
   ],
 });
 
 const HELP_TOPICS = [
   {
     title: "Getting started",
-    body: "Open IQWireCalculator in your phone browser (or the installed home-screen app), create an account, and start the free trial. Open Calculate, enter original wires in hand, original size, original CM, and targeted CM, select catalog sizes, then tap Calculate Best Match.",
+    body: "Open 3PhaseWire in your phone browser (or the installed home-screen app), create an account, and start the free trial. Open Calculate, enter original wires in hand, original size, original CM, and targeted CM, select catalog sizes, then tap Calculate Best Match.",
   },
   {
     title: "Results, save, print, email",
@@ -49,7 +49,7 @@ const HELP_TOPICS = [
   },
   {
     title: "Account deletion",
-    body: `To delete your IQWireCalculator account and associated saved calculations, email ${IQWIRECALCULATOR_SUPPORT_EMAIL} from the same address you registered. Include “Delete my IQWireCalculator account” in the subject. We will confirm and remove the account.`,
+    body: `To delete your 3PhaseWire account and associated saved calculations, email ${IQWIRECALCULATOR_SUPPORT_EMAIL} from the same address you registered. Include “Delete my 3PhaseWire account” in the subject. We will confirm and remove the account.`,
   },
 ];
 
@@ -71,8 +71,8 @@ const SUPPORT_FAQS = [
     a: `That is expected when the ${IQWIRECALCULATOR_TRIAL_DAYS}-day trial ends without an active subscription. Open Profile and subscribe to restore CM Best Match, saves, print, and email.`,
   },
   {
-    q: "Is this the same as IQMotorBase shop software?",
-    a: "No. IQWireCalculator is a standalone wire calculator app you install from the browser. IQMotorBase is the shop management system.",
+    q: "Is this the same as 3PhaseFlow shop software?",
+    a: "No. 3PhaseWire is a standalone wire calculator app you install from the browser. 3PhaseFlow is the shop management system.",
   },
 ];
 
@@ -94,10 +94,10 @@ export default function SupportPage() {
               App support
             </span>
             <h1 className="mt-6 text-4xl font-bold tracking-tight text-title sm:text-5xl lg:text-6xl">
-              IQWireCalculator support
+              3PhaseWire support
             </h1>
             <p className="mt-5 text-lg text-secondary sm:text-xl">
-              Help for the IQWireCalculator phone app from IQMotorBase. Email us and we will get back
+              Help for the 3PhaseWire phone app from 3PhaseFlow. Email us and we will get back
               within one business day.
             </p>
             <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
@@ -124,9 +124,9 @@ export default function SupportPage() {
             <div className="rounded-2xl border border-border bg-card p-6 shadow-sm">
               <h2 className="text-lg font-semibold text-title">Contact</h2>
               <p className="mt-3 text-sm leading-relaxed text-secondary">
-                Publisher: IQMotorBase
+                Publisher: 3PhaseFlow
                 <br />
-                App: IQWireCalculator
+                App: 3PhaseWire
                 <br />
                 Email:{" "}
                 <a href={mailto} className="font-medium text-primary hover:underline">
@@ -143,7 +143,7 @@ export default function SupportPage() {
                 </a>
               </p>
               <p className="mt-3 text-sm text-secondary">
-                Use this page as the support URL for IQWireCalculator.
+                Use this page as the support URL for 3PhaseWire.
               </p>
             </div>
             <div className="rounded-2xl border border-border bg-card p-6 shadow-sm">
@@ -169,7 +169,7 @@ export default function SupportPage() {
                 </li>
                 <li>
                   <Link href={IQWIRECALCULATOR_PATH} className="font-medium text-primary hover:underline">
-                    IQWireCalculator
+                    3PhaseWire
                   </Link>
                 </li>
               </ul>
@@ -219,7 +219,7 @@ export default function SupportPage() {
             with your account email and we will help.
           </p>
           <p className="mt-6 text-sm text-secondary">
-            IQMotorBase shop management system support lives on{" "}
+            3PhaseFlow shop management system support lives on{" "}
             <Link href="/contact" className="font-medium text-primary hover:underline">
               Contact
             </Link>

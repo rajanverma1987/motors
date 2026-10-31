@@ -8,7 +8,7 @@ const path = "/how-to-choose-electric-motor-repair-shop";
 export const metadata = {
   title: "How to Choose an Electric Motor Repair Shop | Buyer's Guide",
   description:
-    "Choose a qualified electric motor repair or rewinding shop: match capabilities to your motor, compare written quotes and testing scope, check certifications (EASA, ISO), and use IQMotorBase.com’s directory plus cost guide to shortlist shops.",
+    "Choose a qualified electric motor repair or rewinding shop: match capabilities to your motor, compare written quotes and testing scope, check certifications (EASA, ISO), and use 3PhaseFlow.com’s directory plus cost guide to shortlist shops.",
   keywords: [
     "choose motor repair shop",
     "electric motor repair shop",
@@ -17,19 +17,19 @@ export const metadata = {
     "motor repair certifications",
     "find qualified motor repair",
   ],
-  authors: [{ name: "IQMotorBase.com" }],
+  authors: [{ name: "3PhaseFlow.com" }],
   openGraph: {
-    title: "How to Choose an Electric Motor Repair Shop | IQMotorBase.com",
+    title: "How to Choose an Electric Motor Repair Shop | 3PhaseFlow.com",
     description:
       "A practical guide to selecting a qualified motor repair and rewinding shop for your equipment.",
     url: path,
     type: "article",
-    siteName: "IQMotorBase.com",
+    siteName: "3PhaseFlow.com",
     locale: "en_US",
   },
   twitter: {
     card: "summary_large_image",
-    title: "How to Choose an Electric Motor Repair Shop | IQMotorBase.com",
+    title: "How to Choose an Electric Motor Repair Shop | 3PhaseFlow.com",
     description: "A practical guide to selecting a qualified motor repair and rewinding shop.",
   },
   alternates: { canonical: path },

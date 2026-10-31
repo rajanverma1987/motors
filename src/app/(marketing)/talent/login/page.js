@@ -22,7 +22,7 @@ const BENEFITS = [
   {
     icon: FiUser,
     title: "Free public profile",
-    body: "Show skills, experience, and availability to motor repair shops hiring on IQMotorBase.",
+    body: "Show skills, experience, and availability to motor repair shops hiring on 3PhaseFlow.",
   },
   {
     icon: FiBell,

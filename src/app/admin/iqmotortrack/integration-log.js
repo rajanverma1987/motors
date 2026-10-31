@@ -161,7 +161,7 @@ export default function TrackIntegrationLog() {
           <div className="min-w-0 flex-1">
             <h2 className="text-xl font-bold text-title">Integration log</h2>
             <p className="mt-1 text-sm text-secondary">
-              Every event between IQMotorTrack and IQMotorBase. Replaying an event never creates duplicates,
+              Every event between 3PhaseTrack and 3PhaseFlow. Replaying an event never creates duplicates,
               so resending a failed delivery is always safe.
             </p>
             <div className="mt-2 flex flex-wrap gap-1.5">

@@ -915,9 +915,9 @@ export default function ServiceProposalFormModal({
     });
   }, [open, employeesWithAdmin, user]);
 
-  /** §14.5 - linked-record context for proposals converted from an IQMotorTrack RFQ. */
+  /** §14.5 - linked-record context for proposals converted from an 3PhaseTrack RFQ. */
   const trackLink = useMemo(() => {
-    if (String(form.sourceSystem || "") !== "IQMotorTrack") return null;
+    if (String(form.sourceSystem || "") !== "3PhaseTrack") return null;
     const version = Number(form.trackProposalVersion) || 0;
     return {
       serialNumber: String(form.trackSerialNumber || "").trim(),
@@ -1952,7 +1952,7 @@ export default function ServiceProposalFormModal({
             <div className="mb-2 rounded-md border border-primary/30 bg-primary/5 p-2.5">
               <div className="flex flex-wrap items-center gap-1.5">
                 <Badge variant="primary" className="rounded-full px-2.5 py-0.5 text-xs">
-                  Linked to IQMotorTrack
+                  Linked to 3PhaseTrack
                 </Badge>
                 {trackLink.serialNumber ? (
                   <Badge variant="default" className="rounded-full px-2.5 py-0.5 text-xs">

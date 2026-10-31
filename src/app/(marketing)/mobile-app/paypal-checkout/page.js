@@ -5,7 +5,7 @@ import { getMobileAppBillingPlans, resolvePlanDocForAccount } from "@/lib/mobile
 export const dynamic = "force-dynamic";
 
 export const metadata = {
-  title: "Subscribe | IQWireCalculator",
+  title: "Subscribe | 3PhaseWire",
   robots: { index: false, follow: false },
 };
 
@@ -37,7 +37,7 @@ export default async function MobileAppPaypalCheckoutPage({ searchParams }) {
   if (!checkoutToken) {
     return (
       <main className="mx-auto flex min-h-[70vh] max-w-lg flex-col items-center justify-center px-6 py-16 text-center">
-        <h1 className="text-2xl font-bold text-title">Subscribe to IQWireCalculator</h1>
+        <h1 className="text-2xl font-bold text-title">Subscribe to 3PhaseWire</h1>
         <p className="mt-3 text-sm text-secondary">This checkout link is incomplete. Go back to the app and tap Subscribe again.</p>
       </main>
     );
@@ -45,7 +45,7 @@ export default async function MobileAppPaypalCheckoutPage({ searchParams }) {
 
   return (
     <main className="mx-auto flex min-h-[70vh] max-w-lg flex-col items-center justify-center px-6 py-16 text-center">
-      <h1 className="text-2xl font-bold text-title">Subscribe to IQWireCalculator</h1>
+      <h1 className="text-2xl font-bold text-title">Subscribe to 3PhaseWire</h1>
       <p className="mt-3 text-sm text-secondary">
         {priceLabel}. You will continue on PayPal to approve billing. After you finish, return to the app.
       </p>

@@ -10,7 +10,7 @@ export const LISTINGS_DIRECTORY_FAQ_ITEMS = [
   {
     question: "How do I find electric motor repair near me?",
     answer:
-      "Use the search and filters on this electric motor repair shops directory to browse centers by company name, city, state, or ZIP code. For location-based results, open the electric motor repair near me page to see shops sorted by distance when you share your location. Each listing links to a profile with capabilities, contact details, and a path to request a quote through IQMotorBase.com.",
+      "Use the search and filters on this electric motor repair shops directory to browse centers by company name, city, state, or ZIP code. For location-based results, open the electric motor repair near me page to see shops sorted by distance when you share your location. Each listing links to a profile with capabilities, contact details, and a path to request a quote through 3PhaseFlow.com.",
   },
   {
     question: "What services are included in electric motor repair?",
@@ -20,7 +20,7 @@ export const LISTINGS_DIRECTORY_FAQ_ITEMS = [
   {
     question: "How much does electric motor repair cost?",
     answer:
-      "Electric motor repair cost depends on motor size (horsepower and frame), failure mode, rewind vs. repair scope, rush fees, and freight. Small commercial motors may repair for a few hundred dollars; large industrial rewinds can run thousands. Use the motor rewind and repair cost calculator and US pricing tables on IQMotorBase.com for ballpark ranges, then obtain written quotes after inspection from shops in this directory.",
+      "Electric motor repair cost depends on motor size (horsepower and frame), failure mode, rewind vs. repair scope, rush fees, and freight. Small commercial motors may repair for a few hundred dollars; large industrial rewinds can run thousands. Use the motor rewind and repair cost calculator and US pricing tables on 3PhaseFlow.com for ballpark ranges, then obtain written quotes after inspection from shops in this directory.",
   },
   {
     question: "When should I repair vs. replace an electric motor?",
@@ -45,11 +45,11 @@ export const LISTINGS_DIRECTORY_FAQ_ITEMS = [
   {
     question: "Does this directory list industrial electric motor repair shops?",
     answer:
-      "Yes. IQMotorBase.com lists industrial and commercial electric motor repair shops across the United States. Profiles describe services such as rewinding, pump motor repair, medium-voltage work, and field service where provided. Use search and location filters to narrow results to your area and application.",
+      "Yes. 3PhaseFlow.com lists industrial and commercial electric motor repair shops across the United States. Profiles describe services such as rewinding, pump motor repair, medium-voltage work, and field service where provided. Use search and location filters to narrow results to your area and application.",
   },
   {
     question: "How do I get a quote for electric motor repair?",
     answer:
-      "Open any listing in this electric motor repair directory and use the quote request option, or submit your motor details through the get a quote flow on IQMotorBase.com. Include horsepower, voltage, frame, symptoms, and photos when possible so shops can respond with accurate electric motor repair estimates.",
+      "Open any listing in this electric motor repair directory and use the quote request option, or submit your motor details through the get a quote flow on 3PhaseFlow.com. Include horsepower, voltage, frame, symptoms, and photos when possible so shops can respond with accurate electric motor repair estimates.",
   },
 ];

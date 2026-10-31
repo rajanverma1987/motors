@@ -27,7 +27,7 @@ export default function PortalUiSetting({ value, onChange, disabled = false }) {
       <FormSectionTitle as="h2">Dashboard UI</FormSectionTitle>
       <p className="mb-4 text-sm text-secondary">
         Choose which workspace this shop uses. This applies only to your company, not to other
-        IQMotorBase shops. Save changes to switch.
+        3PhaseFlow shops. Save changes to switch.
       </p>
       <div
         className="inline-flex max-w-full flex-wrap rounded-none border border-border bg-bg p-0.5"

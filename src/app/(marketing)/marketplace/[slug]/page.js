@@ -29,7 +29,7 @@ export async function generateMetadata({ params }) {
     return { title: "Listing not found | Marketplace" };
   }
   const title = `${item.title} | Marketplace`;
-  const desc = (item.description || `${item.title}, ${categoryLabel(item.category)}. Request from seller on IQMotorBase.com.`).slice(
+  const desc = (item.description || `${item.title}, ${categoryLabel(item.category)}. Request from seller on 3PhaseFlow.com.`).slice(
     0,
     160
   );
@@ -44,7 +44,7 @@ export async function generateMetadata({ params }) {
       title: item.title,
       description: desc,
       url,
-      siteName: "IQMotorBase.com",
+      siteName: "3PhaseFlow.com",
       type: "website",
       images: ogImage ? [{ url: ogImage, alt: item.title }] : [],
     },

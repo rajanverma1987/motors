@@ -9,14 +9,14 @@ import {
 } from "@/lib/iqwirecalculator-marketing";
 
 const LAST_UPDATED = "August 16, 2026";
-const mailto = `mailto:${IQWIRECALCULATOR_SUPPORT_EMAIL}?subject=${encodeURIComponent("IQWireCalculator privacy request")}`;
-const deleteMailto = `mailto:${IQWIRECALCULATOR_SUPPORT_EMAIL}?subject=${encodeURIComponent("Delete my IQWireCalculator account")}`;
+const mailto = `mailto:${IQWIRECALCULATOR_SUPPORT_EMAIL}?subject=${encodeURIComponent("3PhaseWire privacy request")}`;
+const deleteMailto = `mailto:${IQWIRECALCULATOR_SUPPORT_EMAIL}?subject=${encodeURIComponent("Delete my 3PhaseWire account")}`;
 
 export const metadata = marketingPageMetadata({
   path: IQWIRECALCULATOR_PRIVACY_CHOICES_PATH,
-  title: "IQWireCalculator User Privacy Choices",
+  title: "3PhaseWire User Privacy Choices",
   description:
-    "How to access, correct, or delete your IQWireCalculator data, opt out of sale/sharing, and manage your account.",
+    "How to access, correct, or delete your 3PhaseWire data, opt out of sale/sharing, and manage your account.",
 });
 
 export default function IqwirecalculatorPrivacyChoicesPage() {
@@ -28,18 +28,18 @@ export default function IqwirecalculatorPrivacyChoicesPage() {
         </Link>
         <span className="mx-2">/</span>
         <Link href={IQWIRECALCULATOR_PATH} className="text-primary hover:underline">
-          IQWireCalculator
+          3PhaseWire
         </Link>
         <span className="mx-2">/</span>
         User Privacy Choices
       </p>
       <h1 className="mt-4 text-3xl font-bold tracking-tight text-title sm:text-4xl">
-        IQWireCalculator User Privacy Choices
+        3PhaseWire User Privacy Choices
       </h1>
       <p className="mt-2 text-sm text-secondary">Last updated: {LAST_UPDATED}</p>
       <p className="mt-6 rounded-lg border border-border bg-muted/30 p-4 text-sm text-secondary">
-        Use this page to control how IQMotorBase uses personal information from the{" "}
-        <strong className="text-title">IQWireCalculator</strong> app. Full details are in the{" "}
+        Use this page to control how 3PhaseFlow uses personal information from the{" "}
+        <strong className="text-title">3PhaseWire</strong> app. Full details are in the{" "}
         <Link href={IQWIRECALCULATOR_PRIVACY_PATH} className="font-medium text-primary hover:underline">
           Privacy Policy
         </Link>
@@ -51,7 +51,7 @@ export default function IqwirecalculatorPrivacyChoicesPage() {
         <p className="mt-3 leading-relaxed text-secondary">
           We do not sell your personal information. We do not share it for cross-context behavioral advertising. The
           app does not use the iOS advertising identifier (IDFA) to track you across other companies’ apps or websites.
-          There is no “Do Not Sell or Share” toggle to flip because that activity is not part of IQWireCalculator.
+          There is no “Do Not Sell or Share” toggle to flip because that activity is not part of 3PhaseWire.
         </p>
 
         <h2 className="mt-10 text-xl font-semibold text-title">Choices in the app</h2>
@@ -84,7 +84,7 @@ export default function IqwirecalculatorPrivacyChoicesPage() {
           <a href={deleteMailto} className="font-medium text-primary hover:underline">
             {IQWIRECALCULATOR_SUPPORT_EMAIL}
           </a>{" "}
-          with the subject “Delete my IQWireCalculator account.” We will delete the account and associated saved
+          with the subject “Delete my 3PhaseWire account.” We will delete the account and associated saved
           calculations. Billing records may be kept as required by law. Cancel the subscription in Profile first if you
           do not want another charge.
         </p>

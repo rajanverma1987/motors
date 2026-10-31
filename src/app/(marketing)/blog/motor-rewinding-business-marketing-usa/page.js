@@ -18,12 +18,12 @@ export const metadata = {
     "electric motor shop SEO",
   ],
   openGraph: {
-    title: "Motor Rewinding Business Marketing in the USA | IQMotorBase.com",
+    title: "Motor Rewinding Business Marketing in the USA | 3PhaseFlow.com",
     description:
       "Technical trust, geography, verticals, and workflow, how US rewind shops win qualified industrial work.",
     url: path,
     type: "article",
-    siteName: "IQMotorBase.com",
+    siteName: "3PhaseFlow.com",
     locale: "en_US",
   },
   alternates: { canonical: path },
@@ -39,7 +39,7 @@ export default function BlogRewindingMarketingPage() {
       breadcrumbLink={{ href: "/blog", label: "Blog" }}
       canonicalPath={path}
       sidebarTitle="Get found + stay organized"
-      sidebarDescription="List your shop and run jobs with IQMotorBase.com."
+      sidebarDescription="List your shop and run jobs with 3PhaseFlow.com."
       sidebarCta={<ListYourShopCta />}
     >
       <article className="prose prose-neutral dark:prose-invert max-w-none">
