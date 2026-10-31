@@ -77,7 +77,10 @@ export default function Footer() {
             className="inline-block shrink-0 transition-opacity hover:opacity-90"
             aria-label="3PhaseFlow, home"
           >
-            <BrandLogo className="h-[2.4rem] w-auto max-w-[min(100%,200px)] object-contain object-left md:h-[2.7rem] md:max-w-[min(100%,216px)]" />
+            <BrandLogo
+              plain
+              className="h-[2.4rem] w-auto max-w-[min(100%,200px)] object-contain object-left md:h-[2.7rem] md:max-w-[min(100%,216px)]"
+            />
           </Link>
           <p className="max-w-2xl text-sm leading-snug text-secondary md:pt-1">
             Job management, shop parts inventory, lead generation, and public employee job postings for motor repair
@@ -118,6 +121,7 @@ export default function Footer() {
               <FacebookFollowCta variant="compact" />
               <p className="shrink-0 text-center text-sm text-secondary sm:text-right">
                 © {year} 3PhaseFlow.com. All rights reserved.
+                <span className="mt-1 block text-xs text-secondary/90">Formerly known as IQMotorBase</span>
               </p>
             </div>
           </div>

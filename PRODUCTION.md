@@ -27,7 +27,7 @@ Before going live, ensure the following.
 
 - Point DNS + TLS for `3phaseflow.com` (and `www`) at this app.
 - Keep `iqmotorbase.com` and `motorswinding.com` pointed at the app so permanent redirects in `next.config.mjs` / `web.config` work.
-- Set production env: `SITE_URL`, `NEXT_PUBLIC_SITE_URL` = `https://3phaseflow.com`; SMTP / Resend from `@3phaseflow.com` (and `mail.3phaseflow.com` if used); update `INTUIT_REDIRECT_URI`, PayPal return/webhook URLs, `ALLOWED_API_ORIGINS`, IndexNow key for the new host.
+- Set production env: `SITE_URL`, `NEXT_PUBLIC_SITE_URL` = `https://3phaseflow.com`; SMTP for transactional (`contact@3phaseflow.com`); Resend marketing from `contact@mail.3phaseflow.com` with click tracking on `links.mail.3phaseflow.com`; update `INTUIT_REDIRECT_URI`, PayPal return/webhook URLs, `ALLOWED_API_ORIGINS`, IndexNow key for the new host.
 - Forward mail from old `@iqmotorbase.com` addresses if needed.
 - Search Console: verify new property, submit sitemap, optional Change of Address from the old domain.
 - Smoke: homepage OG/favicon, login, test email send, Track + Wire PWA install text, 301 from an old host.

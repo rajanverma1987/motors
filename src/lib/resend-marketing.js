@@ -1,6 +1,7 @@
 import { Resend } from "resend";
 import { Webhook } from "standardwebhooks";
 
+/** Resend sending domain: mail.3phaseflow.com (click tracking: links.mail.3phaseflow.com). */
 const DEFAULT_FROM = "3PhaseFlow <contact@mail.3phaseflow.com>";
 const DEFAULT_REPLY_TO = "contact@3phaseflow.com";
 

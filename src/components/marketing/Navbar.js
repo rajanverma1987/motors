@@ -97,6 +97,14 @@ export default function Navbar() {
   return (
     <>
       <header className="marketing-navbar sticky top-0 z-50 border-b border-border bg-card pt-[env(safe-area-inset-top)] shadow-sm">
+        <div
+          className="border-b border-amber-400/60 bg-amber-300 px-3 py-1.5 text-center sm:px-4"
+          role="status"
+        >
+          <p className="text-[11px] font-semibold leading-snug text-red-700 sm:text-xs">
+            Formerly known as IQMotorBase. Same product, new name: 3PhaseFlow.
+          </p>
+        </div>
         <div className="mx-auto flex h-14 max-w-[86.4rem] items-center justify-between gap-2 px-3 sm:h-16 sm:gap-3 sm:px-4 md:h-[4.25rem] md:min-h-[4.5rem] md:gap-6 md:px-6">
           <div className="flex min-w-0 flex-1 items-center gap-2 sm:gap-3 md:gap-4">
             <Link
