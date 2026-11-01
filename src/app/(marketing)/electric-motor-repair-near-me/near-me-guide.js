@@ -300,26 +300,27 @@ export default function NearMeGuide() {
 
       <section className="mt-16">
         <h2 className="text-2xl font-bold tracking-tight text-title sm:text-3xl">
-          What motor repair costs near you, and when to question a quote
+          What industrial motor repair costs near your facility, and when to question a quote
         </h2>
         <p className="mt-4 text-secondary leading-relaxed">
           Cost varies by motor size, repair scope, and urgency. Metro shops with overnight freight lanes often quote
           toward the high end of a range; rural shops with pickup trucks may look cheaper until you add a 90-mile
-          round trip and a second day of downtime. The ranges below are typical for CONUS shops at standard
-          (non-emergency) turnaround, use them to calibrate a quote, not as a bid.
+          round trip and a second day of downtime. The ranges below are typical for CONUS industrial shops at standard
+          (non-emergency) turnaround for plant motors 5 HP and above. Use them to calibrate a quote, not as a bid.
+          Residential and pool/spa motors are outside this network.
         </p>
         <dl className="mt-6 grid gap-4 sm:grid-cols-2">
           <div className="rounded-xl border border-border bg-card p-4">
-            <dt className="font-semibold text-title">Bearing replacement, fractional to 25 HP</dt>
-            <dd className="mt-1 text-secondary">$150 to $600</dd>
+            <dt className="font-semibold text-title">Bearing replacement, 5 to 25 HP</dt>
+            <dd className="mt-1 text-secondary">$250 to $800</dd>
           </div>
           <div className="rounded-xl border border-border bg-card p-4">
             <dt className="font-semibold text-title">Bearing replacement, 25 to 100 HP</dt>
             <dd className="mt-1 text-secondary">$400 to $1,200</dd>
           </div>
           <div className="rounded-xl border border-border bg-card p-4">
-            <dt className="font-semibold text-title">Full rewind, 1 to 10 HP</dt>
-            <dd className="mt-1 text-secondary">$400 to $900</dd>
+            <dt className="font-semibold text-title">Full rewind, 5 to 10 HP</dt>
+            <dd className="mt-1 text-secondary">$700 to $1,500</dd>
           </div>
           <div className="rounded-xl border border-border bg-card p-4">
             <dt className="font-semibold text-title">Full rewind, 10 to 50 HP</dt>

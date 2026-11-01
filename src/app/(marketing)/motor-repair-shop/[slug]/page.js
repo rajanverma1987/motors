@@ -31,29 +31,28 @@ import LocationPageJsonLd from "@/components/marketing/location-page/location-pa
 
 const PAGE_SIZE = 45;
 
-/** Short SERP title with rewinding + state abbr (keeps ~60 chars). */
+/** Short SERP title with industrial framing + state abbr (keeps ~60 chars). */
 function buildLocationSeoTitle(page, areaLabel) {
   const city = String(page?.city || "").trim();
   const state = String(page?.state || "").trim();
   const abbr = usStateToAbbreviation(state);
-  if (city && abbr) return `Motor Repair & Rewinding in ${city}, ${abbr} | 3PhaseFlow`;
-  if (city && state) return `Motor Repair & Rewinding in ${city}, ${state} | 3PhaseFlow`;
-  if (abbr || state) return `Motor Repair & Rewinding in ${abbr || state} | 3PhaseFlow`;
-  return `Motor Repair & Rewinding in ${areaLabel} | 3PhaseFlow`;
+  if (city && abbr) return `Industrial Motor Repair in ${city}, ${abbr} | 3PhaseFlow`;
+  if (city && state) return `Industrial Motor Repair in ${city}, ${state} | 3PhaseFlow`;
+  if (abbr || state) return `Industrial Motor Repair in ${abbr || state} | 3PhaseFlow`;
+  return `Industrial Motor Repair in ${areaLabel} | 3PhaseFlow`;
 }
 
 function buildLocationSeoDescription(areaLabel) {
   return (
-    `Find certified electric motor repair and rewinding shops in ${areaLabel}. ` +
-    `AC motor rewinding, DC armature rewinds, and emergency service. Submit a repair request, ` +
-    `matched to shops serving your area.`
+    `Find industrial and commercial electric motor repair shops in ${areaLabel} (5+ HP plant and facility work). ` +
+    `AC rewinding, DC armature work, and emergency service. Not for residential, pool, or spa motors.`
   );
 }
 
 function buildLocationOgDescription(areaLabel) {
   return (
-    `Certified motor repair and rewinding shops in ${areaLabel}. ` +
-    `AC, DC, armature, and stator rewinding. Submit a request; shops respond same day.`
+    `Industrial motor repair and rewinding shops in ${areaLabel}. ` +
+    `Plant and facility motors 5 HP and above. Submit a qualified repair request.`
   );
 }
 
@@ -62,7 +61,7 @@ export async function generateMetadata({ params, searchParams }) {
   const resolvedSearch = typeof searchParams?.then === "function" ? await searchParams : searchParams ?? {};
   const slug = resolvedParams?.slug;
   const page = await resolveLocationPage(slug);
-  if (!page) return { title: "Motor Repair & Rewinding Shops | 3PhaseFlow" };
+  if (!page) return { title: "Industrial Motor Repair Shops | 3PhaseFlow" };
   const baseUrl = getPublicSiteUrl().replace(/\/$/, "");
   // Filtered/paginated views are the same city page with a narrower list. Google was
   // crawling every match x capability x page combination and reporting them as
@@ -97,7 +96,7 @@ export async function generateMetadata({ params, searchParams }) {
       title: seoTitle,
       description:
         page.metaDescription?.trim() ||
-        `Find certified motor repair and rewinding shops in ${areaLabel}. Submit a request, matched to shops in your area.`,
+        `Find industrial motor repair shops in ${areaLabel} for plant and facility motors 5 HP and above.`,
     },
     robots: { index: !filtered, follow: true },
   };
@@ -187,11 +186,11 @@ export default async function MotorRepairShopLocationPage({ params, searchParams
             By location
           </span>
           <h1 className="mt-4 text-3xl font-bold tracking-tight text-title sm:text-4xl lg:text-5xl">
-            Electric motor repair and rewinding shops in {areaLabel}
+            Industrial motor repair and rewinding shops in {areaLabel}
           </h1>
           <p className="mt-4 max-w-[50.4rem] text-lg text-secondary">
             {page.metaDescription ||
-              `Browse certified electric motor repair and rewinding centers in ${areaLabel}. Filter by capability, AC motor rewinding, DC armature rewinding, stator rewinds, high-voltage, servo, and emergency service. Open profiles to compare turnaround, testing standards, and certifications, then submit your repair or rewind requirement to be matched directly with shops serving your area.`}
+              `Browse industrial and commercial electric motor repair centers in ${areaLabel} for plant and facility motors typically 5 HP and above. Filter by capability, AC rewinding, DC armature work, high-voltage, servo, and emergency service. Residential, pool, and spa motors are not matched through this network.`}
           </p>
           <LocationPageInsights insights={insights} />
         </div>

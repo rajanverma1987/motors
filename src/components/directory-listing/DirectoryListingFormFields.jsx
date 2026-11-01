@@ -140,11 +140,25 @@ export default function DirectoryListingFormFields({
       <FormContainer>
         <FormSectionTitle as="h2">Motor capabilities</FormSectionTitle>
         <div className="space-y-4">
-          <div className="grid gap-4 sm:grid-cols-3">
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <Input
+              label="Min lead size (HP)"
+              name="minMotorSizeHP"
+              type="number"
+              min="0"
+              value={formData.minMotorSizeHP}
+              onChange={updateForm}
+              placeholder="e.g. 10"
+              title="Do not receive directory leads below this HP (platform floor is 5 HP)"
+            />
             <Input label="Max motor size (HP)" name="maxMotorSizeHP" type="number" min="0" value={formData.maxMotorSizeHP} onChange={updateForm} />
             <Input label="Max voltage" name="maxVoltage" placeholder="e.g. 13.8 kV" value={formData.maxVoltage} onChange={updateForm} />
             <Input label="Max weight handled" name="maxWeightHandled" placeholder="e.g. 10,000 lbs" value={formData.maxWeightHandled} onChange={updateForm} />
           </div>
+          <p className="text-xs text-secondary">
+            Min lead size controls which website repair requests are routed to you. Leave blank to use the platform
+            floor (5 HP). Residential and pool/spa jobs are never routed.
+          </p>
           <CheckboxGroup name="motorCapabilities" options={MOTOR_CAPABILITIES} selected={formData.motorCapabilities} onChange={updateForm} />
         </div>
       </FormContainer>

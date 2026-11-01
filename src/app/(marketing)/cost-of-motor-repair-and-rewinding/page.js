@@ -13,42 +13,30 @@ const COST_SIDEBAR_CALC_SCROLLABLE =
 
 export const metadata = {
   title: {
-    absolute: "Motor Rewinding Cost: $400 to $9,000 | Full Price Guide | 3PhaseFlow",
+    absolute: "Industrial Motor Rewinding Cost: $700 to $9,000+ | 3PhaseFlow",
   },
   description:
-    "Motor rewinding costs by HP: $400 to $900 for small motors, $1,200 to $3,500 for 10 to 50 HP, $3,000 to $9,000 for 50 to 200 HP. AC, DC, armature, and stator rewind price ranges. Get a quote.",
+    "Industrial motor rewinding costs by HP: about $700 to $1,500 for 5 to 10 HP, $1,200 to $3,500 for 10 to 50 HP, $3,000 to $9,000 for 50 to 200 HP. Plant and facility motors only. Get a quote.",
   keywords: [
-    "electric motor repair and rewinding   cost",
-    "electric motor repair cost",
-    "motor rewinding cost",
-    "electric motor rewinding cost",
-    "AC motor rewind price",
-    "DC motor repair cost",
     "industrial motor repair cost",
     "industrial motor rewinding price",
-    "how much does motor rewinding cost",
-    "electric motor rewind quote",
-    "electric motor rewind quote calculator",
-    "electric motor rebuild cost",
-    "motor overhaul cost",
-    "fractional HP motor repair cost",
+    "industrial electric motor repair cost",
+    "plant motor rewinding cost",
+    "AC industrial motor rewind price",
+    "DC industrial motor repair cost",
     "medium voltage motor repair cost",
     "explosion proof motor repair cost",
-    "motor repair labor rates",
-    "emergency motor repair cost",
-    "motor rewinding cost calculator",
-    "electric motor repair near me cost",
-    "submersible motor repair cost",
-    "generator motor rewind cost",
-    "motor bearing replacement cost",
-    "motor repair vs rewind cost",
-    "shop minimum motor repair charge",
+    "emergency industrial motor repair cost",
+    "motor rewinding cost calculator industrial",
+    "facility motor overhaul cost",
+    "industrial motor rebuild cost",
+    "how much does industrial motor rewinding cost",
   ],
   authors: [{ name: "3PhaseFlow.com" }],
   openGraph: {
-    title: "Motor Rewinding Cost Guide: $400 to $9,000 by HP | 3PhaseFlow",
+    title: "Industrial Motor Rewinding Cost Guide by HP | 3PhaseFlow",
     description:
-      "Motor rewinding price ranges by HP, AC, DC, armature, and stator rewinds. Get matched to certified shops for a real quote.",
+      "Industrial motor rewinding price ranges by HP for plant and facility motors 5 HP and above. Get matched to certified shops for a real quote.",
     url: path,
     type: "article",
     siteName: "3PhaseFlow.com",
@@ -57,9 +45,9 @@ export const metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Motor Rewinding Cost: $400 to $9,000 | 3PhaseFlow",
+    title: "Industrial Motor Rewinding Cost by HP | 3PhaseFlow",
     description:
-      "Motor rewinding price guide by HP. AC, DC, armature, and stator rewinds. Get a quote.",
+      "Industrial motor rewinding price guide by HP for plant and facility work. Get a quote.",
   },
   alternates: { canonical: path },
   robots: { index: true, follow: true },
@@ -67,9 +55,9 @@ export const metadata = {
 
 const faqItems = [
   {
-    question: "How much does it cost to rewind an electric motor?",
+    question: "How much does it cost to rewind an industrial electric motor?",
     answer:
-      "There is no single price. Small fractional-HP motors often run from a few hundred dollars up to roughly $1,000+ for a full rewind; medium motors (about 5 to 50 HP) commonly fall in the low thousands to several thousand; large industrial units (50+ HP) can reach tens of thousands. The only reliable number is a written quote after inspection.",
+      "There is no single price. Mid-size industrial motors (about 5 to 50 HP) commonly fall in the low thousands to several thousand; large industrial units (50+ HP) can reach tens of thousands. 3PhaseFlow focuses on plant and facility motors typically 5 HP and above. Residential and pool/spa motors are outside this network. The only reliable number is a written quote after inspection.",
   },
   {
     question: "Is rewinding cheaper than buying a new motor?",
@@ -107,9 +95,9 @@ const faqItems = [
       "Both are quoted from inspection. AC induction rewinds are common; pricing scales with copper, slots, and HP. DC motors add commutator, brush rig, and armature work, repairs and rewinds can be labor-heavy. Always compare apples-to-apples scope (armature vs stator only, field coils, mechanical fits) on the written estimate.",
   },
   {
-    question: "Do shops charge a minimum or bench fee for small motor repair?",
+    question: "Do shops charge a minimum for smaller industrial motors?",
     answer:
-      "Yes, many US shops apply a minimum labor or bench charge for fractional-HP and small jobs because setup, teardown, and documentation time does not shrink with motor size. That is why small motor repair cost can look high relative to the copper value alone, ask how minimums apply before authorizing work.",
+      "Yes, many US industrial shops apply a minimum labor or bench charge on the lower end of their industrial HP range because setup, teardown, and documentation time does not shrink with motor size. Ask how minimums apply before authorizing work. This network is not for residential, pool, or spa motors.",
   },
   {
     question: "Does emergency or after-hours motor repair cost more?",
@@ -219,9 +207,9 @@ function CostPageWebPageJsonLd({ pageUrl, site }) {
     "@type": "WebPage",
     "@id": `${pageUrl}#webpage`,
     url: pageUrl,
-    name: "How much does motor rewinding cost? (2026 US guide)",
+    name: "How much does industrial motor rewinding cost? (2026 US guide)",
     description:
-      "US motor rewinding costs by horsepower: ballpark pricing tables ($250 to $60k+), free rewind calculator, cost drivers, and FAQs for comparing shop quotes.",
+      "US industrial motor rewinding costs by horsepower for plant and facility motors 5 HP and above: pricing tables, free rewind calculator, cost drivers, and FAQs.",
     dateModified: "2026-06-25",
     isPartOf: { "@type": "WebSite", name: "3PhaseFlow.com", url: site },
     about: [
@@ -328,9 +316,9 @@ export default function CostOfMotorRepairPage() {
       <CostPageWebPageJsonLd pageUrl={pageUrl} site={site} />
       <CostPageCalculatorJsonLd pageUrl={pageUrl} />
       <BlogPageLayout
-        title="Motor rewinding cost: what shops charge in 2026"
-        description="US ballpark ranges from ~$250 for small motors to $60k+ for large industrial rewinds. Use the free calculator, HP pricing tables, and FAQs below, then compare written quotes from shops. Updated June 2026."
-        breadcrumbLink={{ href: "/electric-motor-repair-shops-listings", label: "Find repair shops" }}
+        title="Industrial motor rewinding cost: what shops charge in 2026"
+        description="US ballpark ranges for plant and facility motors 5 HP and above, from roughly $700 for smaller industrial units to $60k+ for large rewinds. Use the free calculator, HP pricing tables, and FAQs below. Not for residential, pool, or spa motors. Updated June 2026."
+        breadcrumbLink={{ href: "/electric-motor-repair-shops-listings", label: "Find industrial repair shops" }}
         canonicalPath={path}
         sidebarBelowCta={calculatorSidebar}
         wideSidebar
@@ -338,11 +326,11 @@ export default function CostOfMotorRepairPage() {
         quickAnswer={
           <AiQuickAnswer>
             <p>
-              <strong>Quick answer:</strong> Motor rewinding costs between $400 and $9,000 in the United States,
-              depending on horsepower, motor type, and whether emergency turnaround is needed. AC motor rewinds on motors
-              under 50 HP typically cost $1,200 to $3,500. Full rewinds on 50 to 200 HP motors cost $3,000 to $9,000. Emergency
-              rewinds carry a 25 to 50% surcharge above standard rates. These are US shop averages at standard
-              (non-emergency) turnaround as of 2025 to 2026.
+              <strong>Quick answer:</strong> Industrial motor rewinding for plant and facility motors typically costs
+              between about $700 and $9,000+ in the United States, depending on horsepower, motor type, and whether
+              emergency turnaround is needed. AC rewinds on motors under 50 HP often fall in the $1,200 to $3,500 band.
+              Full rewinds on 50 to 200 HP motors cost $3,000 to $9,000. Emergency rewinds carry a 25 to 50% surcharge.
+              This guide targets industrial work typically 5 HP and above, not residential or pool/spa motors.
             </p>
           </AiQuickAnswer>
         }
@@ -358,22 +346,22 @@ export default function CostOfMotorRepairPage() {
               How much does motor rewinding cost? (US ballpark ranges)
             </h2>
             <p className="mt-4 text-secondary">
-              Most US shops quote <strong className="text-title">electric motor rewinding cost</strong> after
-              inspection, but buyers still need orientation before they call. Typical full-rewind ballparks run from{" "}
-              <strong className="text-title">about $250 to $900+</strong> on fractional HP motors,{" "}
-              <strong className="text-title">$900 to $9,000+</strong> in the 5 to 50 HP band, and{" "}
+              Most US shops quote <strong className="text-title">industrial electric motor rewinding cost</strong> after
+              inspection, but plant buyers still need orientation before they call. Typical full-rewind ballparks for
+              motors this network matches (typically 5 HP and above) run from{" "}
+              <strong className="text-title">about $700 to $9,000+</strong> in the 5 to 50 HP band, and{" "}
               <strong className="text-title">$6,000 to $60,000+</strong> for large industrial or medium-voltage work. Use
-              these bands for budgeting, not as a guarantee. Currency, region, and motor condition change outcomes.
+              these bands for budgeting, not as a guarantee. Residential, pool, and spa motors are outside this network.
               Always insist on a <strong className="text-title">written quote</strong> after inspection.
             </p>
             <ul className="mt-6 list-none space-y-3 pl-0 text-secondary">
               <li>
-                <strong className="text-title">Small motors (fractional to ~5 HP):</strong> Many repairs and rewinds fall
-                from the low hundreds to about $1,000+, depending on rewind depth and parts.
+                <strong className="text-title">Smaller industrial (~5 to 10 HP):</strong> Many rewinds and major repairs
+                fall from roughly $700 to about $1,500+, depending on rewind depth and parts.
               </li>
               <li>
-                <strong className="text-title">Medium motors (~5 to 50 HP):</strong> Common to see roughly $1,000 through
-                several thousand for rewind-level work or major repairs.
+                <strong className="text-title">Medium industrial (~10 to 50 HP):</strong> Common to see roughly $1,200
+                through several thousand for rewind-level work or major repairs.
               </li>
               <li>
                 <strong className="text-title">Large industrial (50 HP and up):</strong> Often several thousand to tens of
@@ -416,10 +404,10 @@ export default function CostOfMotorRepairPage() {
                 </thead>
                 <tbody>
                   <tr>
-                    <td>Fractional to 10 HP</td>
-                    <td>$150 to $600</td>
-                    <td>$400 to $900</td>
-                    <td>$350 to $800</td>
+                    <td>5 to 10 HP</td>
+                    <td>$250 to $700</td>
+                    <td>$700 to $1,500</td>
+                    <td>$600 to $1,200</td>
                     <td>+25 to 40%</td>
                   </tr>
                   <tr>
@@ -787,9 +775,9 @@ export default function CostOfMotorRepairPage() {
                 </Link>{" "}
                 or{" "}
                 <Link href="/electric-motor-repair-near-me" className="text-primary font-medium hover:underline">
-                  repair near me
+                  industrial repair near facility
                 </Link>{" "}
-                to shortlist shops that serve your area or industry.
+                to shortlist shops that serve your plant area or industry.
               </li>
               <li>
                 Ask what inspection costs (if any), what is included in the quote, and how change orders are handled if
@@ -866,7 +854,7 @@ export default function CostOfMotorRepairPage() {
               </li>
               <li>
                 <Link href="/electric-motor-repair-near-me" className="text-primary hover:underline">
-                  → Motor repair shops near me
+                  → Industrial motor repair near facility
                 </Link>
               </li>
               <li>
@@ -917,9 +905,9 @@ export default function CostOfMotorRepairPage() {
               </li>
               <li>
                 <Link href="/electric-motor-repair-near-me" className="text-primary hover:underline">
-                  Motor repair near me
+                  Industrial repair near facility
                 </Link>
-                <span className="text-secondary">, local intent</span>
+                <span className="text-secondary">, plant local intent</span>
               </li>
               <li>
                 <Link href="/marketplace" className="text-primary hover:underline">

@@ -3,12 +3,12 @@ import { NEAR_ME_KEYWORDS, NEAR_ME_PATH } from "./near-me-seo-data";
 
 export const metadata = marketingPageMetadata({
   path: NEAR_ME_PATH,
-  title: { absolute: "Electric Motor Repair & Rewinding Near Me | 3PhaseFlow" },
+  title: { absolute: "Industrial Motor Repair Near Me | Plant & Facility Shops | 3PhaseFlow" },
   description:
-    "Find certified electric motor repair and rewinding shops near you. AC motor rewinding, DC armature rewinding, stator rewinds, and emergency service. Browse by state or submit a request.",
-  ogTitle: "Electric Motor Repair & Rewinding Near Me | 3PhaseFlow",
+    "Find industrial electric motor repair and rewinding shops near your facility (5+ HP plant work). AC rewinding, DC armature work, stator rewinds, and emergency service. Not for residential, pool, or spa motors.",
+  ogTitle: "Industrial Motor Repair Near Me | 3PhaseFlow",
   ogDescription:
-    "Find certified motor repair and rewinding shops near you. AC, DC, armature, stator, and emergency rewinds. Browse by state or submit a repair request.",
+    "Industrial motor repair and rewinding shops near your plant or facility. AC, DC, armature, stator, and emergency rewinds for commercial motors 5 HP and above.",
   keywords: NEAR_ME_KEYWORDS,
 });
 

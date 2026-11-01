@@ -102,18 +102,20 @@ export default function ListingsDirectorySeoContent({ total = 0 }) {
         </p>
       </section>
 
-      <section className="mt-10" aria-labelledby="electric-motor-repair-near-you">
-        <h3 id="electric-motor-repair-near-you" className="text-xl font-bold text-title sm:text-2xl">
-          Electric motor repair near you
+      <section className="mt-10" aria-labelledby="industrial-motor-repair-near-facility">
+        <h3 id="industrial-motor-repair-near-facility" className="text-xl font-bold text-title sm:text-2xl">
+          Industrial motor repair near your facility
         </h3>
         <p className="mt-3 max-w-[57.6rem] text-sm leading-relaxed text-secondary sm:text-base">
-          Search this page by city, state, or ZIP to find <strong className="text-title">electric motor repair near
-          me</strong> candidates, or use{" "}
+          Search this page by city, state, or ZIP to find{" "}
+          <strong className="text-title">industrial motor repair near me</strong> candidates for plant and facility
+          motors (typically 5 HP and above), or use{" "}
           <Link href="/electric-motor-repair-near-me" className="font-medium text-primary hover:underline">
-            electric motor repair near me
+            industrial motor repair near me
           </Link>{" "}
           for distance-sorted results when you allow location access. Proximity matters for freight cost and pickup, but
-          capability and testing quality should drive the final choice for critical motors.
+          capability and testing quality should drive the final choice for critical plant motors. Residential, pool, and
+          spa motors are outside this directory.
         </p>
       </section>
 

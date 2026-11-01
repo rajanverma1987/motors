@@ -17,7 +17,7 @@ export const metadata = {
     absolute: "Who Offers Industrial Motor Rewinding & Repair? | 3PhaseFlow Directory",
   },
   description:
-    "Find industrial motor repair and rewinding shops near you. Large-frame AC rewinding, DC armature rewinds, high-voltage stator rewinding, and emergency service. Submit a requirement, matched to qualified shops.",
+    "Find industrial motor repair and rewinding shops near your facility for plant motors typically 5 HP and above. Large-frame AC rewinding, DC armature work, high-voltage stator rewinding, and emergency service. Not for residential, pool, or spa motors.",
   keywords: [
     "industrial motor repair",
     "industrial motor repair near me",
@@ -40,7 +40,7 @@ export const metadata = {
   openGraph: {
     title: "Industrial Motor Rewinding & Repair Shops | 3PhaseFlow",
     description:
-      "Find industrial motor repair and rewinding shops. Large-frame, HV, AC/DC armature rewinding. Submit a requirement, matched to shops near you.",
+      "Find industrial motor repair and rewinding shops for plant and facility motors 5 HP and above. Large-frame, HV, AC/DC armature rewinding.",
     url: path,
     type: "article",
     siteName: "3PhaseFlow.com",
@@ -50,7 +50,7 @@ export const metadata = {
     card: "summary_large_image",
     title: "Who Offers Industrial Motor Rewinding & Repair? | 3PhaseFlow",
     description:
-      "Find industrial motor repair and rewinding shops. Large-frame, HV, AC/DC armature rewinding. Submit a requirement, matched to shops near you.",
+      "Find industrial motor repair and rewinding shops for plant and facility motors 5 HP and above. Large-frame, HV, AC/DC armature rewinding.",
   },
   alternates: { canonical: path },
   robots: { index: true, follow: true },
@@ -60,7 +60,7 @@ const faqItems = [
   {
     question: "What is industrial motor repair?",
     answer:
-      "Industrial motor repair is the inspection, mechanical rebuild, electrical rewind, testing, and re-commissioning of motors used in factories, utilities, water treatment, mining, HVAC plants, and other continuous-duty applications, typically from a few horsepower up to multi-megawatt units. Work is performed by specialized motor repair and rewinding shops with the cranes, ovens, VPI systems, and test equipment large jobs require.",
+      "Industrial motor repair is the inspection, mechanical rebuild, electrical rewind, testing, and re-commissioning of motors used in factories, utilities, water treatment, mining, HVAC plants, and other continuous-duty applications, typically from about 5 HP up to multi-megawatt units. Work is performed by specialized motor repair and rewinding shops with the cranes, ovens, VPI systems, and test equipment large jobs require. Residential, homeowner, pool, and spa pump motors are outside this network.",
   },
   {
     question: "What types of industrial motors do repair shops work on?",

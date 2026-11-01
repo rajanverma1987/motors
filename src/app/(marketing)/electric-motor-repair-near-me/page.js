@@ -9,9 +9,10 @@ export default function NearMePage() {
   const pageSchema = {
     "@context": "https://schema.org",
     "@type": "WebPage",
-    name: "Electric Motor Repair Near Me",
+    name: "Industrial Motor Repair Near Me",
     url: pageUrl,
-    description: "Repair shops near your current location.",
+    description:
+      "Industrial and commercial electric motor repair shops near your facility (5+ HP plant work). Not for residential, pool, or spa motors.",
     breadcrumb: {
       "@type": "BreadcrumbList",
       itemListElement: [
@@ -19,7 +20,7 @@ export default function NearMePage() {
         {
           "@type": "ListItem",
           position: 2,
-          name: "Electric Motor Repair Near Me",
+          name: "Industrial Motor Repair Near Me",
           item: pageUrl,
         },
       ],

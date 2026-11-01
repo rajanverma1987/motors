@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { FiDownload, FiEye, FiMail, FiTrash2, FiUserPlus } from "react-icons/fi";
 import Button from "@/components/ui/button";
+import Badge from "@/components/ui/badge";
 import Table from "@/components/ui/table";
 import Modal from "@/components/ui/modal";
 import Select from "@/components/ui/select";
@@ -13,6 +14,14 @@ import { useToast } from "@/components/toast-provider";
 import { useConfirm } from "@/components/confirm-provider";
 import { useAdminTableSort } from "@/hooks/use-admin-table-sort";
 import { appendAdminSortParams } from "@/lib/admin-table-sort";
+
+function qualificationBadgeVariant(status) {
+  const s = String(status || "").trim().toLowerCase();
+  if (s === "qualified") return "success";
+  if (s === "no_matching_shop") return "warning";
+  if (s) return "danger";
+  return "default";
+}
 
 const MAX_ASSIGNMENTS = 3;
 const FOLLOW_UP_FORM_ID = "admin-lead-follow-up-email-form";
@@ -35,7 +44,10 @@ function buildLeadsCsv(leads) {
     "motorType",
     "motorHp",
     "voltage",
+    "buyerType",
     "urgencyLevel",
+    "qualificationStatus",
+    "qualificationReason",
     "problemDescription",
     "message",
     "sourceListingId",
@@ -61,7 +73,10 @@ function buildLeadsCsv(leads) {
       l.motorType,
       l.motorHp,
       l.voltage,
+      l.buyerType,
       l.urgencyLevel,
+      l.qualificationStatus,
+      l.qualificationReason,
       l.problemDescription,
       l.message,
       srcId,
@@ -410,10 +425,24 @@ export default function AdminLeadsPage() {
       { key: "name", label: "Name", sortable: true },
       { key: "email", label: "Email", sortable: true },
       {
+        key: "qualificationStatus",
+        label: "Match",
+        sortable: false,
+        render: (val, row) => {
+          const status = String(val || row.qualificationStatus || "").trim();
+          if (!status) return "-";
+          return (
+            <Badge variant={qualificationBadgeVariant(status)} className="rounded-full px-2.5 py-0.5 text-xs">
+              {status.replace(/_/g, " ")}
+            </Badge>
+          );
+        },
+      },
+      {
         key: "source",
         label: "Source",
         sortable: true,
-        render: (_, row) => row.sourceListingName || "—",
+        render: (_, row) => row.sourceListingName || "-",
       },
       {
         key: "assignedTo",
@@ -421,7 +450,7 @@ export default function AdminLeadsPage() {
         sortable: true,
         render: (_, row) => {
           const names = (row.assignedToNames || []).filter(Boolean);
-          return names.length ? names.join(", ") : "—";
+          return names.length ? names.join(", ") : "-";
         },
       },
       {
@@ -524,21 +553,43 @@ export default function AdminLeadsPage() {
             <div>
               <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-secondary">Lead information</h3>
               <dl className="grid gap-2 text-sm sm:grid-cols-2">
-                <div><dt className="text-secondary">Name</dt><dd className="font-medium text-title">{viewingLead.name || "—"}</dd></div>
-                <div><dt className="text-secondary">Company</dt><dd className="text-title">{viewingLead.company || "—"}</dd></div>
-                <div><dt className="text-secondary">Email</dt><dd className="text-title">{viewingLead.email || "—"}</dd></div>
-                <div><dt className="text-secondary">Phone</dt><dd className="text-title">{viewingLead.phone || "—"}</dd></div>
-                <div><dt className="text-secondary">City / location</dt><dd className="text-title">{viewingLead.city || "—"}</dd></div>
-                <div><dt className="text-secondary">Zip code</dt><dd className="text-title">{viewingLead.zipCode || "—"}</dd></div>
+                <div><dt className="text-secondary">Name</dt><dd className="font-medium text-title">{viewingLead.name || "-"}</dd></div>
+                <div><dt className="text-secondary">Company</dt><dd className="text-title">{viewingLead.company || "-"}</dd></div>
+                <div><dt className="text-secondary">Email</dt><dd className="text-title">{viewingLead.email || "-"}</dd></div>
+                <div><dt className="text-secondary">Phone</dt><dd className="text-title">{viewingLead.phone || "-"}</dd></div>
+                <div><dt className="text-secondary">Buyer type</dt><dd className="text-title">{viewingLead.buyerType || "-"}</dd></div>
+                <div><dt className="text-secondary">City / location</dt><dd className="text-title">{viewingLead.city || "-"}</dd></div>
+                <div><dt className="text-secondary">Zip code</dt><dd className="text-title">{viewingLead.zipCode || "-"}</dd></div>
+                <div>
+                  <dt className="text-secondary">Match status</dt>
+                  <dd className="text-title">
+                    {viewingLead.qualificationStatus ? (
+                      <Badge
+                        variant={qualificationBadgeVariant(viewingLead.qualificationStatus)}
+                        className="rounded-full px-2.5 py-0.5 text-xs"
+                      >
+                        {String(viewingLead.qualificationStatus).replace(/_/g, " ")}
+                      </Badge>
+                    ) : (
+                      "-"
+                    )}
+                  </dd>
+                </div>
+                {viewingLead.qualificationReason ? (
+                  <div className="sm:col-span-2">
+                    <dt className="text-secondary">Match note</dt>
+                    <dd className="text-title">{viewingLead.qualificationReason}</dd>
+                  </div>
+                ) : null}
               </dl>
             </div>
             <div>
               <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-secondary">Motor details</h3>
               <dl className="grid gap-2 text-sm sm:grid-cols-2">
-                <div><dt className="text-secondary">Motor type</dt><dd className="text-title">{viewingLead.motorType || "—"}</dd></div>
-                <div><dt className="text-secondary">Motor HP</dt><dd className="text-title">{viewingLead.motorHp || "—"}</dd></div>
-                <div><dt className="text-secondary">Voltage</dt><dd className="text-title">{viewingLead.voltage || "—"}</dd></div>
-                <div><dt className="text-secondary">Urgency</dt><dd className="text-title">{viewingLead.urgencyLevel ? String(viewingLead.urgencyLevel).charAt(0).toUpperCase() + String(viewingLead.urgencyLevel).slice(1) : "—"}</dd></div>
+                <div><dt className="text-secondary">Motor type</dt><dd className="text-title">{viewingLead.motorType || "-"}</dd></div>
+                <div><dt className="text-secondary">Motor HP</dt><dd className="text-title">{viewingLead.motorHp || "-"}</dd></div>
+                <div><dt className="text-secondary">Voltage</dt><dd className="text-title">{viewingLead.voltage || "-"}</dd></div>
+                <div><dt className="text-secondary">Urgency</dt><dd className="text-title">{viewingLead.urgencyLevel ? String(viewingLead.urgencyLevel).charAt(0).toUpperCase() + String(viewingLead.urgencyLevel).slice(1) : "-"}</dd></div>
               </dl>
               {(viewingLead.problemDescription || viewingLead.message) && (
                 <div className="mt-2">

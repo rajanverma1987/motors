@@ -133,7 +133,7 @@ export async function PATCH(request, context) {
     const allowed = [
       "companyName", "email", "notificationEmails", "logoUrl", "shortDescription", "yearsInBusiness", "phone", "website",
       "primaryContactPerson", "address", "city", "state", "zipCode", "country",
-      "services", "maxMotorSizeHP", "maxVoltage", "maxWeightHandled", "motorCapabilities",
+      "services", "minMotorSizeHP", "maxMotorSizeHP", "maxVoltage", "maxWeightHandled", "motorCapabilities",
       "equipmentTesting", "rewindingCapabilities", "industriesServed",
       "pickupDeliveryAvailable", "craneCapacity", "forkliftCapacity", "rushRepairAvailable",
       "turnaroundTime", "certifications", "shopSizeSqft", "numTechnicians", "numEngineers",

@@ -10,12 +10,12 @@ export default function ListingsDirectoryHero() {
           Directory
         </span>
         <h1 className="mt-4 text-balance break-words text-3xl font-bold tracking-tight text-title sm:text-4xl lg:text-5xl">
-          Find electric motor repair and rewinding shops
+          Find industrial electric motor repair and rewinding shops
         </h1>
         <p className="mt-4 max-w-[50.4rem] text-pretty text-base text-secondary sm:text-lg">
-          Browse industrial and commercial <strong className="text-title">electric motor repair and rewinding</strong>{" "}
-          centers by city, state, or ZIP. Search this directory or submit your requirement and we&apos;ll match you with
-          qualified shops in your area.
+          Browse <strong className="text-title">industrial and commercial motor repair</strong> centers by city, state,
+          or ZIP for plant and facility motors typically 5 HP and above. Submit a qualified requirement and we&apos;ll
+          match you with shops in your area. Residential, pool, and spa motors are not matched through this directory.
         </p>
       </div>
     </section>

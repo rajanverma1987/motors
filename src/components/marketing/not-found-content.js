@@ -23,8 +23,8 @@ const POPULAR_LINKS = [
   },
   {
     href: "/electric-motor-repair-near-me",
-    label: "Repair shops near me",
-    description: "Local directory for AC, DC, and industrial motor repair.",
+    label: "Industrial repair near facility",
+    description: "Local directory for industrial AC, DC, and plant motor repair.",
     icon: FiMapPin,
   },
   {
@@ -149,8 +149,8 @@ export default function NotFoundContent() {
       <section className="border-t border-border bg-card/50">
         <div className="mx-auto max-w-3xl px-4 py-10 text-center sm:px-6 sm:py-12">
           <p className="text-sm leading-relaxed text-secondary sm:text-base">
-            Need a motor repaired? Submit your motor details through our directory and get matched with shops
-            that quote your HP, voltage, and application. Shop owners can{" "}
+            Need an industrial motor repaired? Submit plant or facility motor details (typically 5+ HP) through our
+            directory and get matched with shops that quote your HP, voltage, and application. Shop owners can{" "}
             <Link href="/list-your-electric-motor-services" className="font-medium text-primary hover:underline">
               list your center for free
             </Link>{" "}

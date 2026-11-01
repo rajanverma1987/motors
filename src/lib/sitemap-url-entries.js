@@ -38,7 +38,7 @@ export async function getSitemapEntries() {
       url: `${baseUrl}/industrial-motor-repair`,
       lastModified: new Date(),
       changeFrequency: "weekly",
-      priority: 0.88,
+      priority: 0.95,
     },
     {
       url: `${baseUrl}/emergency-motor-repair-what-to-do`,
@@ -137,7 +137,12 @@ export async function getSitemapEntries() {
       priority: 0.5,
     },
     { url: `${baseUrl}/electric-motor-repair-shops-listings`, lastModified: new Date(), changeFrequency: "weekly", priority: 0.8 },
-    { url: `${baseUrl}/electric-motor-repair-near-me`, lastModified: new Date(), changeFrequency: "weekly", priority: 0.8 },
+    {
+      url: `${baseUrl}/electric-motor-repair-near-me`,
+      lastModified: new Date(),
+      changeFrequency: "weekly",
+      priority: 0.78,
+    },
     { url: `${baseUrl}${SEO_USA_HUB_PATH}`, lastModified: new Date(), changeFrequency: "weekly", priority: 0.92 },
     { url: `${baseUrl}/blog`, lastModified: new Date(), changeFrequency: "weekly", priority: 0.82 },
     { url: `${baseUrl}/motor-repair-shop-management-software`, lastModified: new Date(), changeFrequency: "monthly", priority: 0.9 },

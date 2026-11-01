@@ -61,7 +61,7 @@ export default function TypesOfElectricMotorRepairServicesPage() {
             AC and DC motor repair and rewinding
           </h2>
           <p className="mt-4 text-secondary">
-            Most shops handle AC induction motors (single- and three-phase) and many handle DC motors (armature and field rewinding). Capabilities vary: some specialize in small fractional-HP motors; others focus on large industrial AC/DC. When searching for a shop, confirm they work on your motor type and size (HP, voltage, frame).
+            Most industrial shops handle three-phase AC induction motors and many handle DC motors (armature and field rewinding). Capabilities vary by voltage class and frame size. When searching for a shop, confirm they work on your plant motor type and size (HP, voltage, frame). 3PhaseFlow matching focuses on industrial and commercial motors typically 5 HP and above.
           </p>
         </section>
 

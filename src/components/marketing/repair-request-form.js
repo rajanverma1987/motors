@@ -8,6 +8,11 @@ import Select from "@/components/ui/select";
 import { isValidEmail } from "@/lib/validation";
 import { REPAIR_FORM_SIDEBAR_MAX_H } from "@/lib/listings-directory-layout";
 import { saveLeadContact, withLeadContactPrefill } from "@/lib/lead-contact-storage";
+import {
+  LEAD_BUYER_TYPE_OPTIONS,
+  PLATFORM_MIN_ROUTE_HP,
+  parseMotorHp,
+} from "@/lib/lead-qualification";
 
 const MOTOR_TYPE_OPTIONS = [
   { value: "", label: "Select motor type…" },
@@ -17,7 +22,7 @@ const MOTOR_TYPE_OPTIONS = [
   { value: "Servo Motor", label: "Servo Motor" },
   { value: "High Voltage Motor (above 4kV)", label: "High Voltage Motor (above 4kV)" },
   { value: "Generator", label: "Generator" },
-  { value: "Pump Motor", label: "Pump Motor" },
+  { value: "Pump Motor (industrial / commercial)", label: "Pump Motor (industrial / commercial)" },
   { value: "Other / Not Sure", label: "Other / Not Sure" },
 ];
 
@@ -36,6 +41,7 @@ const INITIAL_FORM = {
   canShip: "",
   name: "",
   company: "",
+  buyerType: "",
   phone: "",
   email: "",
   city: "",
@@ -77,6 +83,8 @@ export default function RepairRequestForm({
   const [step, setStep] = useState(1);
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [routed, setRouted] = useState(true);
+  const [resultMessage, setResultMessage] = useState("");
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -99,8 +107,16 @@ export default function RepairRequestForm({
 
   const setField = (field, value) => setForm((prev) => ({ ...prev, [field]: value }));
 
-  const step1Valid = form.motorType !== "" && form.failureDescription.trim().length >= 20;
-  const step2Valid = form.name.trim() !== "" && form.email.trim() !== "" && isValidEmail(form.email);
+  const step1Valid =
+    form.motorType !== "" &&
+    parseMotorHp(form.horsepower) != null &&
+    form.failureDescription.trim().length >= 20;
+  const step2Valid =
+    form.name.trim() !== "" &&
+    form.company.trim() !== "" &&
+    form.buyerType.trim() !== "" &&
+    form.email.trim() !== "" &&
+    isValidEmail(form.email);
 
   const handleSubmit = async () => {
     if (!step2Valid) return;
@@ -118,6 +134,7 @@ export default function RepairRequestForm({
           email: form.email.trim(),
           phone: form.phone.trim(),
           company: form.company.trim(),
+          buyerType: form.buyerType.trim(),
           city: contactCity,
           state: contactState,
           zipCode: contactZip,
@@ -141,6 +158,8 @@ export default function RepairRequestForm({
         state: contactState,
         zipCode: contactZip,
       });
+      setRouted(data.routed !== false);
+      setResultMessage(String(data.message || "").trim());
       setSubmitted(true);
     } catch (err) {
       setError(err.message || "Something went wrong. Please try again.");
@@ -160,30 +179,43 @@ export default function RepairRequestForm({
           : "Submit a repair requirement");
 
   const descriptionText = lockUrgency
-    ? "Motor down? Describe the failure, we match you to 24/7 shops in your area within minutes."
+    ? `Industrial motor down? Describe the failure (${PLATFORM_MIN_ROUTE_HP}+ HP). We match industrial shops in your area.`
     : mode === "shop"
-      ? "Describe your motor and failure, the shop will respond directly."
-      : "Describe your motor and failure. We'll match you with shops that serve this area.";
+      ? `Industrial or commercial motors ${PLATFORM_MIN_ROUTE_HP}+ HP. Describe the motor and failure; the shop responds when the job fits their capacity.`
+      : `Industrial and commercial motors ${PLATFORM_MIN_ROUTE_HP}+ HP. Residential, pool, and spa pumps are not matched to shops.`;
 
   if (submitted) {
     return (
       <div
-        className={`mx-auto max-w-[44rem] rounded-xl border border-success/40 bg-success/10 p-6 text-center sm:p-8 ${className}`}
+        className={`mx-auto max-w-[44rem] rounded-xl border p-6 text-center sm:p-8 ${
+          routed ? "border-success/40 bg-success/10" : "border-border bg-card"
+        } ${className}`}
       >
-        <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-success text-lg font-bold text-white">
+        <div
+          className={`mx-auto flex h-12 w-12 items-center justify-center rounded-full text-lg font-bold text-white ${
+            routed ? "bg-success" : "bg-secondary"
+          }`}
+        >
           ✓
         </div>
-        <h3 className="mt-4 text-lg font-bold text-title">Request submitted</h3>
+        <h3 className="mt-4 text-lg font-bold text-title">
+          {routed ? "Request submitted" : "Request received"}
+        </h3>
         <p className="mt-2 text-sm text-secondary">
-          {mode === "shop"
-            ? `${shopName || "The shop"} will receive your request and follow up directly.`
-            : locationLabel
-              ? `We've matched your request to repair centers serving ${locationLabel}. You'll hear back within a few hours.`
-              : "We've received your request and will match you with repair centers in your area."}
+          {resultMessage ||
+            (routed
+              ? mode === "shop"
+                ? `${shopName || "The shop"} will receive your request and follow up directly.`
+                : locationLabel
+                  ? `We've matched your request to repair centers serving ${locationLabel}. You'll hear back within a few hours.`
+                  : "We've received your request and will match you with repair centers in your area."
+              : `We match industrial motors ${PLATFORM_MIN_ROUTE_HP} HP and above. This was not sent to shops.`)}
         </p>
-        <p className="mt-3 text-xs italic text-secondary">
-          For emergency repairs, call the shop directly using the phone number on their listing.
-        </p>
+        {routed ? (
+          <p className="mt-3 text-xs italic text-secondary">
+            For emergency repairs, call the shop directly using the phone number on their listing.
+          </p>
+        ) : null}
       </div>
     );
   }
@@ -255,7 +287,7 @@ export default function RepairRequestForm({
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <Input
-          label="Horsepower (HP)"
+          label={`Horsepower (HP) * · ${PLATFORM_MIN_ROUTE_HP}+ for matching`}
           name="horsepower"
           type="number"
           min="0"
@@ -263,6 +295,7 @@ export default function RepairRequestForm({
           placeholder="e.g. 50"
           value={form.horsepower}
           onChange={(e) => setField("horsepower", e.target.value)}
+          required
         />
         <Input
           label="Voltage (V)"
@@ -279,12 +312,13 @@ export default function RepairRequestForm({
         label="Describe the failure or service needed *"
         name="failureDescription"
         rows={4}
-        placeholder="e.g. Motor tripped the overload relay and won't restart. Burning smell noticed. Running a pump on a water treatment plant."
+        placeholder="e.g. 75 HP, 460V process pump motor tripped overload. Water treatment plant. Need rewind quote."
         value={form.failureDescription}
         onChange={(e) => setField("failureDescription", e.target.value)}
       />
       <p className="-mt-2 text-xs text-secondary">
-        Include symptoms, application, and urgency constraints. Minimum 20 characters.
+        Include symptoms, industrial application, and urgency. Not for pool, spa, or homeowner motors. Minimum 20
+        characters.
       </p>
 
       <fieldset>
@@ -356,12 +390,22 @@ export default function RepairRequestForm({
       />
 
       <Input
-        label="Company / facility"
+        label="Company / facility *"
         name="company"
         autoComplete="organization"
-        placeholder="Company name (optional)"
+        placeholder="Plant or company name"
         value={form.company}
         onChange={(e) => setField("company", e.target.value)}
+        required
+      />
+
+      <Select
+        label="Buyer type *"
+        name="buyerType"
+        options={LEAD_BUYER_TYPE_OPTIONS}
+        value={form.buyerType}
+        onChange={(e) => setField("buyerType", e.target.value)}
+        searchable={false}
       />
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">

@@ -19,7 +19,7 @@ export function buildLocationIntroParagraphs(areaLabel, insights) {
   const basedIn = insights?.basedIn || 0;
 
   return [
-    `Browse certified electric motor repair and rewinding centers in ${areaLabel}. This page lists ${total} ${total === 1 ? "shop" : "shops"} that match this area, either based here or explicitly serving it. Filter by capability, AC motor rewinding, DC armature rewinding, stator rewinds, high-voltage, servo, and emergency service, then submit your repair or rewind requirement to be matched with shops serving your area.`,
+    `Browse industrial and commercial electric motor repair and rewinding centers in ${areaLabel}. This page lists ${total} ${total === 1 ? "shop" : "shops"} that match this area, either based here or explicitly serving it. This network focuses on plant and facility motors typically 5 HP and above. Filter by capability, AC motor rewinding, DC armature rewinding, stator rewinds, high-voltage, servo, and emergency service, then submit a qualified industrial repair request. Residential, pool, and spa motors are not matched here.`,
     basedIn > 0
       ? `${basedIn} ${basedIn === 1 ? "shop is based" : "shops are based"} in ${areaLabel}; others appear because their service area includes this location. Look for the “Based in area” or “Serves area” badge on each card.`
       : `Shops shown here list ${areaLabel} in their service coverage. Confirm workshop location and pickup options on each profile before you ship a motor.`,
@@ -40,8 +40,8 @@ export function buildLocationHowToSteps(areaLabel) {
       body: "Each listing links to capacity, certifications, industries served, and contact details, match voltage, HP, and application to the shop’s published scope.",
     },
     {
-      title: "Submit one requirement or contact shops",
-      body: "Use Submit your requirement / Request quote above, or reach out to shops directly from their profile pages.",
+      title: "Submit one industrial requirement or contact shops",
+      body: "Use Submit your requirement / Request quote above for plant or facility motors (5+ HP), or reach out to shops directly from their profile pages. Residential and pool/spa work is not routed.",
     },
     {
       title: "Use guides for pricing and vetting|not this page",

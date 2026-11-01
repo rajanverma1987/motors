@@ -15,6 +15,11 @@ import { computeCustomerRewindBallpark } from "@/lib/motor-rewind-cost/calculate
 import { parseAdminSortParams, sortAndPaginateAdminRows } from "@/lib/admin-table-sort";
 import { sendToListingNotifyEmails } from "@/lib/listing-notify-emails";
 import { maybeSendLeadPlatformNurtureEmail } from "@/lib/lead-nurture";
+import {
+  filterListingsForLeadHp,
+  notRoutedUserMessage,
+  qualifyWebsiteLead,
+} from "@/lib/lead-qualification";
 
 const LEAD_ADMIN_SORT_KEYS = ["name", "email", "source", "assignedTo", "createdAt"];
 
@@ -68,6 +73,7 @@ export async function POST(request) {
       voltage,
       problemDescription,
       urgencyLevel,
+      buyerType,
       industry,
       motorPhotos,
       calculatorContext: rawCalculatorContext,
@@ -85,17 +91,37 @@ export async function POST(request) {
       );
     }
 
+    const qualification = qualifyWebsiteLead({
+      company,
+      motorHp,
+      buyerType,
+      motorType,
+      problemDescription,
+      message,
+      voltage,
+    });
+    if (!qualification.ok) {
+      return NextResponse.json(
+        { error: qualification.reason || "Invalid lead details." },
+        { status: qualification.httpStatus || 400 }
+      );
+    }
+
     let sourceListingId = "";
     let assignedListingIds = [];
     /** Shops to email after create (listing page or city-matched leads). */
     const listingNotifyTargets = [];
     const rawListingId = listingId != null ? String(listingId).trim() : "";
+    const routeToShops = Boolean(qualification.routeToShops);
+
     if (rawListingId) {
       if (!mongoose.isValidObjectId(rawListingId)) {
         return NextResponse.json({ error: "Invalid listing reference." }, { status: 400 });
       }
       const listingDoc = await Listing.findOne({ _id: rawListingId, status: "approved" })
-        .select("_id email companyName notificationEmails crmUserId primaryContactPerson")
+        .select(
+          "_id email companyName notificationEmails crmUserId primaryContactPerson minMotorSizeHP maxMotorSizeHP"
+        )
         .lean();
       if (!listingDoc) {
         return NextResponse.json(
@@ -104,10 +130,24 @@ export async function POST(request) {
         );
       }
       sourceListingId = listingDoc._id.toString();
-      /** Shop sees this lead in CRM; admin list shows it assigned to this listing company. */
-      assignedListingIds = [sourceListingId];
-      listingNotifyTargets.push(listingDoc);
-    } else {
+      if (routeToShops) {
+        const hpOk =
+          filterListingsForLeadHp(
+            [
+              {
+                id: sourceListingId,
+                minMotorSizeHP: listingDoc.minMotorSizeHP,
+                maxMotorSizeHP: listingDoc.maxMotorSizeHP,
+              },
+            ],
+            qualification.parsedHp
+          ).length > 0;
+        if (hpOk) {
+          assignedListingIds = [sourceListingId];
+          listingNotifyTargets.push(listingDoc);
+        }
+      }
+    } else if (routeToShops) {
       const matchCity = clampString(city, LIMITS.city.max);
       const matchState = clampString(state, LIMITS.city.max);
       const matchZip = clampString(zipCode, LIMITS.zip.max);
@@ -117,16 +157,17 @@ export async function POST(request) {
           state: matchState,
           zip: matchZip,
         });
+        const hpFiltered = filterListingsForLeadHp(matches, qualification.parsedHp);
         const industryKey = industryTagToListingKey(clampString(industry, LIMITS.shortText.max));
         const sortedMatches =
-          industryKey && matches.length > 1
-            ? [...matches].sort((a, b) => {
+          industryKey && hpFiltered.length > 1
+            ? [...hpFiltered].sort((a, b) => {
                 const aMatch = (a.industriesServed || []).includes(industryKey) ? 0 : 1;
                 const bMatch = (b.industriesServed || []).includes(industryKey) ? 0 : 1;
                 if (aMatch !== bMatch) return aMatch - bMatch;
                 return 0;
               })
-            : matches;
+            : hpFiltered;
         const topMatches = sortedMatches.slice(0, 3);
         assignedListingIds = topMatches.map((listing) => listing.id);
         listingNotifyTargets.push(...topMatches);
@@ -165,6 +206,18 @@ export async function POST(request) {
     const cityParts = [clampString(city, LIMITS.city.max), clampString(state, LIMITS.city.max)].filter(Boolean);
     const cityOut = cityParts.length ? cityParts.join(", ").slice(0, LIMITS.city.max) : clampString(city, LIMITS.city.max);
 
+    const routed = listingNotifyTargets.length > 0;
+    const qualificationStatus = routed
+      ? "qualified"
+      : routeToShops
+        ? "no_matching_shop"
+        : qualification.status;
+    const qualificationReason = routed
+      ? ""
+      : routeToShops
+        ? "No matching industrial shops for this HP and location."
+        : qualification.reason || "";
+
     const doc = await Lead.create({
       name: clampString(name, LIMITS.name.max),
       email: (email.trim().toLowerCase()).slice(0, LIMITS.email.max),
@@ -178,6 +231,9 @@ export async function POST(request) {
       voltage: clampString(voltage, LIMITS.shortText.max),
       problemDescription: problemOut,
       urgencyLevel: clampString(urgencyLevel, LIMITS.shortText.max),
+      buyerType: clampString(buyerType, LIMITS.shortText.max),
+      qualificationStatus: clampString(qualificationStatus, LIMITS.shortText.max),
+      qualificationReason: clampString(qualificationReason, LIMITS.message.max),
       industry: clampString(industry, LIMITS.shortText.max),
       motorPhotos: clampArray(motorPhotos, 20),
       sourceListingId: clampString(sourceListingId, 50),
@@ -237,7 +293,17 @@ export async function POST(request) {
       }
     }
 
-    return NextResponse.json({ ok: true, id: doc._id.toString() });
+    return NextResponse.json({
+      ok: true,
+      id: doc._id.toString(),
+      routed,
+      qualificationStatus: doc.qualificationStatus || "",
+      message: routed
+        ? ""
+        : notRoutedUserMessage(qualificationStatus) ||
+          qualificationReason ||
+          "Request received. It was not sent to shops.",
+    });
   } catch (err) {
     console.error("Create lead error:", err);
     return NextResponse.json(

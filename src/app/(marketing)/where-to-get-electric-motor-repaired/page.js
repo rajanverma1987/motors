@@ -6,21 +6,21 @@ import { getPublicSiteUrl } from "@/lib/public-site-url";
 const path = "/where-to-get-electric-motor-repaired";
 
 export const metadata = {
-  title: "Where to Get an Electric Motor Repaired Near You | 3PhaseFlow",
+  title: "Where to Get Industrial Motor Repair Near Your Facility | 3PhaseFlow",
   description:
-    "Submit your motor details and get matched to certified repair shops in your area, same-day response. AC, DC, servo, high-voltage, and 24/7 emergency motor repair.",
+    "Submit plant or facility motor details (5+ HP) and get matched to industrial repair shops in your area. AC, DC, servo, high-voltage, and emergency industrial motor repair. Not for residential, pool, or spa motors.",
   keywords: [
-    "where to get electric motor repaired",
-    "where can I get my electric motor fixed",
-    "electric motor repair near me",
-    "find motor repair shop",
-    "motor repair shop near me",
+    "where to get industrial motor repaired",
+    "industrial motor repair near facility",
+    "find industrial motor repair shop",
+    "plant motor repair shop near me",
+    "industrial motor repair near me",
   ],
   authors: [{ name: "3PhaseFlow.com" }],
   openGraph: {
-    title: "Where to Get an Electric Motor Repaired | 3PhaseFlow",
+    title: "Where to Get Industrial Motor Repair | 3PhaseFlow",
     description:
-      "Find certified motor repair shops near you. Submit your motor details, matched to shops in your area. Same-day response.",
+      "Find industrial motor repair shops near your facility. Submit plant motor details for 5+ HP work. Same-day shop response when matched.",
     url: path,
     type: "article",
     siteName: "3PhaseFlow.com",
@@ -28,8 +28,8 @@ export const metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Where to Get an Electric Motor Repaired Near You | 3PhaseFlow",
-    description: "Submit your motor details, matched to certified shops in your area.",
+    title: "Where to Get Industrial Motor Repair | 3PhaseFlow",
+    description: "Submit plant motor details (5+ HP), matched to industrial shops near your facility.",
   },
   alternates: { canonical: path },
   robots: { index: true, follow: true },
@@ -37,20 +37,20 @@ export const metadata = {
 
 const faqs = [
   {
-    q: "Where can I get my electric motor repaired?",
-    a: "Submit a repair request on 3PhaseFlow and we'll match you to certified repair shops in your area. You can also browse the directory by state to find shops near you. Most shops respond within a few hours during business hours.",
+    q: "Where can I get an industrial electric motor repaired?",
+    a: "Submit a repair request on 3PhaseFlow for plant or facility motors typically 5 HP and above and we'll match you to industrial repair shops in your area. You can also browse the directory by state. Residential, pool, and spa motors are not matched through this network.",
   },
   {
-    q: "How do I know which motor repair shop to choose?",
+    q: "How do I know which industrial motor repair shop to choose?",
     a: "Look for EASA (Electrical Apparatus Service Association) accreditation, it means the shop follows EASA AR100 repair standards. Ask whether they perform all rewind work in-house or subcontract it. Ask for a written test report with the repaired motor. Shops listed on 3PhaseFlow have verified capabilities and service areas.",
   },
   {
-    q: "How quickly can an electric motor be repaired?",
+    q: "How quickly can an industrial electric motor be repaired?",
     a: "Standard turnaround is 5 to 10 business days for most motors under 200 HP. Emergency repair shops can complete simple repairs in 24 to 48 hours and full rewinds in 48 to 72 hours at a premium rate. If your motor is production-critical, indicate emergency in your repair request to get matched to shops with emergency capacity.",
   },
   {
-    q: "What types of electric motors can be repaired?",
-    a: "AC induction motors (three-phase and single-phase), DC motors, servo motors, high-voltage motors, and generators can all be repaired and rewound. Servo motors require specific encoder calibration expertise, confirm this with the shop before sending.",
+    q: "What types of industrial electric motors can be repaired?",
+    a: "Three-phase AC induction motors, DC motors, servo motors, high-voltage motors, and generators used in plants and commercial facilities. This network focuses on industrial and commercial work, not residential or pool/spa pumps. Confirm encoder and voltage capability with the shop before shipping.",
   },
 ];
 
@@ -60,10 +60,10 @@ function PageJsonLd() {
   const pageSchema = {
     "@context": "https://schema.org",
     "@type": "WebPage",
-    name: "Where to Get an Electric Motor Repaired",
+    name: "Where to Get Industrial Motor Repair",
     url,
     description:
-      "Find certified electric motor repair shops near you. Submit a repair request, matched to shops in your area.",
+      "Find industrial electric motor repair shops near your facility for plant motors 5 HP and above.",
     breadcrumb: {
       "@type": "BreadcrumbList",
       itemListElement: [
@@ -71,10 +71,10 @@ function PageJsonLd() {
         {
           "@type": "ListItem",
           position: 2,
-          name: "Find motor repair near me",
+          name: "Industrial motor repair near me",
           item: `${site}/electric-motor-repair-near-me`,
         },
-        { "@type": "ListItem", position: 3, name: "Where to get motor repaired", item: url },
+        { "@type": "ListItem", position: 3, name: "Where to get industrial motor repaired", item: url },
       ],
     },
   };

@@ -135,6 +135,7 @@ export default function AdminFeaturedListingCreateModal({
           zipCode: form.zipCode,
           country: form.country,
           services: form.services || [],
+          minMotorSizeHP: form.minMotorSizeHP,
           maxMotorSizeHP: form.maxMotorSizeHP,
           maxVoltage: form.maxVoltage,
           maxWeightHandled: form.maxWeightHandled,
@@ -261,7 +262,8 @@ export default function AdminFeaturedListingCreateModal({
 
         <section className="space-y-3">
           <FormSectionTitle as="h3">Motor capabilities</FormSectionTitle>
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <Input label="Min lead size (HP)" name="minMotorSizeHP" value={form.minMotorSizeHP} onChange={update} />
             <Input label="Max motor size (HP)" name="maxMotorSizeHP" value={form.maxMotorSizeHP} onChange={update} />
             <Input label="Max voltage" name="maxVoltage" value={form.maxVoltage} onChange={update} />
             <Input label="Max weight handled" name="maxWeightHandled" value={form.maxWeightHandled} onChange={update} />

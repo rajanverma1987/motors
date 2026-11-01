@@ -15,6 +15,7 @@
     "backfill:quote-write-up": "node scripts/backfill-quote-draft-to-write-up.js",
     "backfill:job-po-numbers": "node scripts/backfill-job-po-numbers.js",
     "backfill:simple-portal-dates": "node scripts/backfill-simple-portal-dates.js",
+    "backfill:location-industrial-seo": "node scripts/backfill-location-page-industrial-seo.js",
     "send:lead-nurture-past": "node scripts/send-lead-nurture-to-past-lead-shops.js"
   },
   "dependencies": {

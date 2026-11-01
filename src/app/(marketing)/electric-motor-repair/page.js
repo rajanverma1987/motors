@@ -8,23 +8,23 @@ const path = "/electric-motor-repair";
 
 export const metadata = {
   title: {
-    absolute: "Electric Motor Repair & Rewinding | Find Certified Shops | 3PhaseFlow",
+    absolute: "Industrial Electric Motor Repair & Rewinding | 3PhaseFlow",
   },
   description:
-    "Find certified electric motor repair and rewinding shops near you. AC motor rewinding, DC armature and stator rewinds, servo, high-voltage, and emergency repair. Browse shops by state.",
+    "Find industrial electric motor repair and rewinding shops for plant and facility motors (5+ HP). AC rewinding, DC armature and stator work, servo, high-voltage, and emergency repair. Not for residential, pool, or spa motors.",
   keywords: [
-    "electric motor repair",
-    "motor rewinding",
-    "motor repair directory",
     "industrial motor repair",
-    "motor repair quote",
-    "electric motor repair near me",
+    "industrial electric motor repair",
+    "industrial motor rewinding",
+    "plant motor repair directory",
+    "industrial motor repair quote",
+    "industrial motor repair near me",
   ],
   authors: [{ name: "3PhaseFlow.com" }],
   openGraph: {
-    title: "Electric Motor Repair & Rewinding | 3PhaseFlow",
+    title: "Industrial Electric Motor Repair & Rewinding | 3PhaseFlow",
     description:
-      "Find certified motor repair and rewinding shops. AC, DC, armature, stator, and emergency rewinds. Browse by state.",
+      "Find industrial motor repair and rewinding shops for plant and facility work. AC, DC, armature, stator, and emergency rewinds.",
     url: path,
     type: "website",
     siteName: "3PhaseFlow.com",
@@ -32,9 +32,9 @@ export const metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Electric Motor Repair & Rewinding | 3PhaseFlow",
+    title: "Industrial Electric Motor Repair & Rewinding | 3PhaseFlow",
     description:
-      "Find certified motor repair and rewinding shops. AC, DC, armature, stator, and emergency rewinds. Browse by state.",
+      "Find industrial motor repair and rewinding shops for plant and facility work. Browse by state.",
   },
   alternates: { canonical: path },
   robots: { index: true, follow: true },
@@ -45,9 +45,9 @@ export default function ElectricMotorRepairHubPage() {
   const hubJsonLd = {
     "@context": "https://schema.org",
     "@type": "CollectionPage",
-    name: "Electric motor repair & rewinding | buyer resources",
+    name: "Industrial electric motor repair & rewinding | buyer resources",
     description:
-      "Collection of practical guides for facilities and buyers who need electric motor repair, rewinding, quotes, and qualified shops.",
+      "Guides for facilities and plant buyers who need industrial electric motor repair, rewinding, quotes, and qualified shops (typically 5+ HP).",
     url: `${siteUrl.replace(/\/$/, "")}${path}`,
     isPartOf: { "@type": "WebSite", name: "3PhaseFlow.com", url: siteUrl.replace(/\/$/, "") },
   };

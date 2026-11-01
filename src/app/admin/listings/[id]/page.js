@@ -211,6 +211,7 @@ export default function AdminListingDetailPage() {
         zipCode: current.zipCode ?? "",
         country: current.country ?? "",
         services: current.services ?? [],
+        minMotorSizeHP: current.minMotorSizeHP ?? "",
         maxMotorSizeHP: current.maxMotorSizeHP ?? "",
         maxVoltage: current.maxVoltage ?? "",
         maxWeightHandled: current.maxWeightHandled ?? "",
@@ -430,7 +431,13 @@ export default function AdminListingDetailPage() {
       {/* Motor capabilities */}
       <FormContainer className="mb-6">
         <FormSectionTitle as="h2">Motor capabilities</FormSectionTitle>
-        <div className="grid gap-4 sm:grid-cols-3">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <Input
+            label="Min lead size (HP)"
+            value={listing.minMotorSizeHP ?? ""}
+            onChange={(e) => updateField("minMotorSizeHP", e.target.value)}
+            placeholder="e.g. 10"
+          />
           <Input label="Max motor size (HP)" value={listing.maxMotorSizeHP ?? ""} onChange={(e) => updateField("maxMotorSizeHP", e.target.value)} />
           <Input label="Max voltage" value={listing.maxVoltage ?? ""} onChange={(e) => updateField("maxVoltage", e.target.value)} />
           <Input label="Max weight handled" value={listing.maxWeightHandled ?? ""} onChange={(e) => updateField("maxWeightHandled", e.target.value)} />

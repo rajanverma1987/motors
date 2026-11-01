@@ -15,7 +15,7 @@ export default function ListingsHeroCta() {
           className="w-full min-w-0 sm:w-auto"
           onClick={() => setLeadFormOpen(true)}
         >
-          Submit your requirement / Request quote
+          Submit industrial repair request
         </Button>
       </div>
       <LeadFormModal open={leadFormOpen} onClose={() => setLeadFormOpen(false)} listing={null} />

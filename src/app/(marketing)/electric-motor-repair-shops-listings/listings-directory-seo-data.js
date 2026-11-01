@@ -3,24 +3,24 @@ export const LISTINGS_DIRECTORY_PATH = "/electric-motor-repair-shops-listings";
 /** Visible FAQ copy must match FAQPage JSON-LD on the same page. */
 export const LISTINGS_DIRECTORY_FAQ_ITEMS = [
   {
-    question: "What is electric motor repair?",
+    question: "What is industrial electric motor repair?",
     answer:
-      "Electric motor repair is the inspection, diagnosis, and restoration of AC, DC, servo, pump, and specialty motors so they can return to safe, reliable service. Qualified shops disassemble the motor, assess windings, bearings, shafts, housings, and insulation, then repair or replace damaged components. Work often includes cleaning, rewinding, bearing replacement, machining, balancing, and electrical testing before the motor is released. Industrial electric motor repair addresses larger horsepower units and critical plant equipment; commercial electric motor repair covers smaller motors in HVAC, pools, and light industrial applications.",
+      "Industrial electric motor repair is the inspection, diagnosis, and restoration of plant and facility AC, DC, servo, process pump, and specialty motors so they can return to safe, reliable service. Qualified shops disassemble the motor, assess windings, bearings, shafts, housings, and insulation, then repair or replace damaged components. Work often includes cleaning, rewinding, bearing replacement, machining, balancing, and electrical testing before the motor is released. This directory focuses on industrial and commercial motors typically 5 HP and above for manufacturing, utilities, and OEM applications. Residential, homeowner, pool, and spa pump motors are outside this network.",
   },
   {
-    question: "How do I find electric motor repair near me?",
+    question: "How do I find industrial motor repair near my facility?",
     answer:
-      "Use the search and filters on this electric motor repair shops directory to browse centers by company name, city, state, or ZIP code. For location-based results, open the electric motor repair near me page to see shops sorted by distance when you share your location. Each listing links to a profile with capabilities, contact details, and a path to request a quote through 3PhaseFlow.com.",
+      "Use the search and filters on this industrial electric motor repair shops directory to browse centers by company name, city, state, or ZIP code. For location-based results, open the industrial motor repair near me page to see shops sorted by distance when you share your facility location. Each listing links to a profile with capabilities, contact details, and a path to request a quote through 3PhaseFlow.com for qualified industrial work.",
   },
   {
-    question: "What services are included in electric motor repair?",
+    question: "What services are included in industrial electric motor repair?",
     answer:
-      "Common electric motor repair services include bearing and seal replacement, shaft repair, housing repair, insulation treatment, rewinding, VPI (vacuum pressure impregnation), dynamic balancing, alignment support, and post-repair testing (megger, surge, hi-pot, vibration). Shops may also offer emergency motor repair, on-site troubleshooting, and predictive maintenance. See our guide to types of electric motor repair services for a full breakdown of service categories.",
+      "Common industrial electric motor repair services include bearing and seal replacement, shaft repair, housing repair, insulation treatment, rewinding, VPI (vacuum pressure impregnation), dynamic balancing, alignment support, and post-repair testing (megger, surge, hi-pot, vibration). Shops may also offer emergency plant motor repair, on-site troubleshooting, and predictive maintenance. See our guide to types of electric motor repair services for a full breakdown of service categories.",
   },
   {
-    question: "How much does electric motor repair cost?",
+    question: "How much does industrial electric motor repair cost?",
     answer:
-      "Electric motor repair cost depends on motor size (horsepower and frame), failure mode, rewind vs. repair scope, rush fees, and freight. Small commercial motors may repair for a few hundred dollars; large industrial rewinds can run thousands. Use the motor rewind and repair cost calculator and US pricing tables on 3PhaseFlow.com for ballpark ranges, then obtain written quotes after inspection from shops in this directory.",
+      "Industrial electric motor repair cost depends on motor size (horsepower and frame), failure mode, rewind vs. repair scope, rush fees, and freight. Mid-size industrial motors often fall in the low thousands; large industrial rewinds can run tens of thousands. Use the motor rewind and repair cost calculator and US pricing tables on 3PhaseFlow.com for ballpark ranges, then obtain written quotes after inspection from shops in this directory.",
   },
   {
     question: "When should I repair vs. replace an electric motor?",
@@ -45,11 +45,11 @@ export const LISTINGS_DIRECTORY_FAQ_ITEMS = [
   {
     question: "Does this directory list industrial electric motor repair shops?",
     answer:
-      "Yes. 3PhaseFlow.com lists industrial and commercial electric motor repair shops across the United States. Profiles describe services such as rewinding, pump motor repair, medium-voltage work, and field service where provided. Use search and location filters to narrow results to your area and application.",
+      "Yes. 3PhaseFlow.com lists industrial and commercial electric motor repair shops across the United States for plant and facility work (typically 5 HP and above). Profiles describe services such as rewinding, industrial pump motor repair, medium-voltage work, and field service where provided. Residential, pool, and spa motors are not matched through this network.",
   },
   {
-    question: "How do I get a quote for electric motor repair?",
+    question: "How do I get a quote for industrial electric motor repair?",
     answer:
-      "Open any listing in this electric motor repair directory and use the quote request option, or submit your motor details through the get a quote flow on 3PhaseFlow.com. Include horsepower, voltage, frame, symptoms, and photos when possible so shops can respond with accurate electric motor repair estimates.",
+      "Open any listing in this industrial electric motor repair directory and use the quote request option, or submit plant motor details through the get a quote flow on 3PhaseFlow.com. Include horsepower (5+), voltage, frame, facility application, symptoms, and photos when possible so shops can respond with accurate industrial motor repair estimates.",
   },
 ];

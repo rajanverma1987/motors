@@ -21,6 +21,8 @@ const listingSchema = new mongoose.Schema(
     country: { type: String, default: "United States" },
     // Services & capabilities (arrays of strings)
     services: [{ type: String }],
+    /** Prefer not to receive directory leads below this HP (platform floor still applies). */
+    minMotorSizeHP: { type: String, default: "" },
     maxMotorSizeHP: { type: String, default: "" },
     maxVoltage: { type: String, default: "" },
     maxWeightHandled: { type: String, default: "" },

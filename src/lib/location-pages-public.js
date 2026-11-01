@@ -1,5 +1,36 @@
 import { connectDB } from "@/lib/db";
 import LocationPage from "@/models/LocationPage";
+import { SEO_INDUSTRIAL_MIN_HP } from "@/lib/seo-industrial-lead-framing";
+
+/**
+ * Stored LocationPage.title for city/state (visible H1 + related links).
+ * @param {string} city
+ * @param {string} state
+ */
+export function buildIndustrialLocationPageTitle(city, state) {
+  const c = String(city || "").trim();
+  const s = String(state || "").trim();
+  if (c && s) return `Industrial Motor Repair & Rewinding Shops in ${c}, ${s}`;
+  if (s) return `Industrial Motor Repair & Rewinding Shops in ${s}`;
+  if (c) return `Industrial Motor Repair & Rewinding Shops in ${c}`;
+  return "Industrial Motor Repair & Rewinding Shops";
+}
+
+/**
+ * Stored LocationPage.metaDescription (SERP description when set).
+ * @param {string} city
+ * @param {string} state
+ */
+export function buildIndustrialLocationPageMetaDescription(city, state) {
+  const c = String(city || "").trim();
+  const s = String(state || "").trim();
+  const area = c && s ? `${c}, ${s}` : c || s || "your area";
+  return (
+    `Find industrial electric motor repair and rewinding shops in ${area} ` +
+    `for plant and facility motors ${SEO_INDUSTRIAL_MIN_HP} HP and above. ` +
+    `Not for residential, pool, or spa motors.`
+  );
+}
 
 export async function getLocationPageBySlug(slug, options = {}) {
   const { activeOnly = true } = options;
@@ -60,16 +91,10 @@ export async function ensureLocationPageForArea(city, state, zip) {
   const existing = await LocationPage.findOne({ slug }).lean();
   if (existing) return { ...existing, id: existing._id.toString(), _id: undefined };
 
-  const title =
-    c && s
-      ? `Electric Motor Repair & Rewinding Shops in ${c}, ${s}`
-      : s
-        ? `Electric Motor Repair & Rewinding Shops in ${s}`
-        : `Electric Motor Repair & Rewinding Shops in ${c}`;
   const doc = await LocationPage.create({
     slug,
-    title,
-    metaDescription: `Find certified electric motor repair and rewinding shops in ${c && s ? `${c}, ${s}` : c || s}. AC motor rewinding, DC armature rewinds, and emergency service.`,
+    title: buildIndustrialLocationPageTitle(c, s),
+    metaDescription: buildIndustrialLocationPageMetaDescription(c, s),
     city: c,
     state: s,
     zip: (zip || "").trim(),

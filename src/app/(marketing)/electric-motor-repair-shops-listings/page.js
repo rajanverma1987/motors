@@ -8,24 +8,23 @@ import { LISTINGS_DIRECTORY_PATH } from "./listings-directory-seo-data";
 
 export const metadata = marketingPageMetadata({
   path: LISTINGS_DIRECTORY_PATH,
-  title: { absolute: "Find Electric Motor Repair & Rewinding Shops | 3PhaseFlow Directory" },
+  title: { absolute: "Industrial Electric Motor Repair Shop Directory | 3PhaseFlow" },
   description:
-    "Browse certified electric motor repair and rewinding shops by state. AC motor rewinding, DC armature rewinds, stator rewinding, and emergency service. Submit a repair request, matched to shops in your area.",
-  ogTitle: "Electric Motor Repair & Rewinding Shop Directory | 3PhaseFlow",
+    "Browse industrial and commercial electric motor repair shops by state (5+ HP plant and facility work). AC rewinding, DC armature work, stator rewinds, and emergency service. Not for residential, pool, or spa motors.",
+  ogTitle: "Industrial Motor Repair & Rewinding Shop Directory | 3PhaseFlow",
   ogDescription:
-    "Find certified motor repair and rewinding shops near you. AC, DC, armature, and stator rewinds. Browse by state or submit a requirement.",
+    "Find industrial motor repair and rewinding shops for plant and facility motors. AC, DC, armature, and stator rewinds. Browse by state or submit a qualified requirement.",
   keywords: [
-    "electric motor repair",
-    "electric motor repair shops",
-    "electric motor repair near me",
-    "electric motor rewinding",
-    "motor rewinding shops",
     "industrial electric motor repair",
-    "motor repair center",
-    "AC motor repair",
-    "motor repair directory",
-    "electric motor repair services",
+    "industrial motor repair shops",
+    "industrial motor repair near me",
+    "industrial motor rewinding",
+    "plant motor repair directory",
     "commercial electric motor repair",
+    "facility motor repair shop",
+    "AC industrial motor repair",
+    "motor rewinding shops industrial",
+    "emergency industrial motor repair",
   ],
 });
 

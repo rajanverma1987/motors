@@ -43,7 +43,7 @@ const BUYER_LINKS = [
   },
   {
     href: "/electric-motor-repair-near-me",
-    label: "Repair shops near me",
+    label: "Industrial repair near facility",
     hint: "Local search intent",
   },
   {

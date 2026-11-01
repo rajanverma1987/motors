@@ -14,6 +14,14 @@ const leadSchema = new mongoose.Schema(
     voltage: { type: String, default: "" },
     problemDescription: { type: String, default: "" },
     urgencyLevel: { type: String, default: "" },
+    /** industrial_plant | commercial | oem_contractor | municipal_utility | residential */
+    buyerType: { type: String, default: "" },
+    /**
+     * Website lead gate: qualified leads may be assigned to shops.
+     * not_routed statuses still store the lead for admin visibility without shop notify.
+     */
+    qualificationStatus: { type: String, default: "" },
+    qualificationReason: { type: String, default: "" },
     /** Industry vertical tag from marketing pages (e.g. manufacturing, water-treatment). */
     industry: { type: String, default: "" },
     motorPhotos: [{ type: String }],

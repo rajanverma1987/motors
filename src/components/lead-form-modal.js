@@ -8,6 +8,11 @@ import Modal from "@/components/ui/modal";
 import Select from "@/components/ui/select";
 import { Form, FormSection, FORM_SECTIONS_STACK_CLASS } from "@/components/ui/form-layout";
 import { saveLeadContact, withLeadContactPrefill } from "@/lib/lead-contact-storage";
+import {
+  LEAD_BUYER_TYPE_OPTIONS,
+  PLATFORM_MIN_ROUTE_HP,
+  parseMotorHp,
+} from "@/lib/lead-qualification";
 
 const URGENCY_OPTIONS = [
   { value: "", label: "Select urgency…" },
@@ -24,6 +29,7 @@ const INITIAL_FORM = {
   email: "",
   city: "",
   zipCode: "",
+  buyerType: "",
   motorType: "",
   motorHp: "",
   voltage: "",
@@ -44,6 +50,9 @@ export default function LeadFormModal({
   const [motorPhotoFiles, setMotorPhotoFiles] = useState([]);
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [routed, setRouted] = useState(true);
+  const [resultMessage, setResultMessage] = useState("");
+  const [clientError, setClientError] = useState("");
 
   const listingIdStr = listing?.id != null ? String(listing.id).trim() : "";
 
@@ -55,11 +64,27 @@ export default function LeadFormModal({
     );
     setForm(withLeadContactPrefill({ ...INITIAL_FORM, ...nonEmptyPrefill }));
     setSubmitted(false);
+    setRouted(true);
+    setResultMessage("");
+    setClientError("");
     setMotorPhotoFiles([]);
   }, [open, prefill]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setClientError("");
+    if (!String(form.company || "").trim()) {
+      setClientError("Company or facility name is required.");
+      return;
+    }
+    if (!String(form.buyerType || "").trim()) {
+      setClientError("Select buyer type (industrial / commercial).");
+      return;
+    }
+    if (parseMotorHp(form.motorHp) == null) {
+      setClientError(`Motor HP is required (industrial matching starts at ${PLATFORM_MIN_ROUTE_HP} HP).`);
+      return;
+    }
     setSubmitting(true);
     try {
       let motorPhotos = [];
@@ -92,6 +117,7 @@ export default function LeadFormModal({
           company: form.company,
           city: form.city,
           zipCode: form.zipCode,
+          buyerType: form.buyerType,
           motorType: form.motorType,
           motorHp: form.motorHp,
           voltage: form.voltage,
@@ -112,6 +138,8 @@ export default function LeadFormModal({
         city: form.city,
         zipCode: form.zipCode,
       });
+      setRouted(data.routed !== false);
+      setResultMessage(String(data.message || "").trim());
       setSubmitted(true);
       setForm(INITIAL_FORM);
       setMotorPhotoFiles([]);
@@ -125,6 +153,9 @@ export default function LeadFormModal({
   const handleClose = () => {
     onClose();
     setSubmitted(false);
+    setRouted(true);
+    setResultMessage("");
+    setClientError("");
     setMotorPhotoFiles([]);
     setForm(INITIAL_FORM);
   };
@@ -132,8 +163,8 @@ export default function LeadFormModal({
   const introText =
     introTextOverride ||
     (listing
-      ? `Submit your repair requirement. It will be sent to ${listing.companyName}.`
-      : "Submit your repair requirement. We'll match you with repair shops in your area.");
+      ? `Submit your industrial or commercial repair requirement. It will be sent to ${listing.companyName} when it meets our matching criteria (${PLATFORM_MIN_ROUTE_HP}+ HP).`
+      : `Submit your industrial or commercial repair requirement (${PLATFORM_MIN_ROUTE_HP}+ HP). We'll match you with repair shops in your area.`);
 
   return (
     <Modal
@@ -152,14 +183,29 @@ export default function LeadFormModal({
     >
       {submitted ? (
         <div className="py-4 text-center">
-          <p className="text-title font-medium">Thank you for your request.</p>
+          <p className="text-title font-medium">
+            {routed ? "Thank you for your request." : "Request received."}
+          </p>
           <p className="mt-2 text-sm text-secondary">
-            Your requirement has been submitted. {listing ? "The repair center will be in touch." : "We'll match you with repair shops and get back to you."}
+            {resultMessage ||
+              (routed
+                ? listing
+                  ? "The repair center will be in touch."
+                  : "We'll match you with repair shops and get back to you."
+                : `We focus on industrial and commercial motors ${PLATFORM_MIN_ROUTE_HP} HP and above. This was not sent to shops.`)}
           </p>
         </div>
       ) : (
         <Form id="lead-form-modal-form" onSubmit={handleSubmit} className={`${FORM_SECTIONS_STACK_CLASS} !space-y-0 !border-0 !bg-transparent !p-0 !shadow-none`}>
           <p className="text-sm text-secondary">{introText}</p>
+          <p className="text-xs text-secondary">
+            Residential, homeowner, pool, and spa pump work is not routed to our industrial shop network.
+          </p>
+          {clientError ? (
+            <p className="rounded-sm border border-danger/40 bg-danger/10 px-3 py-2 text-sm text-danger" role="alert">
+              {clientError}
+            </p>
+          ) : null}
 
           <div className="grid min-h-0 grid-cols-1 items-stretch gap-6 lg:min-h-[min(70vh,36rem)] lg:grid-cols-[minmax(0,1fr)_minmax(18rem,42%)] lg:gap-8">
             <div className="flex min-h-0 flex-col gap-4 lg:h-full">
@@ -173,11 +219,24 @@ export default function LeadFormModal({
                     required
                   />
                   <Input
-                    label="Company Name"
+                    label="Company / facility"
                     name="company"
                     value={form.company}
                     onChange={(e) => setForm((f) => ({ ...f, company: e.target.value }))}
+                    required
+                    placeholder="Plant or company name"
                   />
+                  <div className="sm:col-span-2">
+                    <Select
+                      label="Buyer type"
+                      name="buyerType"
+                      options={LEAD_BUYER_TYPE_OPTIONS}
+                      value={form.buyerType}
+                      onChange={(e) => setForm((f) => ({ ...f, buyerType: e.target.value }))}
+                      searchable={false}
+                      required
+                    />
+                  </div>
                   <Input
                     label="Phone"
                     name="phone"
@@ -219,11 +278,12 @@ export default function LeadFormModal({
                     placeholder="e.g. AC induction, DC"
                   />
                   <Input
-                    label="Motor HP"
+                    label={`Motor HP (${PLATFORM_MIN_ROUTE_HP}+ for matching)`}
                     name="motorHp"
                     value={form.motorHp}
                     onChange={(e) => setForm((f) => ({ ...f, motorHp: e.target.value }))}
-                    placeholder="e.g. 50 HP"
+                    placeholder="e.g. 50"
+                    required
                   />
                   <Input
                     label="Voltage"
@@ -270,7 +330,7 @@ export default function LeadFormModal({
                 name="problemDescription"
                 value={form.problemDescription}
                 onChange={(e) => setForm((f) => ({ ...f, problemDescription: e.target.value }))}
-                placeholder="Describe the issue, symptoms, timeline, etc."
+                placeholder="Describe the industrial application, symptoms, and timeline."
                 rows={6}
                 className="flex min-h-0 flex-1 flex-col gap-2 [&_label]:sr-only"
                 textareaClassName="min-h-[12rem] flex-1 resize-y lg:min-h-0"
