@@ -92,6 +92,14 @@ export async function POST(request) {
           listingCompanyName: listingDoc.companyName || shopName || "",
           leadContactName: doc.name,
           siteUrl: getPublicSiteUrl(request),
+          lead: {
+            name: doc.name,
+            company: doc.company,
+            email: doc.email,
+            phone: doc.phone,
+            city: doc.city,
+            zipCode: doc.zipCode,
+          },
         })
       );
     } catch (e) {

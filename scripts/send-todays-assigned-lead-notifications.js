@@ -96,6 +96,22 @@ async function main() {
           leadContactName: lead.name,
           leadContactCompany: lead.company,
           siteUrl,
+          lead: {
+            name: lead.name,
+            company: lead.company,
+            email: lead.email,
+            phone: lead.phone,
+            city: lead.city,
+            zipCode: lead.zipCode,
+            buyerType: lead.buyerType,
+            motorType: lead.motorType,
+            motorHp: lead.motorHp,
+            voltage: lead.voltage,
+            urgencyLevel: lead.urgencyLevel,
+            industry: lead.industry,
+            problemDescription: lead.problemDescription,
+            message: lead.message,
+          },
         });
         if (result && result.ok === false) {
           failedCount += 1;

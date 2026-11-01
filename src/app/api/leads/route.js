@@ -250,6 +250,22 @@ export async function POST(request) {
           leadContactName: doc.name,
           leadContactCompany: doc.company,
           siteUrl,
+          lead: {
+            name: doc.name,
+            company: doc.company,
+            email: doc.email,
+            phone: doc.phone,
+            city: doc.city,
+            zipCode: doc.zipCode,
+            buyerType: doc.buyerType,
+            motorType: doc.motorType,
+            motorHp: doc.motorHp,
+            voltage: doc.voltage,
+            urgencyLevel: doc.urgencyLevel,
+            industry: doc.industry,
+            problemDescription: doc.problemDescription,
+            message: doc.message,
+          },
         })
       );
       try {

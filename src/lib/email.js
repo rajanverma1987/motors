@@ -18,6 +18,12 @@ import {
   buildCrmWelcomeEmailContent,
   buildDemoAccountCredentialsEmailContent,
 } from "@/lib/demo-account-credentials-email";
+import { getDemoBookingUrl } from "@/lib/demo-booking-url";
+import {
+  buildLeadContactDetailRowsHtml,
+  getLeadFullContactInEmailUntilDate,
+  shouldIncludeFullLeadContactInShopEmail,
+} from "@/lib/lead-shop-notification-promo";
 
 export {
   buildCrmWelcomeEmailContent,
@@ -390,6 +396,15 @@ export async function sendShopListedNotificationToAdmin(doc) {
 
 /**
  * Notify a listed repair center when a visitor submits an RFQ from their public listing page.
+ * During the full-contact promo window, the email includes complete lead details (not gated behind login).
+ * @param {{
+ *   to: string,
+ *   listingCompanyName?: string,
+ *   leadContactName?: string,
+ *   leadContactCompany?: string,
+ *   siteUrl?: string,
+ *   lead?: Record<string, unknown> | null,
+ * }} params
  */
 export async function sendNewWebsiteLeadNotificationToShop({
   to,
@@ -397,22 +412,93 @@ export async function sendNewWebsiteLeadNotificationToShop({
   leadContactName,
   leadContactCompany,
   siteUrl,
+  lead = null,
 }) {
   const esc = (v) =>
     v == null ? "" : String(v).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
   const base = String(siteUrl || getPublicSiteUrl()).replace(/\/+$/, "");
   const leadsUrl = `${base}/dashboards?tab=customers`;
   const loginUrl = `${base}/login`;
-  const fromLine = [esc(leadContactName || "Someone"), leadContactCompany ? ` (${esc(leadContactCompany)})` : ""].join("");
-  const subject = `New lead for ${listingCompanyName || "your shop"} to 3PhaseFlow.com`;
+  const demoUrl = getDemoBookingUrl();
+  const includeFull = shouldIncludeFullLeadContactInShopEmail();
+  const untilDate = getLeadFullContactInEmailUntilDate();
+  const leadPayload = lead && typeof lead === "object" ? lead : {};
+  const name = String(leadPayload.name || leadContactName || "").trim();
+  const company = String(leadPayload.company || leadContactCompany || "").trim();
+  const fromLine = [esc(name || "Someone"), company ? ` (${esc(company)})` : ""].join("");
+  const subject = `New industrial lead for ${listingCompanyName || "your shop"} | 3PhaseFlow.com`;
+  const feedbackToMatch = String(fromEmail || "").match(/[\w.+-]+@[\w.-]+\.\w+/);
+  const feedbackTo = (feedbackToMatch && feedbackToMatch[0]) || "contact@3phaseflow.com";
+  const feedbackMailto = `mailto:${encodeURIComponent(feedbackTo)}?subject=${encodeURIComponent(
+    `Lead quality feedback: ${listingCompanyName || "shop"}`
+  )}&body=${encodeURIComponent(
+    [
+      "Lead quality feedback for 3PhaseFlow",
+      "",
+      "1) Was this lead industrial / relevant to your shop? (Yes / Partially / No)",
+      "2) Was motor size (HP) a good fit? (Yes / Too small / Too large / Unclear)",
+      "3) Overall lead quality: Excellent / Good / Fair / Poor",
+      "4) Any comments to improve lead matching?",
+      "",
+      `Lead: ${name || "-"}${company ? ` / ${company}` : ""}`,
+    ].join("\n")
+  )}`;
+
+  const { tableHtml, problemBlock } = includeFull
+    ? buildLeadContactDetailRowsHtml(
+        {
+          name,
+          company,
+          email: leadPayload.email,
+          phone: leadPayload.phone,
+          city: leadPayload.city,
+          zipCode: leadPayload.zipCode,
+          buyerType: leadPayload.buyerType,
+          motorType: leadPayload.motorType,
+          motorHp: leadPayload.motorHp,
+          voltage: leadPayload.voltage,
+          urgencyLevel: leadPayload.urgencyLevel,
+          industry: leadPayload.industry,
+          problemDescription: leadPayload.problemDescription,
+          message: leadPayload.message,
+        },
+        esc
+      )
+    : { tableHtml: "", problemBlock: "" };
+
+  const contactSection = includeFull
+    ? `
+    <p><strong>Full contact details</strong> (included through ${esc(untilDate)} so you can respond immediately):</p>
+    ${tableHtml || `<p><strong>From:</strong> ${fromLine || "A visitor"}</p>`}
+    ${problemBlock}
+    <p style="font-size:13px;color:#555;">You do not need to unlock this lead. Contact info is in this email. Use the shop platform to track follow-up, quotes, and jobs in one place.</p>
+    `
+    : `
+    <p><strong>From:</strong> ${fromLine || "A visitor"}</p>
+    <p>Log in to your shop dashboard to view full contact details and respond in your Shop Management System.</p>
+    `;
+
   const html = `
     <p>Hello,</p>
-    <p>You received a new repair inquiry (RFQ) from your <strong>3PhaseFlow.com</strong> directory listing.</p>
-    <p><strong>From:</strong> ${fromLine || "A visitor"}</p>
-    <p>Log in to your shop dashboard to view full contact details and respond in your Shop Management System:</p>
-    <p><a href="${esc(leadsUrl)}" style="display:inline-block;padding:10px 20px;background:#9a5d33;color:#fff;text-decoration:none;border-radius:6px;">Open Leads in Shop Management System</a></p>
-    <p style="font-size:13px;color:#555;">If you are not signed in, use <a href="${esc(loginUrl)}">Log in</a> first with your shop email, then open <strong>Leads</strong>.</p>
-    <p>,  3PhaseFlow.com</p>
+    <p>You received a new industrial repair inquiry from <strong>3PhaseFlow.com</strong>.</p>
+    ${contactSection}
+    <p><strong>Manage this lead on 3PhaseFlow</strong> (quotes, job tracking, customer history, and more directory leads):</p>
+    <p>
+      <a href="${esc(leadsUrl)}" style="display:inline-block;padding:10px 20px;background:#9a5d33;color:#fff;text-decoration:none;border-radius:6px;margin:0 8px 8px 0;">Open Leads in Shop Management System</a>
+      <a href="${esc(loginUrl)}" style="display:inline-block;padding:10px 20px;background:#fff;color:#9a5d33;border:1px solid #9a5d33;text-decoration:none;border-radius:6px;margin:0 8px 8px 0;">Log in</a>
+    </p>
+    <p style="font-size:13px;color:#555;">If you are not signed in yet, use Log in with your shop email, then open <strong>Leads</strong>. Prefer a walkthrough? <a href="${esc(demoUrl)}">Book a free 30-min demo</a>.</p>
+    <hr style="border:none;border-top:1px solid #e5e7eb;margin:24px 0;" />
+    <p><strong>Quick feedback (2 minutes)</strong></p>
+    <p>We are improving industrial lead matching. Please reply to this email or use the button below:</p>
+    <ul>
+      <li>Was this lead industrial / relevant to your shop?</li>
+      <li>Was motor size (HP) a good fit?</li>
+      <li>Overall quality: Excellent, Good, Fair, or Poor?</li>
+      <li>Any comments to improve matching?</li>
+    </ul>
+    <p><a href="${esc(feedbackMailto)}" style="display:inline-block;padding:10px 20px;background:#1f2937;color:#fff;text-decoration:none;border-radius:6px;">Send lead quality feedback</a></p>
+    <p>Thank you,<br/>3PhaseFlow.com</p>
   `;
   return sendEmail(to, subject, wrapPlatformBrandedHtml(html));
 }
@@ -449,28 +535,67 @@ export async function sendLeadPlatformNurtureEmail({ to, name, bookingUrl, unsub
 
 /**
  * Notify a listed repair center when a visitor unlocks their contact info on the public listing page.
+ * @param {{
+ *   to: string,
+ *   listingCompanyName?: string,
+ *   leadContactName?: string,
+ *   siteUrl?: string,
+ *   lead?: Record<string, unknown> | null,
+ * }} params
  */
 export async function sendContactUnlockNotificationToShop({
   to,
   listingCompanyName,
   leadContactName,
   siteUrl,
+  lead = null,
 }) {
   const esc = (v) =>
     v == null ? "" : String(v).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
   const base = String(siteUrl || getPublicSiteUrl()).replace(/\/+$/, "");
   const leadsUrl = `${base}/dashboards?tab=customers`;
   const loginUrl = `${base}/login`;
-  const fromLine = esc(leadContactName || "Someone");
-  const subject = `Contact info viewed for ${listingCompanyName || "your shop"} to 3PhaseFlow.com`;
+  const demoUrl = getDemoBookingUrl();
+  const includeFull = shouldIncludeFullLeadContactInShopEmail();
+  const untilDate = getLeadFullContactInEmailUntilDate();
+  const leadPayload = lead && typeof lead === "object" ? lead : {};
+  const name = String(leadPayload.name || leadContactName || "").trim();
+  const fromLine = esc(name || "Someone");
+  const subject = `Contact info viewed for ${listingCompanyName || "your shop"} | 3PhaseFlow.com`;
+  const { tableHtml } = includeFull
+    ? buildLeadContactDetailRowsHtml(
+        {
+          name,
+          company: leadPayload.company,
+          email: leadPayload.email,
+          phone: leadPayload.phone,
+          city: leadPayload.city,
+          zipCode: leadPayload.zipCode,
+        },
+        esc
+      )
+    : { tableHtml: "" };
+
+  const contactSection = includeFull
+    ? `
+    <p><strong>Visitor contact</strong> (included through ${esc(untilDate)}):</p>
+    ${tableHtml || `<p><strong>${fromLine}</strong></p>`}
+    `
+    : `
+    <p><strong>${fromLine}</strong> viewed your contact information. Log in to view their details in Leads.</p>
+    `;
+
   const html = `
     <p>Hello,</p>
-    <p><strong>${fromLine}</strong> viewed your contact information on your <strong>3PhaseFlow.com</strong> directory listing.</p>
-    <p>This is a softer lead than a full repair request, they may follow up directly or submit an RFQ later.</p>
-    <p>Log in to your shop dashboard to view their contact details:</p>
-    <p><a href="${esc(leadsUrl)}" style="display:inline-block;padding:10px 20px;background:#9a5d33;color:#fff;text-decoration:none;border-radius:6px;">Open Leads in Shop Management System</a></p>
-    <p style="font-size:13px;color:#555;">If you are not signed in, use <a href="${esc(loginUrl)}">Log in</a> first with your shop email, then open <strong>Leads</strong>.</p>
-    <p>,  3PhaseFlow.com</p>
+    <p>Someone viewed your contact information on your <strong>3PhaseFlow.com</strong> directory listing.</p>
+    <p>This is a softer lead than a full repair request. They may follow up directly or submit an RFQ later.</p>
+    ${contactSection}
+    <p>
+      <a href="${esc(leadsUrl)}" style="display:inline-block;padding:10px 20px;background:#9a5d33;color:#fff;text-decoration:none;border-radius:6px;margin:0 8px 8px 0;">Open Leads in Shop Management System</a>
+      <a href="${esc(loginUrl)}" style="display:inline-block;padding:10px 20px;background:#fff;color:#9a5d33;border:1px solid #9a5d33;text-decoration:none;border-radius:6px;margin:0 8px 8px 0;">Log in</a>
+    </p>
+    <p style="font-size:13px;color:#555;">Track contacts and convert them to quotes and jobs in 3PhaseFlow. <a href="${esc(demoUrl)}">Book a free demo</a>.</p>
+    <p>Thank you,<br/>3PhaseFlow.com</p>
   `;
   return sendEmail(to, subject, wrapPlatformBrandedHtml(html));
 }
