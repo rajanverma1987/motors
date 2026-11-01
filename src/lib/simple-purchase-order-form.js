@@ -469,7 +469,7 @@ function lineHasContentForEdit(line) {
   );
 }
 
-/** True when a line has enough content to appear on Receiving tab. */
+/** True when a line has enough content to show on the PO (and expandable receiving). */
 export function poLineHasContent(line) {
   return lineHasContentForEdit(line);
 }

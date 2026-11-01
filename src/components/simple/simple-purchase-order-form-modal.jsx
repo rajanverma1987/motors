@@ -78,7 +78,6 @@ import {
 } from "@/lib/simple-typography";
 
 const TAB_PO = "purchase-order";
-const TAB_RECEIVING = "receiving";
 const TAB_PAYMENT = "payment";
 
 const FORM_ID = "simple-purchase-order-form";
@@ -261,6 +260,7 @@ export default function SimplePurchaseOrderFormModal({
   const [addFromInventoryOpen, setAddFromInventoryOpen] = useState(false);
   const [linkInventoryLineId, setLinkInventoryLineId] = useState(null);
 
+  const poIsSaved = Boolean(String(form.id || "").trim());
   const poType = resolveSimplePoType(form);
   const isShopPo = poType === SIMPLE_PO_TYPE_SHOP;
   const showTypeSelect = allowPoTypeChange && !isViewMode && !isEditMode;
@@ -687,7 +687,7 @@ export default function SimplePurchaseOrderFormModal({
       if (!canCancelPoLine(line)) {
         await alert({
           title: "Cannot cancel",
-          message: "Only items with status Ordered can be cancelled. Received items must be returned from the Material Receiving tab.",
+          message: "Only items with status Ordered can be cancelled. Received items must be returned using the Return action on the line.",
           variant: "danger",
         });
         return;
@@ -832,11 +832,6 @@ export default function SimplePurchaseOrderFormModal({
     if (!id) return;
     jobView?.openJob?.(id);
   };
-
-  const contentLines = useMemo(
-    () => (form.lineItems || []).filter((line) => lineHasContent(line)),
-    [form.lineItems]
-  );
 
   const receivingStatusEditOptions = useMemo(
     () =>
@@ -1150,15 +1145,9 @@ export default function SimplePurchaseOrderFormModal({
         setJobPos(nextList);
       }
       await alert({ title: "Saved", message: `Purchase order ${saved.poNumber} saved.` });
-      if (!isViewMode && !isEditMode) {
-        if (isPage) {
-          setForm(storedPoToForm(saved));
-        } else {
-          onClose?.();
-        }
-      } else {
-        setForm(storedPoToForm(saved));
-      }
+      // Stay on PO tab with saved id so receiving expand is available immediately.
+      setForm(storedPoToForm(saved));
+      setActiveTab(TAB_PO);
     } catch (err) {
       await alert({
         title: "Error",
@@ -1778,7 +1767,7 @@ export default function SimplePurchaseOrderFormModal({
             className="flex min-h-0 flex-1 flex-col"
             listClassName={
               isPage
-                ? "simple-po-page-tabs shrink-0 !grid !w-full !grid-cols-3 !gap-0 !rounded-none !p-0"
+                ? `simple-po-page-tabs shrink-0 !grid !w-full ${canViewFinancials ? "!grid-cols-2" : "!grid-cols-1"} !gap-0 !rounded-none !p-0`
                 : "shrink-0"
             }
             tabButtonClassName={
@@ -1811,8 +1800,25 @@ export default function SimplePurchaseOrderFormModal({
                         </span>
                       </div>
                     ) : null}
+                    {!poIsSaved ? (
+                      <p className="mb-1 text-xs text-secondary">
+                        Save the purchase order first to receive line items.
+                      </p>
+                    ) : null}
                     <div className={`shrink-0 overflow-auto border border-border ${TABLE_SCROLL_MAX_CLASS}`}>
-                      <table className={`w-full ${canViewFinancials ? "min-w-[52rem]" : "min-w-[20rem]"} border-collapse border-spacing-0 text-xs`}>
+                      <table
+                        className={`w-full border-collapse border-spacing-0 text-xs ${
+                          poIsSaved
+                            ? isShopPo
+                              ? "min-w-[96rem]"
+                              : canViewFinancials
+                                ? "min-w-[80rem]"
+                                : "min-w-[56rem]"
+                            : canViewFinancials
+                              ? "min-w-[52rem]"
+                              : "min-w-[20rem]"
+                        }`}
+                      >
                         <thead className="sticky top-0 z-[1] bg-[color-mix(in_srgb,hsl(var(--primary))_4%,hsl(var(--card)))] text-title">
                           <tr className="border-b-2 border-border">
                             <th className="border-r border-border px-1 py-1 text-left font-semibold">Item Name</th>
@@ -1827,6 +1833,22 @@ export default function SimplePurchaseOrderFormModal({
                                 <th className="w-28 border-r border-border px-1 py-1 text-right font-semibold">Grand Total</th>
                               </>
                             ) : null}
+                            {poIsSaved ? (
+                              <>
+                                <th className="w-24 border-r border-border px-1 py-1 text-right font-semibold">Received Qty</th>
+                                <th className="w-40 border-r border-border px-1 py-1 text-left font-semibold">Receiving Status</th>
+                                <th className="w-36 border-r border-border px-1 py-1 text-left font-semibold">Received Date</th>
+                                <th className="w-36 border-r border-border px-1 py-1 text-left font-semibold">Vendor Invoice#</th>
+                                {isShopPo ? (
+                                  <>
+                                    <th className="w-44 border-r border-border px-1 py-1 text-left font-semibold">Inventory SKU</th>
+                                    <th className="w-28 border-r border-border px-1 py-1 text-center font-semibold">Add to inventory</th>
+                                    <th className="w-24 border-r border-border px-1 py-1 text-right font-semibold">Markup %</th>
+                                  </>
+                                ) : null}
+                                <th className="w-16 border-r border-border px-1 py-1 text-center font-semibold">Return</th>
+                              </>
+                            ) : null}
                             <th className="w-7 p-0.5 text-left font-semibold" />
                           </tr>
                         </thead>
@@ -1834,11 +1856,18 @@ export default function SimplePurchaseOrderFormModal({
                           {(form.lineItems || []).map((line, idx) => {
                             const t = computePoLineTotals(line);
                             const inactive = isPoLineInactive(line);
+                            const hasContent = lineHasContent(line);
+                            const canReceive = poIsSaved && hasContent;
+                            const canReturn = canReturnPoLine(line) && poIsSaved;
+                            const linkedSku =
+                              String(line.inventorySku || "").trim() ||
+                              String(line.inventoryName || "").trim() ||
+                              (String(line.inventoryItemId || "").trim() ? "Linked" : "");
                             const canRemove =
                               !inactive &&
                               (form.lineItems || []).length > 1 &&
-                              (idx < (form.lineItems || []).length - 1 || lineHasContent(line)) &&
-                              (!poWasSentToVendor(form) || !String(form.id || "").trim() || canCancelPoLine(line));
+                              (idx < (form.lineItems || []).length - 1 || hasContent) &&
+                              (!poWasSentToVendor(form) || !poIsSaved || canCancelPoLine(line));
                             const rowClass = inactive
                               ? "border-t border-border bg-danger/10 line-through"
                               : "border-t border-border bg-card";
@@ -1848,6 +1877,7 @@ export default function SimplePurchaseOrderFormModal({
                             const cellMutedClass = inactive
                               ? `${CELL_INPUT_MUTED} line-through text-secondary`
                               : `${CELL_INPUT_MUTED} text-right tabular-nums`;
+                            const receiveDisabled = saving || inactive || !canReceive;
                             return (
                               <tr key={line.id} className={rowClass}>
                                 <td className="border-r border-border p-0">
@@ -1928,6 +1958,180 @@ export default function SimplePurchaseOrderFormModal({
                                         value={formatMoney(t.grandTotal)}
                                         className={`${cellMutedClass} font-semibold`}
                                       />
+                                    </td>
+                                  </>
+                                ) : null}
+                                {poIsSaved ? (
+                                  <>
+                                    <td className="border-r border-border p-0">
+                                      {canReceive ? (
+                                        <input
+                                          type="text"
+                                          inputMode="decimal"
+                                          value={line.receivedQty ?? "0"}
+                                          onChange={(e) => patchLine(line.id, "receivedQty", e.target.value)}
+                                          className={`${CELL_INPUT} text-right tabular-nums ${inactive ? "!bg-danger/5 line-through pointer-events-none" : ""}`}
+                                          disabled={receiveDisabled}
+                                          readOnly={inactive}
+                                        />
+                                      ) : (
+                                        <span className="block px-1 py-1 text-secondary">-</span>
+                                      )}
+                                    </td>
+                                    <td className="border-r border-border px-1 py-0.5">
+                                      {canReceive ? (
+                                        <SimpleSelect
+                                          options={
+                                            inactive
+                                              ? SIMPLE_PO_RECEIVING_STATUS_OPTIONS
+                                              : receivingStatusEditOptions
+                                          }
+                                          value={line.receivingStatus || "Ordered"}
+                                          onChange={(e) => patchLine(line.id, "receivingStatus", e.target.value)}
+                                          disabled={receiveDisabled}
+                                          aria-label={`Receiving status for ${line.itemName || "line"}`}
+                                        />
+                                      ) : (
+                                        <span className="block px-1 py-1 text-secondary">-</span>
+                                      )}
+                                    </td>
+                                    <td className="border-r border-border p-0">
+                                      {canReceive ? (
+                                        <input
+                                          type="date"
+                                          value={String(line.receivedDate || "").slice(0, 10)}
+                                          onChange={(e) => patchLine(line.id, "receivedDate", e.target.value)}
+                                          className={`${CELL_INPUT} ${inactive ? "!bg-danger/5 line-through pointer-events-none" : ""}`}
+                                          disabled={receiveDisabled}
+                                          readOnly={inactive}
+                                        />
+                                      ) : (
+                                        <span className="block px-1 py-1 text-secondary">-</span>
+                                      )}
+                                    </td>
+                                    <td className="border-r border-border p-0">
+                                      {canReceive ? (
+                                        <input
+                                          type="text"
+                                          value={line.vendorInvoiceNumber || ""}
+                                          onChange={(e) => patchLine(line.id, "vendorInvoiceNumber", e.target.value)}
+                                          className={`${CELL_INPUT} ${inactive ? "!bg-danger/5 line-through pointer-events-none" : ""}`}
+                                          disabled={receiveDisabled}
+                                          readOnly={inactive}
+                                          aria-label={`Vendor Invoice# for ${line.itemName || "line"}`}
+                                        />
+                                      ) : (
+                                        <span className="block px-1 py-1 text-secondary">-</span>
+                                      )}
+                                    </td>
+                                    {isShopPo ? (
+                                      <>
+                                        <td className="border-r border-border px-1 py-1">
+                                          {canReceive ? (
+                                            linkedSku ? (
+                                              <div className="min-w-0">
+                                                <div className="truncate font-medium text-title" title={linkedSku}>
+                                                  {line.inventoryName || linkedSku}
+                                                </div>
+                                                {line.inventorySku ? (
+                                                  <div className="truncate text-[10px] text-secondary">
+                                                    SKU: {line.inventorySku}
+                                                  </div>
+                                                ) : null}
+                                              </div>
+                                            ) : !inactive ? (
+                                              <button
+                                                type="button"
+                                                className="text-xs font-medium text-primary hover:underline"
+                                                disabled={saving}
+                                                onClick={() => setLinkInventoryLineId(line.id)}
+                                              >
+                                                Link SKU…
+                                              </button>
+                                            ) : (
+                                              <span className="text-secondary">-</span>
+                                            )
+                                          ) : (
+                                            <span className="text-secondary">-</span>
+                                          )}
+                                        </td>
+                                        <td className="border-r border-border px-1 py-1 text-center">
+                                          {canReceive ? (
+                                            <input
+                                              type="checkbox"
+                                              className="h-3.5 w-3.5 accent-primary"
+                                              checked={Boolean(line.addToInventory)}
+                                              onChange={(e) => {
+                                                const checked = e.target.checked;
+                                                const def =
+                                                  Number(mergedSettings?.defaultInventoryMarkupPercent) ||
+                                                  0;
+                                                const fillMarkup =
+                                                  checked &&
+                                                  String(line.inventoryMarkupPercent || "").trim() === "" &&
+                                                  def > 0;
+                                                setForm((f) => {
+                                                  const next = (f.lineItems || []).map((row) => {
+                                                    if (row.id !== line.id) return row;
+                                                    return {
+                                                      ...row,
+                                                      addToInventory: checked,
+                                                      ...(fillMarkup
+                                                        ? { inventoryMarkupPercent: String(def) }
+                                                        : {}),
+                                                    };
+                                                  });
+                                                  return { ...f, lineItems: next };
+                                                });
+                                              }}
+                                              disabled={receiveDisabled}
+                                              aria-label={`Add ${line.itemName || "line"} to inventory on receive`}
+                                            />
+                                          ) : (
+                                            <span className="text-secondary">-</span>
+                                          )}
+                                        </td>
+                                        <td className="border-r border-border px-1 py-1">
+                                          {canReceive ? (
+                                            <input
+                                              type="text"
+                                              inputMode="decimal"
+                                              value={line.inventoryMarkupPercent || ""}
+                                              onChange={(e) =>
+                                                patchLine(
+                                                  line.id,
+                                                  "inventoryMarkupPercent",
+                                                  sanitizePoNumericInput(e.target.value)
+                                                )
+                                              }
+                                              className={`${CELL_INPUT} text-right tabular-nums ${
+                                                inactive ? "!bg-danger/5 line-through pointer-events-none" : ""
+                                              }`}
+                                              placeholder="0"
+                                              disabled={receiveDisabled || !line.addToInventory}
+                                              readOnly={inactive}
+                                              aria-label={`Inventory markup percent for ${line.itemName || "line"}`}
+                                              title="Markup % applied when receiving into inventory"
+                                            />
+                                          ) : (
+                                            <span className="text-secondary">-</span>
+                                          )}
+                                        </td>
+                                      </>
+                                    ) : null}
+                                    <td className="border-r border-border p-0 text-center">
+                                      {canReturn ? (
+                                        <button
+                                          type="button"
+                                          className="rounded-none p-0.5 text-primary hover:bg-primary/10"
+                                          title="Return item to vendor"
+                                          aria-label={`Return ${line.itemName || "line"}`}
+                                          onClick={() => handleReturnLineClick(line)}
+                                          disabled={saving || returningLine}
+                                        >
+                                          <FiCornerUpLeft className="h-3.5 w-3.5" aria-hidden />
+                                        </button>
+                                      ) : null}
                                     </td>
                                   </>
                                 ) : null}
@@ -2050,205 +2254,6 @@ export default function SimplePurchaseOrderFormModal({
                         />
                       </div>
                     </div>
-                  </>
-                ),
-              },
-              {
-                id: TAB_RECEIVING,
-                label: isPage ? "Receiving" : "Material Receiving",
-                children: (
-                  <>
-                    {contentLines.length === 0 ? (
-                      <p className="text-sm text-secondary">Add line items on the Purchase Order tab first.</p>
-                    ) : (
-                      <div className={`shrink-0 overflow-auto border border-border ${TABLE_SCROLL_MAX_CLASS}`}>
-                        <table className={`w-full ${isShopPo ? "min-w-[80rem]" : "min-w-[56rem]"} border-collapse border-spacing-0 text-xs`}>
-                          <thead className="sticky top-0 z-[1] bg-[color-mix(in_srgb,hsl(var(--primary))_4%,hsl(var(--card)))] text-title">
-                            <tr className="border-b-2 border-border">
-                              <th className="border-r border-border px-1 py-1 text-left font-semibold">Item Name</th>
-                              <th className="w-20 border-r border-border px-1 py-1 text-left font-semibold">UOM</th>
-                              <th className="w-24 border-r border-border px-1 py-1 text-right font-semibold">Ordered Qty</th>
-                              <th className="w-24 border-r border-border px-1 py-1 text-right font-semibold">Received Qty</th>
-                              <th className="w-40 border-r border-border px-1 py-1 text-left font-semibold">Receiving Status</th>
-                              <th className="w-36 border-r border-border px-1 py-1 text-left font-semibold">Received Date</th>
-                              <th className="w-36 border-r border-border px-1 py-1 text-left font-semibold">Vendor Invoice#</th>
-                              {isShopPo ? (
-                                <>
-                                  <th className="w-44 border-r border-border px-1 py-1 text-left font-semibold">Inventory SKU</th>
-                                  <th className="w-28 border-r border-border px-1 py-1 text-center font-semibold">Add to inventory</th>
-                                  <th className="w-24 border-r border-border px-1 py-1 text-right font-semibold">Markup %</th>
-                                </>
-                              ) : null}
-                              <th className="w-16 px-1 py-1 text-center font-semibold">Return</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {contentLines.map((line) => {
-                              const inactive = isPoLineInactive(line);
-                              const canReturn = canReturnPoLine(line) && String(form.id || "").trim();
-                              const linkedSku =
-                                String(line.inventorySku || "").trim() ||
-                                String(line.inventoryName || "").trim() ||
-                                (String(line.inventoryItemId || "").trim() ? "Linked" : "");
-                              const rowClass = inactive
-                                ? "border-t border-border bg-danger/10 line-through text-secondary"
-                                : "border-t border-border bg-card";
-                              return (
-                              <tr key={line.id} className={rowClass}>
-                                <td className="border-r border-border px-1 py-1">{line.itemName || "-"}</td>
-                                <td className="border-r border-border px-1 py-1">{line.uom || "-"}</td>
-                                <td className="border-r border-border px-1 py-1 text-right tabular-nums">
-                                  {line.quantity || "0"}
-                                </td>
-                                <td className="border-r border-border p-0">
-                                  <input
-                                    type="text"
-                                    inputMode="decimal"
-                                    value={line.receivedQty ?? "0"}
-                                    onChange={(e) => patchLine(line.id, "receivedQty", e.target.value)}
-                                    className={`${CELL_INPUT} text-right tabular-nums ${inactive ? "!bg-danger/5 line-through pointer-events-none" : ""}`}
-                                    disabled={saving || inactive}
-                                    readOnly={inactive}
-                                  />
-                                </td>
-                                <td className="border-r border-border px-1 py-0.5">
-                                  <SimpleSelect
-                                    options={
-                                      inactive
-                                        ? SIMPLE_PO_RECEIVING_STATUS_OPTIONS
-                                        : receivingStatusEditOptions
-                                    }
-                                    value={line.receivingStatus || "Ordered"}
-                                    onChange={(e) => patchLine(line.id, "receivingStatus", e.target.value)}
-                                    disabled={saving || inactive}
-                                    aria-label={`Receiving status for ${line.itemName || "line"}`}
-                                  />
-                                </td>
-                                <td className="border-r border-border p-0">
-                                  <input
-                                    type="date"
-                                    value={String(line.receivedDate || "").slice(0, 10)}
-                                    onChange={(e) => patchLine(line.id, "receivedDate", e.target.value)}
-                                    className={`${CELL_INPUT} ${inactive ? "!bg-danger/5 line-through pointer-events-none" : ""}`}
-                                    disabled={saving || inactive}
-                                    readOnly={inactive}
-                                  />
-                                </td>
-                                <td className="border-r border-border p-0">
-                                  <input
-                                    type="text"
-                                    value={line.vendorInvoiceNumber || ""}
-                                    onChange={(e) => patchLine(line.id, "vendorInvoiceNumber", e.target.value)}
-                                    className={`${CELL_INPUT} ${inactive ? "!bg-danger/5 line-through pointer-events-none" : ""}`}
-                                    disabled={saving || inactive}
-                                    readOnly={inactive}
-                                    aria-label={`Vendor Invoice# for ${line.itemName || "line"}`}
-                                  />
-                                </td>
-                                {isShopPo ? (
-                                  <>
-                                    <td className="border-r border-border px-1 py-1">
-                                      {linkedSku ? (
-                                        <div className="min-w-0">
-                                          <div className="truncate font-medium text-title" title={linkedSku}>
-                                            {line.inventoryName || linkedSku}
-                                          </div>
-                                          {line.inventorySku ? (
-                                            <div className="truncate text-[10px] text-secondary">
-                                              SKU: {line.inventorySku}
-                                            </div>
-                                          ) : null}
-                                        </div>
-                                      ) : !inactive ? (
-                                        <button
-                                          type="button"
-                                          className="text-xs font-medium text-primary hover:underline"
-                                          disabled={saving}
-                                          onClick={() => setLinkInventoryLineId(line.id)}
-                                        >
-                                          Link SKU…
-                                        </button>
-                                      ) : (
-                                        <span className="text-secondary">-</span>
-                                      )}
-                                    </td>
-                                    <td className="border-r border-border px-1 py-1 text-center">
-                                      <input
-                                        type="checkbox"
-                                        className="h-3.5 w-3.5 accent-primary"
-                                        checked={Boolean(line.addToInventory)}
-                                        onChange={(e) => {
-                                          const checked = e.target.checked;
-                                          const def =
-                                            Number(mergedSettings?.defaultInventoryMarkupPercent) ||
-                                            0;
-                                          const fillMarkup =
-                                            checked &&
-                                            String(line.inventoryMarkupPercent || "").trim() === "" &&
-                                            def > 0;
-                                          setForm((f) => {
-                                            const next = (f.lineItems || []).map((row) => {
-                                              if (row.id !== line.id) return row;
-                                              return {
-                                                ...row,
-                                                addToInventory: checked,
-                                                ...(fillMarkup
-                                                  ? { inventoryMarkupPercent: String(def) }
-                                                  : {}),
-                                              };
-                                            });
-                                            return { ...f, lineItems: next };
-                                          });
-                                        }}
-                                        disabled={saving || inactive}
-                                        aria-label={`Add ${line.itemName || "line"} to inventory on receive`}
-                                      />
-                                    </td>
-                                    <td className="border-r border-border px-1 py-1">
-                                      <input
-                                        type="text"
-                                        inputMode="decimal"
-                                        value={line.inventoryMarkupPercent || ""}
-                                        onChange={(e) =>
-                                          patchLine(
-                                            line.id,
-                                            "inventoryMarkupPercent",
-                                            sanitizePoNumericInput(e.target.value)
-                                          )
-                                        }
-                                        className={`${CELL_INPUT} text-right tabular-nums ${
-                                          inactive ? "!bg-danger/5 line-through pointer-events-none" : ""
-                                        }`}
-                                        placeholder="0"
-                                        disabled={saving || inactive || !line.addToInventory}
-                                        readOnly={inactive}
-                                        aria-label={`Inventory markup percent for ${line.itemName || "line"}`}
-                                        title="Markup % applied when receiving into inventory"
-                                      />
-                                    </td>
-                                  </>
-                                ) : null}
-                                <td className="p-0 text-center">
-                                  {canReturn ? (
-                                    <button
-                                      type="button"
-                                      className="rounded-none p-0.5 text-primary hover:bg-primary/10"
-                                      title="Return item to vendor"
-                                      aria-label={`Return ${line.itemName || "line"}`}
-                                      onClick={() => handleReturnLineClick(line)}
-                                      disabled={saving || returningLine}
-                                    >
-                                      <FiCornerUpLeft className="h-3.5 w-3.5" aria-hidden />
-                                    </button>
-                                  ) : null}
-                                </td>
-                              </tr>
-                              );
-                            })}
-                          </tbody>
-                        </table>
-                      </div>
-                    )}
                   </>
                 ),
               },
