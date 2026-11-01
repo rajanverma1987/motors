@@ -503,30 +503,34 @@ export default function CustomerViewModal({
     [openSimpleRecordId]
   );
 
-  /** Navigate within this customer's activity list (same pattern as Master Search). */
+  /**
+   * Navigate within the right-side table as currently filtered/sorted.
+   * Status chips (Draft, Proposal Submitted, …) scope Service Proposal prev/next.
+   */
   const clientRecordNavigation = useMemo(() => {
-    if (!openSimpleRecordId || activityRows.length < 2) return null;
-    const openIndex = activityRows.findIndex(
+    const navRows = displayedActivityRows;
+    if (!openSimpleRecordId || navRows.length < 2) return null;
+    const openIndex = navRows.findIndex(
       (r) => String(r.id) === String(openSimpleRecordId)
     );
     if (openIndex < 0) return null;
     return {
       currentIndex: openIndex,
-      total: activityRows.length,
+      total: navRows.length,
       canPrevious: openIndex > 0,
-      canNext: openIndex < activityRows.length - 1,
+      canNext: openIndex < navRows.length - 1,
       onPrevious: () => {
-        const prev = activityRows[openIndex - 1];
+        const prev = navRows[openIndex - 1];
         const id = String(prev?.id || "").trim();
         if (id) setOpenSimpleRecordId(id);
       },
       onNext: () => {
-        const next = activityRows[openIndex + 1];
+        const next = navRows[openIndex + 1];
         const id = String(next?.id || "").trim();
         if (id) setOpenSimpleRecordId(id);
       },
     };
-  }, [openSimpleRecordId, activityRows]);
+  }, [openSimpleRecordId, displayedActivityRows]);
 
   const handleSimpleProposalSave = async (nextForm, options = {}) => {
     const companyName =
