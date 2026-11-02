@@ -78,6 +78,7 @@ function buildAllowedApiHosts(request) {
 
   // Canonical + legacy domains still redirecting to 3phaseflow.com
   addHostVariants(allowed, "3phaseflow.com");
+  addHostVariants(allowed, "admin.3phaseflow.com");
   addHostVariants(allowed, "motorswinding.com");
   addHostVariants(allowed, "iqmotorbase.com");
 
