@@ -1,0 +1,78 @@
+import mongoose from "mongoose";
+
+const customerSchema = new mongoose.Schema(
+  {
+    /** Shop-facing customer number / ID (e.g. "001") — not the Mongo _id */
+    customerNumber: { type: String, default: "", trim: true },
+    companyName: { type: String, default: "", trim: true },
+    primaryContactName: { type: String, default: "", trim: true },
+    phone: { type: String, default: "", trim: true },
+    fax: { type: String, default: "", trim: true },
+    email: { type: String, default: "", trim: true },
+    alternatePhone: { type: String, default: "", trim: true },
+    alternateEmail: { type: String, default: "", trim: true },
+    billingContact: { type: String, default: "", trim: true },
+    customerType: { type: String, default: "", trim: true },
+    paymentTerms: { type: String, default: "", trim: true },
+    preferredPaymentMethod: { type: String, default: "", trim: true },
+    preferredContactMethod: { type: String, default: "", trim: true },
+    address: { type: String, default: "", trim: true },
+    city: { type: String, default: "", trim: true },
+    state: { type: String, default: "", trim: true },
+    zipCode: { type: String, default: "", trim: true },
+    country: { type: String, default: "United States", trim: true },
+    shippingAddress: { type: String, default: "", trim: true },
+    shippingCity: { type: String, default: "", trim: true },
+    shippingState: { type: String, default: "", trim: true },
+    shippingZipCode: { type: String, default: "", trim: true },
+    shippingCountry: { type: String, default: "United States", trim: true },
+    /** Additional contact persons: { contactName, phone, email } */
+    additionalContacts: [
+      {
+        contactName: { type: String, default: "", trim: true },
+        phone: { type: String, default: "", trim: true },
+        email: { type: String, default: "", trim: true },
+      },
+    ],
+    /** Customer documents: { name, url } — url may be a web path or legacy file path */
+    documents: [
+      {
+        name: { type: String, default: "", trim: true },
+        url: { type: String, default: "", trim: true },
+      },
+    ],
+    notes: { type: String, default: "", trim: true },
+    ein: { type: String, default: "", trim: true },
+    creditLimit: { type: String, default: "", trim: true },
+    taxExempt: { type: Boolean, default: true },
+    taxPercent: { type: String, default: "0", trim: true },
+    /** Token for customer portal link (public view of motors, quotes, status). Unique when set — do not default to "". */
+    portalToken: { type: String, trim: true },
+    /** Import metadata for external system linking */
+    sourceSystem: { type: String, default: "", trim: true },
+    externalRef: { type: String, default: "", trim: true },
+    importBatchId: { type: String, default: "", trim: true },
+    importedAt: { type: Date, default: null },
+    importStatus: { type: String, default: "", trim: true },
+    /** Shop that owns this customer (dashboard user email) */
+    createdByEmail: { type: String, required: true, trim: true },
+  },
+  { timestamps: true }
+);
+
+customerSchema.index({ createdByEmail: 1, createdAt: -1 });
+customerSchema.index({ createdByEmail: 1, companyName: 1 });
+customerSchema.index(
+  { createdByEmail: 1, sourceSystem: 1, externalRef: 1 },
+  { unique: true, partialFilterExpression: { externalRef: { $gt: "" } } }
+);
+/** Unique only for non-empty tokens; empty string would collide for every new customer (E11000). */
+customerSchema.index(
+  { portalToken: 1 },
+  {
+    unique: true,
+    partialFilterExpression: { portalToken: { $gt: "" } },
+  }
+);
+
+export default mongoose.models.Customer || mongoose.model("Customer", customerSchema);

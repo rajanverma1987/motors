@@ -1,0 +1,424 @@
+/**
+ * PayPal REST API (Subscriptions v1). Uses PAYPAL_CLIENT_ID / PAYPAL_CLIENT_SECRET.
+ * PAYPAL_MODE=sandbox | live
+ */
+
+export function paypalBaseUrl() {
+  const mode = (process.env.PAYPAL_MODE || "sandbox").toLowerCase();
+  return mode === "live" ? "https://api-m.paypal.com" : "https://api-m.sandbox.paypal.com";
+}
+
+export function paypalConfigured() {
+  return !!(process.env.PAYPAL_CLIENT_ID && process.env.PAYPAL_CLIENT_SECRET);
+}
+
+/** Public PayPal JS SDK client id (same as REST client id). Safe to send to the browser. */
+export function paypalPublicClientId() {
+  return String(process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID || process.env.PAYPAL_CLIENT_ID || "").trim();
+}
+
+export async function getPaypalAccessToken() {
+  if (!paypalConfigured()) {
+    throw new Error("PayPal is not configured (PAYPAL_CLIENT_ID / PAYPAL_CLIENT_SECRET).");
+  }
+  const auth = Buffer.from(
+    `${process.env.PAYPAL_CLIENT_ID}:${process.env.PAYPAL_CLIENT_SECRET}`
+  ).toString("base64");
+  const res = await fetch(`${paypalBaseUrl()}/v1/oauth2/token`, {
+    method: "POST",
+    headers: {
+      Authorization: `Basic ${auth}`,
+      "Content-Type": "application/x-www-form-urlencoded",
+    },
+    body: "grant_type=client_credentials",
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw new Error(data.error_description || data.error || "PayPal token failed");
+  }
+  return data.access_token;
+}
+
+function billingIntervalFromPlan(plan) {
+  const cycle = plan.billingCycle || "monthly";
+  const count = Math.max(1, Number(plan.billingIntervalCount) || 1);
+  if (cycle === "yearly") {
+    return { interval_unit: "YEAR", interval_count: 1 };
+  }
+  if (cycle === "custom") {
+    return { interval_unit: "MONTH", interval_count: count };
+  }
+  return { interval_unit: "MONTH", interval_count: 1 };
+}
+
+function paypalErrorMessage(payload, fallback) {
+  const details = Array.isArray(payload?.details)
+    ? payload.details.map((d) => d?.description || d?.issue).filter(Boolean).join("; ")
+    : "";
+  return details || payload?.message || payload?.name || fallback;
+}
+
+/**
+ * Create catalog product + billing plan with fixed negotiated price.
+ * @param {import("mongoose").Document} planDoc - SubscriptionPlan
+ */
+export async function createPaypalProductAndPlan(planDoc) {
+  const token = await getPaypalAccessToken();
+  const base = paypalBaseUrl();
+  const headers = {
+    Authorization: `Bearer ${token}`,
+    "Content-Type": "application/json",
+    Prefer: "return=representation",
+  };
+
+  const price = Number(planDoc.customPrice || 0).toFixed(2);
+  const cycle = String(planDoc.billingCycle || "monthly");
+  const productName = String(planDoc.name || "3PhaseWire").slice(0, 127);
+  const planName = `${productName} ${cycle} ${price}`.slice(0, 127);
+  const description = String(planDoc.description || planDoc.name || "3PhaseWire").slice(0, 127);
+
+  const productRes = await fetch(`${base}/v1/catalogs/products`, {
+    method: "POST",
+    headers,
+    body: JSON.stringify({
+      name: productName,
+      description,
+      type: "SERVICE",
+    }),
+  });
+  const product = await productRes.json().catch(() => ({}));
+  if (!productRes.ok) {
+    throw new Error(paypalErrorMessage(product, "PayPal product create failed"));
+  }
+  const productId = product.id;
+
+  const { interval_unit, interval_count } = billingIntervalFromPlan(planDoc);
+
+  const planBody = {
+    product_id: productId,
+    name: planName,
+    description,
+    status: "ACTIVE",
+    billing_cycles: [
+      {
+        frequency: { interval_unit, interval_count },
+        tenure_type: "REGULAR",
+        sequence: 1,
+        total_cycles: 0,
+        pricing_scheme: {
+          fixed_price: {
+            value: price,
+            currency_code: (planDoc.currency || "USD").toUpperCase(),
+          },
+        },
+      },
+    ],
+    payment_preferences: {
+      auto_bill_outstanding: true,
+      payment_failure_threshold: 3,
+    },
+  };
+
+  const planRes = await fetch(`${base}/v1/billing/plans`, {
+    method: "POST",
+    headers,
+    body: JSON.stringify(planBody),
+  });
+  const planJson = await planRes.json().catch(() => ({}));
+  if (!planRes.ok) {
+    throw new Error(paypalErrorMessage(planJson, "PayPal billing plan create failed"));
+  }
+
+  const paypalPlanId = planJson.id;
+  try {
+    await activatePaypalBillingPlan(paypalPlanId, token);
+  } catch {
+    /* created with status ACTIVE */
+  }
+
+  return {
+    paypalProductId: productId,
+    paypalPlanId,
+  };
+}
+
+export async function activatePaypalBillingPlan(paypalPlanId, accessToken) {
+  const id = String(paypalPlanId || "").trim();
+  if (!id) return;
+  const token = accessToken || (await getPaypalAccessToken());
+  const base = paypalBaseUrl();
+  const res = await fetch(`${base}/v1/billing/plans/${encodeURIComponent(id)}/activate`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+  });
+  if (!res.ok && res.status !== 204) {
+    const err = await res.json().catch(() => ({}));
+    const msg = String(err.message || err.name || "");
+    if (/already|active/i.test(msg)) return;
+    throw new Error(msg || "PayPal billing plan activate failed");
+  }
+}
+
+export async function ensurePaypalBillingPlanActive(paypalPlanId) {
+  const id = String(paypalPlanId || "").trim();
+  if (!id) throw new Error("PayPal billing plan is missing.");
+  const token = await getPaypalAccessToken();
+  const base = paypalBaseUrl();
+  const res = await fetch(`${base}/v1/billing/plans/${encodeURIComponent(id)}`, {
+    method: "GET",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw new Error(data.message || data.name || "PayPal billing plan lookup failed");
+  }
+  const status = String(data.status || "").toUpperCase();
+  if (status === "ACTIVE") return data;
+  if (status === "CREATED" || status === "INACTIVE") {
+    await activatePaypalBillingPlan(id, token);
+    return data;
+  }
+  throw new Error(`PayPal billing plan is ${status || "not usable"}. Set the price again in Admin → Subscription plans.`);
+}
+
+export function paypalCheckoutOrigin() {
+  const mode = (process.env.PAYPAL_MODE || "sandbox").toLowerCase();
+  return mode === "live" ? "https://www.paypal.com" : "https://www.sandbox.paypal.com";
+}
+
+/** PayPal sometimes returns a path-only approve href; Next would then send the user to our domain. */
+export function absolutePaypalCheckoutUrl(href) {
+  let raw = String(href || "").trim();
+  if (!raw) return "";
+  const origin = paypalCheckoutOrigin();
+  if (raw.startsWith("//")) raw = `https:${raw}`;
+  if (raw.startsWith("/")) raw = `${origin}${raw}`;
+  if (!/^https?:\/\//i.test(raw)) {
+    raw = `https://${raw.replace(/^\/+/, "")}`;
+  }
+  try {
+    const parsed = new URL(raw);
+    const host = parsed.hostname.toLowerCase();
+    if (!host.endsWith("paypal.com")) return "";
+    if (!parsed.pathname || parsed.pathname === "/") return "";
+    parsed.protocol = "https:";
+    return parsed.toString();
+  } catch {
+    return "";
+  }
+}
+
+function paypalApproveUrl(links) {
+  const list = Array.isArray(links) ? links : [];
+  const byRel = (rel) => list.find((l) => l && l.rel === rel && l.href);
+  const approve = byRel("approve");
+  const payerAction = byRel("payer-action");
+  return absolutePaypalCheckoutUrl(approve?.href || payerAction?.href || "");
+}
+
+/**
+ * Update regular-cycle price on an existing PayPal billing plan.
+ * New and existing subscribers on this plan get the new price from the next billing cycle
+ * (PayPal emails current subscribers; if renewal is within 10 days the new price starts the cycle after).
+ */
+export async function updatePaypalPlanPricing(paypalPlanId, { price, currency }) {
+  const id = String(paypalPlanId || "").trim();
+  if (!id) throw new Error("PayPal plan ID is required to update pricing.");
+  const value = Number(price);
+  if (!Number.isFinite(value) || value <= 0) {
+    throw new Error("Enter a valid price to update PayPal.");
+  }
+  const token = await getPaypalAccessToken();
+  const base = paypalBaseUrl();
+  const res = await fetch(`${base}/v1/billing/plans/${encodeURIComponent(id)}/update-pricing-schemes`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      pricing_schemes: [
+        {
+          billing_cycle_sequence: 1,
+          pricing_scheme: {
+            fixed_price: {
+              value: value.toFixed(2),
+              currency_code: String(currency || "USD").toUpperCase(),
+            },
+          },
+        },
+      ],
+    }),
+  });
+  if (!res.ok && res.status !== 204) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(paypalErrorMessage(err, "PayPal plan price update failed"));
+  }
+}
+
+/**
+ * Create a subscription (returns approval link for subscriber).
+ */
+export async function createPaypalSubscription({
+  paypalPlanId,
+  returnUrl,
+  cancelUrl,
+  subscriberEmail,
+  brandName = "3PhaseFlow",
+  customId,
+  landingPage,
+}) {
+  await ensurePaypalBillingPlanActive(paypalPlanId);
+  const token = await getPaypalAccessToken();
+  const base = paypalBaseUrl();
+  const landing =
+    landingPage === "BILLING" || landingPage === "LOGIN" || landingPage === "NO_PREFERENCE"
+      ? landingPage
+      : "";
+  const body = {
+    plan_id: paypalPlanId,
+    custom_id: customId ? String(customId).slice(0, 127) : undefined,
+    subscriber: subscriberEmail
+      ? {
+          email_address: subscriberEmail,
+        }
+      : undefined,
+    application_context: {
+      brand_name: String(brandName || "3PhaseFlow").slice(0, 127),
+      locale: "en-US",
+      shipping_preference: "NO_SHIPPING",
+      user_action: "SUBSCRIBE_NOW",
+      ...(landing ? { landing_page: landing } : {}),
+      return_url: returnUrl,
+      cancel_url: cancelUrl,
+    },
+  };
+  const res = await fetch(`${base}/v1/billing/subscriptions`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+      Prefer: "return=representation",
+    },
+    body: JSON.stringify(body),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw new Error(data.message || data.name || "PayPal subscription create failed");
+  }
+  const approvalUrl = paypalApproveUrl(data.links);
+  if (!approvalUrl) {
+    throw new Error("PayPal did not return a checkout link. Activate the billing plan in PayPal and try again.");
+  }
+  return {
+    subscriptionId: data.id,
+    approvalUrl,
+    status: data.status,
+  };
+}
+
+export async function getPaypalSubscription(paypalSubscriptionId) {
+  const id = String(paypalSubscriptionId || "").trim();
+  if (!id) return null;
+  const token = await getPaypalAccessToken();
+  const base = paypalBaseUrl();
+  const res = await fetch(`${base}/v1/billing/subscriptions/${encodeURIComponent(id)}`, {
+    method: "GET",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+  });
+  const data = await res.json().catch(() => ({}));
+  if (res.status === 404) return null;
+  if (!res.ok) {
+    throw new Error(data.message || data.name || "PayPal subscription lookup failed");
+  }
+  return data;
+}
+
+export async function activatePaypalSubscription(paypalSubscriptionId) {
+  const id = String(paypalSubscriptionId || "").trim();
+  if (!id) return;
+  const token = await getPaypalAccessToken();
+  const base = paypalBaseUrl();
+  const res = await fetch(`${base}/v1/billing/subscriptions/${encodeURIComponent(id)}/activate`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ reason: "Buyer returned from PayPal checkout" }),
+  });
+  if (!res.ok && res.status !== 204) {
+    const err = await res.json().catch(() => ({}));
+    const msg = String(err.message || err.name || "");
+    if (/already|active/i.test(msg)) return;
+    throw new Error(msg || "PayPal subscription activate failed");
+  }
+}
+
+/**
+ * Cancel PayPal subscription at end of cycle or immediately.
+ */
+export async function cancelPaypalSubscription(paypalSubscriptionId, reason = "Admin changed plan") {
+  if (!paypalSubscriptionId) return;
+  const token = await getPaypalAccessToken();
+  const base = paypalBaseUrl();
+  const res = await fetch(`${base}/v1/billing/subscriptions/${paypalSubscriptionId}/cancel`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ reason: { note: reason.slice(0, 127) } }),
+  });
+  if (!res.ok && res.status !== 204) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.message || "PayPal cancel failed");
+  }
+}
+
+/**
+ * Verify webhook signature (PayPal API).
+ */
+export async function verifyPaypalWebhookSignature({
+  transmissionId,
+  transmissionTime,
+  certUrl,
+  authAlgo,
+  transmissionSig,
+  webhookId,
+  webhookEventBody,
+}) {
+  if (!process.env.PAYPAL_WEBHOOK_ID) {
+    console.warn("PAYPAL_WEBHOOK_ID not set — webhook verification skipped in dev is unsafe");
+    return process.env.NODE_ENV !== "production";
+  }
+  const token = await getPaypalAccessToken();
+  const base = paypalBaseUrl();
+  const res = await fetch(`${base}/v1/notifications/verify-webhook-signature`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      transmission_id: transmissionId,
+      transmission_time: transmissionTime,
+      cert_url: certUrl,
+      auth_algo: authAlgo,
+      transmission_sig: transmissionSig,
+      webhook_id: webhookId || process.env.PAYPAL_WEBHOOK_ID,
+      webhook_event: webhookEventBody,
+    }),
+  });
+  const data = await res.json().catch(() => ({}));
+  return data.verification_status === "SUCCESS";
+}

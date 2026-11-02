@@ -1,0 +1,60 @@
+import HelpIcon from "./help-icon";
+
+export default function Input({
+  label,
+  help,
+  id: idProp,
+  placeholder,
+  value,
+  onChange,
+  onBlur,
+  onKeyDown,
+  type = "text",
+  inputMode,
+  name,
+  className = "",
+  readOnly = false,
+  disabled = false,
+  required = false,
+  maxLength,
+  autoComplete,
+  /** Applied to the native input element (e.g. compact rows in spec grids). */
+  inputClassName = "",
+  /** Optional control rendered inside the field, on the right. */
+  suffix = null,
+}) {
+  const id = idProp ?? name;
+  return (
+    <div className={`flex flex-col gap-1 ${className}`}>
+      {label && (
+        <label htmlFor={id} className={`inline-flex items-center gap-1.5 text-sm text-title ${disabled || readOnly ? "opacity-70" : ""}`}>
+          {label}
+          <HelpIcon text={help} />
+        </label>
+      )}
+      <div className="relative">
+        <input
+          id={id}
+          type={type}
+          name={name}
+          value={value ?? ""}
+          placeholder={placeholder}
+          onChange={onChange}
+          onBlur={onBlur}
+          onKeyDown={onKeyDown}
+          inputMode={inputMode}
+          readOnly={readOnly}
+          disabled={disabled}
+          tabIndex={disabled ? -1 : undefined}
+          required={required}
+          maxLength={maxLength}
+          autoComplete={autoComplete}
+          className={`w-full min-w-0 rounded-md border-[0.5px] border-border bg-bg px-3 py-2 text-text placeholder:text-sm placeholder:text-secondary focus:outline-none focus:ring-[0.5px] focus:ring-primary focus:border-primary/30 disabled:opacity-60 disabled:cursor-not-allowed disabled:bg-card disabled:border-border/80 ${disabled ? "!opacity-60 !cursor-not-allowed !bg-card dark:!bg-form-bg !border-border select-none" : ""} ${readOnly && !disabled ? "!opacity-60 !cursor-default !bg-card dark:!bg-form-bg !border-border select-none" : ""} ${suffix ? "pr-16" : ""} ${inputClassName}`.trim()}
+        />
+        {suffix ? (
+          <div className="absolute inset-y-0 right-1 flex items-center">{suffix}</div>
+        ) : null}
+      </div>
+    </div>
+  );
+}

@@ -1,0 +1,98 @@
+import mongoose from "mongoose";
+
+const quoteSchema = new mongoose.Schema(
+  {
+    /** Customer id (dashboard Customer) */
+    customerId: { type: String, required: true, trim: true },
+    /** Customer's motor id (Motor document) */
+    motorId: { type: String, required: true, trim: true },
+    /** Optional: lead this quote was created from */
+    leadId: { type: String, default: "", trim: true },
+    /** RFQ lifecycle slug — configurable under Settings → Dropdowns; new RFQs default to write-up. */
+    status: { type: String, default: "write-up", trim: true },
+    /** Customer PO number */
+    customerPo: { type: String, default: "", trim: true },
+    /** Quote date (e.g. YYYY-MM-DD) */
+    date: { type: String, default: "", trim: true },
+    /** Prepared by: employee id or name */
+    preparedBy: { type: String, default: "", trim: true },
+    /** Assigned technician (Employee id) — synced to work orders; required for mobile app visibility */
+    technicianEmployeeId: { type: String, default: "", trim: true },
+    /** Auto-generated RFQ number: A00001, A00002, ... */
+    rfqNumber: { type: String, default: "", trim: true },
+    /** Legacy single-line scope; kept for backward compat */
+    repairScope: { type: String, default: "", trim: true },
+    laborTotal: { type: String, default: "", trim: true },
+    partsTotal: { type: String, default: "", trim: true },
+    customerTaxExempt: { type: Boolean, default: true },
+    customerTaxPercent: { type: String, default: "0", trim: true },
+    /** Scope line items: description + price (labor) */
+    scopeLines: [{
+      scope: { type: String, default: "", trim: true },
+      price: { type: String, default: "", trim: true },
+    }],
+    /** Parts/Other Cost line items: item, qty, uom (unit e.g. kg, lbs), price (unit price). Total = qty * price */
+    partsLines: [{
+      item: { type: String, default: "", trim: true },
+      qty: { type: String, default: "1", trim: true },
+      uom: { type: String, default: "", trim: true },
+      price: { type: String, default: "", trim: true },
+      /** Dashboard inventory row id when line is tied to stock */
+      inventoryItemId: { type: String, default: "", trim: true },
+    }],
+    estimatedCompletion: { type: String, default: "", trim: true },
+    /** Client-facing notes: shown on proposal and invoice sent to customer */
+    customerNotes: { type: String, default: "", trim: true },
+    /** Internal notes: for repair company reference only */
+    notes: { type: String, default: "", trim: true },
+    /** Attachments linked to this RFQ (url + display name) */
+    attachments: {
+      type: [{
+        url: { type: String, required: true, trim: true },
+        name: { type: String, default: "", trim: true },
+      }],
+      default: [],
+    },
+    /** Token for customer approve/reject link (public URL) */
+    respondToken: { type: String, default: "", trim: true },
+    /** When the customer approved or rejected via the respond link */
+    respondedAt: { type: Date, default: null },
+    /** Log of status changes: { from, to, at, by } */
+    statusLog: {
+      type: [{
+        from: { type: String, default: "", trim: true },
+        to: { type: String, default: "", trim: true },
+        at: { type: Date, required: true },
+        by: { type: String, default: "", trim: true },
+      }],
+      default: [],
+    },
+    /** Parent ref metadata for import traceability */
+    customerSourceSystem: { type: String, default: "", trim: true },
+    customerExternalRef: { type: String, default: "", trim: true },
+    motorSourceSystem: { type: String, default: "", trim: true },
+    motorExternalRef: { type: String, default: "", trim: true },
+    /** Import metadata for external system linking */
+    sourceSystem: { type: String, default: "", trim: true },
+    externalRef: { type: String, default: "", trim: true },
+    importBatchId: { type: String, default: "", trim: true },
+    importedAt: { type: Date, default: null },
+    importStatus: { type: String, default: "", trim: true },
+    createdByEmail: { type: String, required: true, trim: true },
+    /** When created from Job Write-Up final flow quote */
+    repairFlowJobId: { type: String, default: "", trim: true },
+    /** MotorRepairFlowQuote document id (pipeline quote) */
+    motorRepairFlowQuoteId: { type: String, default: "", trim: true },
+  },
+  { timestamps: true }
+);
+
+quoteSchema.index({ createdByEmail: 1, createdAt: -1 });
+quoteSchema.index({ createdByEmail: 1, customerId: 1 });
+quoteSchema.index({ respondToken: 1 }, { sparse: true });
+quoteSchema.index(
+  { createdByEmail: 1, sourceSystem: 1, externalRef: 1 },
+  { unique: true, partialFilterExpression: { externalRef: { $gt: "" } } }
+);
+
+export default mongoose.models.Quote || mongoose.model("Quote", quoteSchema);

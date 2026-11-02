@@ -1,0 +1,116 @@
+import { NextResponse } from "next/server";
+import { connectDB } from "@/lib/db";
+import DemoRequest from "@/models/DemoRequest";
+import { sendDemoRequestToAdmin, sendDemoRequestThankYou } from "@/lib/email";
+import { checkRateLimit } from "@/lib/rate-limit";
+import { isValidEmail, LIMITS, clampString } from "@/lib/validation";
+
+export async function POST(request) {
+  const { allowed } = await checkRateLimit(request, "contact-demo", 10);
+  if (!allowed) {
+    return NextResponse.json({ error: "Too many requests. Try again later." }, { status: 429 });
+  }
+  try {
+    const body = await request.json();
+    const name = clampString(body?.name, LIMITS.name.max);
+    const email = (body?.email ?? "").trim().toLowerCase().slice(0, LIMITS.email.max);
+    const phone = clampString(body?.phone, 30);
+    const preferDate = clampString(body?.preferDate, 20);
+    const preferTime = clampString(body?.preferTime, 20);
+    const timezone = clampString(body?.timezone, 100);
+    const businessName = clampString(body?.businessName, 200);
+    const website = clampString(body?.website, 300);
+    const city = clampString(body?.city, 120);
+    const state = clampString(body?.state, 80);
+    const businessType = clampString(body?.businessType, 120);
+    const teamSize = clampString(body?.teamSize, 120);
+    const currentTools = clampString(body?.currentTools, 400);
+    const mainProblem = clampString(body?.mainProblem, 400);
+    const sourcePage = clampString(body?.sourcePage, 500);
+
+    if (!name) {
+      return NextResponse.json({ error: "Name is required." }, { status: 400 });
+    }
+    if (!email) {
+      return NextResponse.json({ error: "Email is required." }, { status: 400 });
+    }
+    if (!isValidEmail(email)) {
+      return NextResponse.json({ error: "Please enter a valid email address." }, { status: 400 });
+    }
+    if (!businessName) {
+      return NextResponse.json(
+        { error: "Shop name is required so we can verify your motor repair shop." },
+        { status: 400 }
+      );
+    }
+
+    const fields = {
+      name,
+      email,
+      phone,
+      preferDate,
+      preferTime,
+      timezone,
+      businessName,
+      website,
+      city,
+      state,
+      businessType,
+      teamSize,
+      currentTools,
+      mainProblem,
+      sourcePage,
+    };
+
+    // Persist before notifying. If SMTP is down the lead still survives in admin,
+    // which is what previously made these requests vanish without a trace.
+    let record = null;
+    try {
+      await connectDB();
+      record = await DemoRequest.create({ ...fields, formType: "demo" });
+    } catch (dbErr) {
+      console.error("Demo request save failed:", dbErr);
+    }
+
+    const adminResult = await sendDemoRequestToAdmin(fields);
+    if (!adminResult.ok) {
+      console.error("Demo request admin email failed:", adminResult.error);
+    }
+
+    const thankYouResult = await sendDemoRequestThankYou(name, email, {
+      preferDate,
+      preferTime,
+      timezone,
+    });
+    if (!thankYouResult.ok) {
+      console.warn("Demo request thank-you email failed:", thankYouResult.error);
+    }
+
+    if (record) {
+      try {
+        record.notifyEmailStatus = adminResult.ok ? "sent" : "failed";
+        record.notifyEmailError = adminResult.ok ? "" : String(adminResult.error || "").slice(0, 500);
+        record.thankYouEmailStatus = thankYouResult.ok ? "sent" : "failed";
+        await record.save();
+      } catch (statusErr) {
+        console.error("Demo request email-status update failed:", statusErr);
+      }
+    }
+
+    // Only a lead that reached neither the database nor the mailbox is a real failure.
+    if (!record && !adminResult.ok) {
+      return NextResponse.json(
+        { error: "Failed to send your request. Please try again or email us directly." },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json({ ok: true });
+  } catch (err) {
+    console.error("Contact demo error:", err);
+    return NextResponse.json(
+      { error: err.message || "Request failed" },
+      { status: 500 }
+    );
+  }
+}

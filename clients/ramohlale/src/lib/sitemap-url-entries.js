@@ -1,0 +1,381 @@
+import { getActiveLocationPagesForSitemap } from "@/lib/location-pages-public";
+import { getAllPublishedSlugs } from "@/lib/marketplace";
+import { getPublicSiteUrl } from "@/lib/public-site-url";
+import { SEO_USA_HUB_PATH, SEO_USA_STATES, getAllSeoCityEntries } from "@/lib/seo-usa-config";
+import { getPublicJobPostingSlugs } from "@/lib/job-postings-public";
+import { getPublicTalentSlugs } from "@/lib/talent-public";
+import { connectDB } from "@/lib/db";
+import Listing from "@/models/Listing";
+import { ensureApprovedListingsHaveUrlSlug } from "@/lib/listing-url-slug";
+import { isListingUrlSlugExportSafe } from "@/lib/listing-slug";
+
+/**
+ * Shared sitemap URL list (same sources as `src/app/sitemap.js`).
+ * Used by IndexNow post-build and the sitemap route.
+ *
+ * @returns {Promise<import('next').MetadataRoute.Sitemap>}
+ */
+export async function getSitemapEntries() {
+  const baseUrl = getPublicSiteUrl();
+
+  const staticPages = [
+    { url: baseUrl, lastModified: new Date(), changeFrequency: "weekly", priority: 1 },
+    { url: `${baseUrl}/pricing`, lastModified: new Date(), changeFrequency: "monthly", priority: 0.8 },
+    { url: `${baseUrl}/contact`, lastModified: new Date(), changeFrequency: "monthly", priority: 0.8 },
+    { url: `${baseUrl}/support`, lastModified: new Date(), changeFrequency: "monthly", priority: 0.7 },
+    { url: `${baseUrl}/about`, lastModified: new Date(), changeFrequency: "monthly", priority: 0.7 },
+    { url: `${baseUrl}/privacy`, lastModified: new Date(), changeFrequency: "yearly", priority: 0.5 },
+    { url: `${baseUrl}/terms`, lastModified: new Date(), changeFrequency: "yearly", priority: 0.5 },
+    { url: `${baseUrl}/marketplace`, lastModified: new Date(), changeFrequency: "daily", priority: 0.85 },
+    {
+      url: `${baseUrl}/motor-repair-marketplace`,
+      lastModified: new Date(),
+      changeFrequency: "monthly",
+      priority: 0.75,
+    },
+    { url: `${baseUrl}/electric-motor-repair`, lastModified: new Date(), changeFrequency: "weekly", priority: 0.8 },
+    {
+      url: `${baseUrl}/industrial-motor-repair`,
+      lastModified: new Date(),
+      changeFrequency: "weekly",
+      priority: 0.95,
+    },
+    {
+      url: `${baseUrl}/emergency-motor-repair-what-to-do`,
+      lastModified: new Date(),
+      changeFrequency: "monthly",
+      priority: 0.7,
+    },
+    {
+      url: `${baseUrl}/electric-motor-repair-manufacturing`,
+      lastModified: new Date(),
+      changeFrequency: "monthly",
+      priority: 0.8,
+    },
+    {
+      url: `${baseUrl}/electric-motor-repair-water-treatment`,
+      lastModified: new Date(),
+      changeFrequency: "monthly",
+      priority: 0.8,
+    },
+    {
+      url: `${baseUrl}/electric-motor-repair-oil-gas`,
+      lastModified: new Date(),
+      changeFrequency: "monthly",
+      priority: 0.8,
+    },
+    {
+      url: `${baseUrl}/electric-motor-repair-food-processing`,
+      lastModified: new Date(),
+      changeFrequency: "monthly",
+      priority: 0.8,
+    },
+    {
+      url: `${baseUrl}/electric-motor-repair-mining`,
+      lastModified: new Date(),
+      changeFrequency: "monthly",
+      priority: 0.8,
+    },
+    {
+      url: `${baseUrl}/cost-of-motor-repair-and-rewinding`,
+      lastModified: new Date(),
+      changeFrequency: "weekly",
+      priority: 0.95,
+    },
+    {
+      url: `${baseUrl}/rewind-vs-surplus-motor-replacement`,
+      lastModified: new Date(),
+      changeFrequency: "monthly",
+      priority: 0.8,
+    },
+    {
+      url: `${baseUrl}/generator-rewinding-cost`,
+      lastModified: new Date(),
+      changeFrequency: "monthly",
+      priority: 0.8,
+    },
+    {
+      url: `${baseUrl}/where-to-get-electric-motor-repaired`,
+      lastModified: new Date(),
+      changeFrequency: "monthly",
+      priority: 0.8,
+    },
+    {
+      url: `${baseUrl}/electric-motor-rewinding-cost-calculator`,
+      lastModified: new Date(),
+      changeFrequency: "weekly",
+      priority: 0.9,
+    },
+    {
+      url: `${baseUrl}/calculators-subscription`,
+      lastModified: new Date(),
+      changeFrequency: "monthly",
+      priority: 0.85,
+    },
+    {
+      url: `${baseUrl}/iqwirecalculator`,
+      lastModified: new Date(),
+      changeFrequency: "monthly",
+      priority: 0.9,
+    },
+    {
+      url: `${baseUrl}/motor-maintenance-and-repair`,
+      lastModified: new Date(),
+      changeFrequency: "monthly",
+      priority: 0.92,
+    },
+    {
+      url: `${baseUrl}/iqwirecalculator/privacy`,
+      lastModified: new Date(),
+      changeFrequency: "yearly",
+      priority: 0.5,
+    },
+    {
+      url: `${baseUrl}/iqwirecalculator/privacy-choices`,
+      lastModified: new Date(),
+      changeFrequency: "yearly",
+      priority: 0.5,
+    },
+    { url: `${baseUrl}/electric-motor-repair-shops-listings`, lastModified: new Date(), changeFrequency: "weekly", priority: 0.8 },
+    {
+      url: `${baseUrl}/electric-motor-repair-near-me`,
+      lastModified: new Date(),
+      changeFrequency: "weekly",
+      priority: 0.78,
+    },
+    { url: `${baseUrl}${SEO_USA_HUB_PATH}`, lastModified: new Date(), changeFrequency: "weekly", priority: 0.92 },
+    { url: `${baseUrl}/blog`, lastModified: new Date(), changeFrequency: "weekly", priority: 0.82 },
+    { url: `${baseUrl}/motor-repair-shop-management-software`, lastModified: new Date(), changeFrequency: "monthly", priority: 0.9 },
+    {
+      url: `${baseUrl}/work-order-software-for-motor-repair-shops`,
+      lastModified: new Date(),
+      changeFrequency: "monthly",
+      priority: 0.86,
+    },
+    {
+      url: `${baseUrl}/motor-repair-inventory-software`,
+      lastModified: new Date(),
+      changeFrequency: "monthly",
+      priority: 0.86,
+    },
+    {
+      url: `${baseUrl}/motor-repair-crm-software`,
+      lastModified: new Date(),
+      changeFrequency: "monthly",
+      priority: 0.88,
+    },
+    {
+      url: `${baseUrl}/motor-repair-invoicing-and-quoting-software`,
+      lastModified: new Date(),
+      changeFrequency: "monthly",
+      priority: 0.86,
+    },
+    {
+      url: `${baseUrl}/motor-repair-work-order-template`,
+      lastModified: new Date(),
+      changeFrequency: "monthly",
+      priority: 0.86,
+    },
+    {
+      url: `${baseUrl}/repair-shop-invoice-template`,
+      lastModified: new Date(),
+      changeFrequency: "monthly",
+      priority: 0.86,
+    },
+    { url: `${baseUrl}/job-card-system-for-repair-shop`, lastModified: new Date(), changeFrequency: "monthly", priority: 0.84 },
+    { url: `${baseUrl}/track-motor-repair-jobs`, lastModified: new Date(), changeFrequency: "monthly", priority: 0.84 },
+    {
+      url: `${baseUrl}/technician-mobile-app-shop-floor-first`,
+      lastModified: new Date(),
+      changeFrequency: "monthly",
+      priority: 0.84,
+    },
+    {
+      url: `${baseUrl}/list-your-electric-motor-services`,
+      lastModified: new Date(),
+      changeFrequency: "monthly",
+      priority: 0.85,
+    },
+    {
+      url: `${baseUrl}/why-list-your-motor-repair-shop`,
+      lastModified: new Date(),
+      changeFrequency: "monthly",
+      priority: 0.84,
+    },
+    {
+      url: `${baseUrl}/how-motor-repair-shops-get-more-customers`,
+      lastModified: new Date(),
+      changeFrequency: "monthly",
+      priority: 0.84,
+    },
+    { url: `${baseUrl}/blog/how-to-get-more-customers-for-motor-repair-shop`, lastModified: new Date(), changeFrequency: "monthly", priority: 0.8 },
+    {
+      url: `${baseUrl}/blog/plant-motor-maintenance-and-repair-software-iqmotortrack`,
+      lastModified: new Date(),
+      changeFrequency: "monthly",
+      priority: 0.88,
+    },
+    { url: `${baseUrl}/blog/motor-rewinding-business-marketing-usa`, lastModified: new Date(), changeFrequency: "monthly", priority: 0.8 },
+    { url: `${baseUrl}/blog/best-software-for-repair-shop-2026`, lastModified: new Date(), changeFrequency: "monthly", priority: 0.86 },
+    { url: `${baseUrl}/blog/how-to-manage-repair-jobs-efficiently`, lastModified: new Date(), changeFrequency: "monthly", priority: 0.8 },
+    {
+      url: `${baseUrl}/blog/motor-repair-job-diagram-drawing-tool`,
+      lastModified: new Date(),
+      changeFrequency: "monthly",
+      priority: 0.8,
+    },
+    { url: `${baseUrl}/careers`, lastModified: new Date(), changeFrequency: "weekly", priority: 0.75 },
+    { url: `${baseUrl}/talent`, lastModified: new Date(), changeFrequency: "daily", priority: 0.8 },
+    {
+      url: `${baseUrl}/blog/create-free-electric-motor-shop-technician-profile`,
+      lastModified: new Date(),
+      changeFrequency: "monthly",
+      priority: 0.78,
+    },
+    {
+      url: `${baseUrl}/types-of-electric-motor-repair-services`,
+      lastModified: new Date(),
+      changeFrequency: "monthly",
+      priority: 0.7,
+    },
+    {
+      url: `${baseUrl}/how-to-choose-electric-motor-repair-shop`,
+      lastModified: new Date(),
+      changeFrequency: "monthly",
+      priority: 0.7,
+    },
+    {
+      url: `${baseUrl}/benefits-of-motor-repair-directory`,
+      lastModified: new Date(),
+      changeFrequency: "monthly",
+      priority: 0.7,
+    },
+    {
+      url: `${baseUrl}/when-to-repair-or-replace-electric-motor`,
+      lastModified: new Date(),
+      changeFrequency: "monthly",
+      priority: 0.7,
+    },
+    {
+      url: `${baseUrl}/blog/electric-motor-calculators-fla-torque-speed-power`,
+      lastModified: new Date(),
+      changeFrequency: "monthly",
+      priority: 0.75,
+    },
+    {
+      url: `${baseUrl}/blog/motor-rewinding-cm-best-match-calculator-guide`,
+      lastModified: new Date(),
+      changeFrequency: "monthly",
+      priority: 0.75,
+    },
+    {
+      url: `${baseUrl}/developers/api`,
+      lastModified: new Date(),
+      changeFrequency: "monthly",
+      priority: 0.5,
+    },
+  ];
+
+  const seoUsaStatePages = SEO_USA_STATES.map((s) => ({
+    url: `${baseUrl}/usa/${s.slug}/motor-repair-business-listing`,
+    lastModified: new Date(),
+    changeFrequency: "weekly",
+    priority: 0.88,
+  }));
+
+  const seoUsaCityPages = getAllSeoCityEntries().map((row) => ({
+    url: `${baseUrl}${row.path}`,
+    lastModified: new Date(),
+    changeFrequency: "weekly",
+    priority: 0.85,
+  }));
+
+  let locationPages = [];
+  try {
+    const active = await getActiveLocationPagesForSitemap();
+    locationPages = active.map((p) => ({
+      url: `${baseUrl}/motor-repair-shop/${p.slug}`,
+      lastModified: p.updatedAt ? new Date(p.updatedAt) : new Date(),
+      changeFrequency: "weekly",
+      priority: 0.7,
+    }));
+  } catch (err) {
+    console.error("Sitemap location pages error:", err);
+  }
+
+  let marketplaceItems = [];
+  try {
+    const slugs = await getAllPublishedSlugs();
+    marketplaceItems = slugs.map((slug) => ({
+      url: `${baseUrl}/marketplace/${slug}`,
+      lastModified: new Date(),
+      changeFrequency: "weekly",
+      priority: 0.7,
+    }));
+  } catch (err) {
+    console.error("Sitemap marketplace items error:", err);
+  }
+
+  let careerJobs = [];
+  try {
+    const jobSlugs = await getPublicJobPostingSlugs();
+    careerJobs = jobSlugs.map((slug) => ({
+      url: `${baseUrl}/careers/${slug}`,
+      lastModified: new Date(),
+      changeFrequency: "weekly",
+      priority: 0.72,
+    }));
+  } catch (err) {
+    console.error("Sitemap careers jobs error:", err);
+  }
+
+  let talentProfiles = [];
+  try {
+    const talent = await getPublicTalentSlugs();
+    talentProfiles = talent.map((row) => ({
+      url: `${baseUrl}/talent/${row.slug}`,
+      lastModified: row.updatedAt ? new Date(row.updatedAt) : new Date(),
+      changeFrequency: "weekly",
+      priority: 0.7,
+    }));
+  } catch (err) {
+    console.error("Sitemap talent profiles error:", err);
+  }
+
+  let listingPages = [];
+  try {
+    await connectDB();
+    await ensureApprovedListingsHaveUrlSlug();
+    const listings = await Listing.find({ status: "approved", urlSlug: { $ne: "" } })
+      .select("urlSlug updatedAt")
+      .lean();
+    listingPages = listings
+      .filter((l) => isListingUrlSlugExportSafe(l.urlSlug))
+      .map((l) => ({
+        url: `${baseUrl}/electric-motor-repair-shops-listings/${l.urlSlug}`,
+        lastModified: l.updatedAt ? new Date(l.updatedAt) : new Date(),
+        changeFrequency: "weekly",
+        priority: 0.72,
+      }));
+  } catch (err) {
+    console.error("Sitemap listing pages error:", err);
+  }
+
+  return [
+    ...staticPages,
+    ...seoUsaStatePages,
+    ...seoUsaCityPages,
+    ...locationPages,
+    ...marketplaceItems,
+    ...careerJobs,
+    ...talentProfiles,
+    ...listingPages,
+  ];
+}
+
+/** Plain URL strings for IndexNow (deduped). */
+export async function getAllSitemapUrls() {
+  const entries = await getSitemapEntries();
+  const urls = entries.map((e) => e.url).filter(Boolean);
+  return [...new Set(urls)];
+}

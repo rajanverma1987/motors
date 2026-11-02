@@ -1,0 +1,127 @@
+import { NextResponse } from "next/server";
+import { randomBytes } from "crypto";
+import { connectDB } from "@/lib/db";
+import PurchaseOrder from "@/models/PurchaseOrder";
+import Vendor from "@/models/Vendor";
+import { getPortalUserFromRequest } from "@/lib/auth-portal";
+import { sendPoToVendor } from "@/lib/email";
+import { getPublicSiteUrl } from "@/lib/public-site-url";
+import UserSettings from "@/models/UserSettings";
+import { mergeUserSettings } from "@/lib/user-settings";
+import { buildPoVendorAddressesEmailBlock } from "@/lib/accounts-display";
+import { resolveShopEmailLogo } from "@/lib/shop-email-logo";
+import { parseSendDocumentEmailBody } from "@/lib/send-document-custom-message";
+
+function getParams(context) {
+  return typeof context.params?.then === "function"
+    ? context.params
+    : Promise.resolve(context.params || {});
+}
+
+export async function POST(request, context) {
+  try {
+    const user = await getPortalUserFromRequest(request);
+    if (!user?.email) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    const params = await getParams(context);
+    const id = params?.id;
+    if (!id) {
+      return NextResponse.json({ error: "PO ID required" }, { status: 400 });
+    }
+    await connectDB();
+    const email = user.email.trim().toLowerCase();
+    const doc = await PurchaseOrder.findOne({
+      _id: id,
+      createdByEmail: email,
+    });
+    if (!doc) {
+      return NextResponse.json({ error: "Purchase order not found" }, { status: 404 });
+    }
+
+    const vendor = await Vendor.findOne({
+      _id: doc.vendorId,
+      createdByEmail: email,
+    }).lean();
+    const toEmail = vendor?.email?.trim();
+    if (!toEmail) {
+      return NextResponse.json(
+        { error: "Vendor has no email address. Add an email to the vendor record." },
+        { status: 400 }
+      );
+    }
+
+    if (!doc.vendorShareToken?.trim()) {
+      let token;
+      let exists = true;
+      for (let i = 0; i < 5; i++) {
+        token = randomBytes(24).toString("hex");
+        const existing = await PurchaseOrder.findOne({ vendorShareToken: token }).lean();
+        if (!existing) {
+          exists = false;
+          break;
+        }
+      }
+      doc.vendorShareToken = exists ? randomBytes(24).toString("hex") : token;
+      await doc.save();
+    }
+
+    const baseUrl = getPublicSiteUrl(request);
+    const viewUrl = `${baseUrl.replace(/\/$/, "")}/po/${doc.vendorShareToken}`;
+    const shopCompanyName =
+      (user.shopName && String(user.shopName).trim()) ||
+      process.env.MOTOR_SHOP_COMPANY_NAME?.trim() ||
+      "";
+
+    const settingsDoc = await UserSettings.findOne({ ownerEmail: email }).lean();
+    const uSettings = mergeUserSettings(settingsDoc?.settings);
+    const shopLogo = resolveShopEmailLogo({
+      ownerEmail: email,
+      logoUrl: uSettings.logoUrl,
+      baseUrl,
+    });
+
+    const poVendorAddressesHtml = buildPoVendorAddressesEmailBlock({
+      billingAddress: uSettings.accountsBillingAddress,
+      shippingAddress: uSettings.accountsShippingAddress,
+    });
+
+    const { customMessage, ccEmails, ccError } = await parseSendDocumentEmailBody(request);
+    if (ccError) {
+      return NextResponse.json({ error: ccError }, { status: 400 });
+    }
+
+    const emailResult = await sendPoToVendor(
+      toEmail,
+      vendor.name || vendor.contactName,
+      doc.poNumber || "",
+      viewUrl,
+      shopCompanyName,
+      {
+        userSettings: uSettings,
+        ...(shopLogo.logoSrc ? { logoSrc: shopLogo.logoSrc } : {}),
+        ...(shopLogo.attachments.length ? { attachments: shopLogo.attachments } : {}),
+        ...(poVendorAddressesHtml.trim() ? { poVendorAddressesHtml } : {}),
+        ...(customMessage ? { customMessage } : {}),
+        ...(ccEmails.length ? { cc: ccEmails } : {}),
+      }
+    );
+    if (!emailResult.ok) {
+      return NextResponse.json(
+        { error: emailResult.error || "Failed to send email" },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json({
+      ok: true,
+      message: "Purchase order sent to vendor.",
+    });
+  } catch (err) {
+    console.error("PO send to vendor error:", err);
+    return NextResponse.json(
+      { error: err.message || "Failed to send purchase order" },
+      { status: 500 }
+    );
+  }
+}

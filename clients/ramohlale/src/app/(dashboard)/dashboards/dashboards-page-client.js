@@ -1,0 +1,306 @@
+"use client";
+
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import {
+  FiBarChart2,
+  FiClipboard,
+  FiDatabase,
+  FiDollarSign,
+  FiFileText,
+  FiGrid,
+  FiHome,
+  FiPackage,
+  FiShoppingCart,
+  FiSliders,
+  FiUsers,
+} from "react-icons/fi";
+import Tabs from "@/components/ui/tabs";
+import { useAuth } from "@/contexts/auth-context";
+import ServiceProposalsPanel, {
+  SIMPLE_LIST_VARIANT_INVOICES,
+  SIMPLE_LIST_VARIANT_PROPOSALS,
+} from "./service-proposals-panel";
+import PurchaseOrdersPanel from "./purchase-orders-panel";
+import InventoryPanel from "./inventory-panel";
+import CustomersPanel from "./customers-panel";
+import ReportsPanel from "./reports-panel";
+import MasterDataSearchPanel from "./master-data-search-panel";
+import CalculatorsPanel from "./calculators-panel";
+import DashboardOverviewPanel from "./dashboard-overview-panel";
+import SimpleExpensesPanel from "@/components/simple/simple-expenses-panel";
+import {
+  SIMPLE_CUSTOMERS_LEADS_HREF,
+  SIMPLE_PORTAL_PATH,
+  SIMPLE_TAB_CALCULATORS,
+  SIMPLE_TAB_CUSTOMERS,
+  SIMPLE_TAB_DASHBOARD,
+  SIMPLE_TAB_EXPENSES,
+  SIMPLE_TAB_IDS,
+  SIMPLE_TAB_INVENTORY,
+  SIMPLE_TAB_JOB_BOARD,
+  SIMPLE_TAB_INVOICES,
+  SIMPLE_TAB_MASTER_DATA_SEARCH,
+  SIMPLE_TAB_PURCHASE_ORDERS,
+  SIMPLE_TAB_REPORTS,
+  SIMPLE_TAB_SERVICE_PROPOSALS,
+  SIMPLE_TAB_TRACK_RFQS,
+} from "@/lib/simple-portal-tabs";
+import { SIMPLE_PHONE_DRAWER_TAB_META } from "@/lib/simple-phone-nav";
+import { SIMPLE_PORTAL_ROOT_CLASS } from "@/lib/simple-screen-ui";
+import { simpleSettingsHref } from "@/lib/simple-settings-nav";
+import SimpleJobViewProvider from "@/components/simple/simple-job-view-provider";
+import SimpleJobBoardSection from "@/components/simple/settings/simple-job-board-section";
+import { useUserSettings } from "@/contexts/user-settings-context";
+import { useSimplePhoneChrome } from "@/components/simple/simple-phone-chrome-context";
+import SimplePhoneBottomNav from "@/components/simple/simple-phone-bottom-nav";
+
+/** Square UI — only used on Simple `/dashboards`. */
+const DASHBOARDS_SQUARE_UI_CLASS = [
+  "[&_button]:!rounded-none",
+  "[&_input]:!rounded-none",
+  "[&_textarea]:!rounded-none",
+  "[&_select]:!rounded-none",
+  "[&_.status-filter-pill]:!rounded-none",
+  "[&_.status-filter-pill_span]:!rounded-none",
+].join(" ");
+const DASHBOARDS_TAB_LIST_CLASS =
+  "simple-hub-tablist shrink-0 !flex-nowrap !gap-[2px] !overflow-x-auto !rounded-none !border-0 !bg-transparent !p-0 dark:!bg-transparent max-md:!hidden";
+const DASHBOARDS_TAB_BUTTON_CLASS =
+  "!box-border !flex !h-[4.75rem] !min-w-0 !flex-1 !flex-col !items-center !justify-center !rounded-none !px-1 !py-2 sm:!h-[5.25rem]";
+
+function TabLabel({ icon: Icon, children }) {
+  return (
+    <span className="flex w-full flex-col items-center justify-center gap-1.5 text-center">
+      {Icon ? <Icon className="h-6 w-6 shrink-0 sm:h-7 sm:w-7" aria-hidden /> : null}
+      <span className="max-w-full px-0.5 text-[11px] font-bold leading-tight whitespace-normal sm:text-[12px]">
+        {children}
+      </span>
+    </span>
+  );
+}
+
+export default function DashboardsPageClient() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const { user, isOwner, canViewFinancials, isSimulatedFinancialRestriction } = useAuth();
+  const { settings, loading: settingsLoading } = useUserSettings();
+  const { setHubChrome, clearHubChrome } = useSimplePhoneChrome();
+  const effectiveIsOwner =
+    isOwner ??
+    Boolean(user && !(user?.isEmployee || user?.authType === "employee" || Boolean(user?.employeeId)));
+  const calcOnly = !!user?.calculatorOnlyAccount;
+  const showJobBoard = !calcOnly && settings?.shopFloorBoardInHub === true;
+  const tabParam = searchParams.get("tab");
+  const tabAllowed = (id) =>
+    id === SIMPLE_TAB_JOB_BOARD ? showJobBoard : SIMPLE_TAB_IDS.includes(id);
+  const urlTab = calcOnly
+    ? SIMPLE_TAB_CALCULATORS
+    : !canViewFinancials &&
+        (tabParam === SIMPLE_TAB_INVOICES || tabParam === SIMPLE_TAB_EXPENSES)
+      ? SIMPLE_TAB_SERVICE_PROPOSALS
+      : tabParam === SIMPLE_TAB_TRACK_RFQS
+        ? SIMPLE_TAB_CUSTOMERS
+        : tabAllowed(tabParam)
+          ? tabParam
+          : SIMPLE_TAB_SERVICE_PROPOSALS;
+  /** Immediate UI feedback — URL sync via router.replace can lag and feel like dead clicks. */
+  const [pendingTab, setPendingTab] = useState(null);
+  const activeTab = pendingTab && tabAllowed(pendingTab) ? pendingTab : urlTab;
+
+  useEffect(() => {
+    setPendingTab(null);
+  }, [urlTab]);
+
+  /** Square inputs/buttons in page + portaled form modals while Simple `/dashboards` is mounted. */
+  useEffect(() => {
+    document.body.classList.add("simple-dashboards-square-inputs");
+    return () => {
+      document.body.classList.remove("simple-dashboards-square-inputs");
+    };
+  }, []);
+
+  const handleTabChange = useCallback(
+    (nextTab) => {
+      if (!nextTab || nextTab === activeTab) return;
+      if (calcOnly && nextTab !== SIMPLE_TAB_CALCULATORS) return;
+      setPendingTab(nextTab);
+      const params = new URLSearchParams(searchParams.toString());
+      params.set("tab", nextTab);
+      router.replace(`${SIMPLE_PORTAL_PATH}?${params.toString()}`, { scroll: false });
+    },
+    [activeTab, calcOnly, router, searchParams]
+  );
+
+  const drawerItems = useMemo(() => {
+    if (calcOnly) return [];
+    return SIMPLE_PHONE_DRAWER_TAB_META.filter((item) => {
+      if (item.id === SIMPLE_TAB_JOB_BOARD) return showJobBoard;
+      if (item.id === SIMPLE_TAB_INVOICES) return canViewFinancials;
+      return true;
+    });
+  }, [calcOnly, canViewFinancials, showJobBoard]);
+
+  useEffect(() => {
+    if (calcOnly) {
+      setHubChrome({
+        showBottomNav: false,
+        activeTab,
+        drawerItems: [],
+        onSelectTab: handleTabChange,
+      });
+    } else {
+      setHubChrome({
+        showBottomNav: true,
+        activeTab,
+        drawerItems,
+        onSelectTab: handleTabChange,
+      });
+    }
+    return () => clearHubChrome();
+  }, [calcOnly, activeTab, drawerItems, handleTabChange, setHubChrome, clearHubChrome]);
+
+  useEffect(() => {
+    if (!calcOnly) return;
+    if (tabParam === SIMPLE_TAB_CALCULATORS) return;
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("tab", SIMPLE_TAB_CALCULATORS);
+    router.replace(`${SIMPLE_PORTAL_PATH}?${params.toString()}`, { scroll: false });
+  }, [calcOnly, router, searchParams, tabParam]);
+
+  useEffect(() => {
+    if (tabParam !== "deleted") return;
+    router.replace(simpleSettingsHref("deleted"), { scroll: false });
+  }, [router, tabParam]);
+
+  // Old hub tab links: Motor Down RFQs now live under Customers → Leads.
+  useEffect(() => {
+    if (calcOnly) return;
+    if (tabParam !== SIMPLE_TAB_TRACK_RFQS) return;
+    router.replace(SIMPLE_CUSTOMERS_LEADS_HREF, { scroll: false });
+  }, [calcOnly, router, tabParam]);
+
+  useEffect(() => {
+    if (calcOnly || settingsLoading || showJobBoard) return;
+    if (tabParam !== SIMPLE_TAB_JOB_BOARD) return;
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("tab", SIMPLE_TAB_DASHBOARD);
+    router.replace(`${SIMPLE_PORTAL_PATH}?${params.toString()}`, { scroll: false });
+  }, [calcOnly, router, searchParams, settingsLoading, showJobBoard, tabParam]);
+
+  const tabs = useMemo(() => {
+    const all = [
+      {
+        id: SIMPLE_TAB_DASHBOARD,
+        label: <TabLabel icon={FiHome}>Dashboard</TabLabel>,
+        children: <DashboardOverviewPanel />,
+      },
+      ...(showJobBoard
+        ? [
+            {
+              id: SIMPLE_TAB_JOB_BOARD,
+              label: <TabLabel icon={FiGrid}>Job board</TabLabel>,
+              children: <SimpleJobBoardSection hub />,
+            },
+          ]
+        : []),
+      {
+        id: SIMPLE_TAB_CUSTOMERS,
+        label: <TabLabel icon={FiUsers}>Customers</TabLabel>,
+        children: <CustomersPanel />,
+      },
+      {
+        id: SIMPLE_TAB_SERVICE_PROPOSALS,
+        label: <TabLabel icon={FiFileText}>Service Proposals</TabLabel>,
+        children: <ServiceProposalsPanel variant={SIMPLE_LIST_VARIANT_PROPOSALS} />,
+      },
+      {
+        id: SIMPLE_TAB_INVOICES,
+        label: <TabLabel icon={FiClipboard}>Invoices / Receivables</TabLabel>,
+        children: <ServiceProposalsPanel variant={SIMPLE_LIST_VARIANT_INVOICES} />,
+      },
+      {
+        id: SIMPLE_TAB_EXPENSES,
+        label: <TabLabel icon={FiDollarSign}>Expenses</TabLabel>,
+        /** Phone bottom nav only. Keep out of desktop Hub tab strip. */
+        hideInList: true,
+        children: <SimpleExpensesPanel />,
+      },
+      {
+        id: SIMPLE_TAB_PURCHASE_ORDERS,
+        label: <TabLabel icon={FiShoppingCart}>Purchase / Payable</TabLabel>,
+        children: <PurchaseOrdersPanel />,
+      },
+      {
+        id: SIMPLE_TAB_INVENTORY,
+        label: <TabLabel icon={FiPackage}>Inventory</TabLabel>,
+        children: <InventoryPanel />,
+      },
+      {
+        id: SIMPLE_TAB_REPORTS,
+        label: <TabLabel icon={FiBarChart2}>Reports</TabLabel>,
+        children: <ReportsPanel />,
+      },
+      {
+        id: SIMPLE_TAB_MASTER_DATA_SEARCH,
+        label: <TabLabel icon={FiDatabase}>Master Data Search</TabLabel>,
+        children: <MasterDataSearchPanel />,
+      },
+      {
+        id: SIMPLE_TAB_CALCULATORS,
+        label: <TabLabel icon={FiSliders}>Calculators</TabLabel>,
+        children: <CalculatorsPanel />,
+      },
+    ];
+    const allowed = canViewFinancials
+      ? all
+      : all.filter((t) => t.id !== SIMPLE_TAB_INVOICES && t.id !== SIMPLE_TAB_EXPENSES);
+    return calcOnly ? allowed.filter((t) => t.id === SIMPLE_TAB_CALCULATORS) : allowed;
+  }, [calcOnly, canViewFinancials, showJobBoard]);
+
+  return (
+    <SimpleJobViewProvider>
+    <div
+      className={`${SIMPLE_PORTAL_ROOT_CLASS} flex h-full min-h-0 w-full min-w-0 flex-1 flex-col overflow-hidden ${DASHBOARDS_SQUARE_UI_CLASS} ${
+        calcOnly ? "" : "max-md:pb-[calc(3.75rem+env(safe-area-inset-bottom))]"
+      }`}
+    >
+      {isSimulatedFinancialRestriction ? (
+        <div className="flex shrink-0 flex-col gap-2 border-b border-warning/40 bg-warning/10 px-3 py-2 text-xs text-title sm:flex-row sm:items-center sm:justify-between sm:gap-2 sm:px-4">
+          <div className="flex items-start gap-2 sm:items-center">
+            <span className="mt-1 inline-block h-2 w-2 shrink-0 rounded-full bg-warning sm:mt-0" aria-hidden />
+            <span>
+              <strong>Restricted financial simulation active:</strong> Costs, pricing, margins,
+              invoices, and AP / AR are hidden as viewed by restricted floor staff.
+            </span>
+          </div>
+          {effectiveIsOwner ? (
+            <button
+              type="button"
+              onClick={() => router.push("/dashboards/settings?section=access-controls")}
+              className="shrink-0 self-start font-bold text-primary hover:underline sm:self-auto"
+            >
+              Manage in Settings
+            </button>
+          ) : null}
+        </div>
+      ) : null}
+      <Tabs
+        className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden"
+        listClassName={DASHBOARDS_TAB_LIST_CLASS}
+        tabButtonClassName={DASHBOARDS_TAB_BUTTON_CLASS}
+        panelClassName="flex min-h-0 flex-1 flex-col overflow-hidden pt-0"
+        value={activeTab}
+        onChange={handleTabChange}
+        tabs={tabs}
+        ariaLabel="Simple portal sections"
+        keepMounted
+        animatePanel={false}
+      />
+      {!calcOnly ? (
+        <SimplePhoneBottomNav activeTab={activeTab} onSelectTab={handleTabChange} />
+      ) : null}
+    </div>
+    </SimpleJobViewProvider>
+  );
+}

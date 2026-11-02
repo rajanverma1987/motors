@@ -1,0 +1,134 @@
+import { NextResponse } from "next/server";
+import mongoose from "mongoose";
+import { connectDB } from "@/lib/db";
+import Lead from "@/models/Lead";
+import Listing from "@/models/Listing";
+import { getAdminFromRequest } from "@/lib/auth-admin";
+import { getPublicSiteUrl } from "@/lib/public-site-url";
+import { sendNewWebsiteLeadNotificationToShop } from "@/lib/email";
+import { sendToListingNotifyEmails } from "@/lib/listing-notify-emails";
+import { maybeSendLeadPlatformNurtureEmail } from "@/lib/lead-nurture";
+
+function getParams(context) {
+  return typeof context.params?.then === "function"
+    ? context.params
+    : Promise.resolve(context.params || {});
+}
+
+function normalizeListingId(id) {
+  return String(id || "").trim();
+}
+
+export async function PATCH(request, context) {
+  try {
+    const admin = await getAdminFromRequest(request);
+    if (!admin) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    const params = await getParams(context);
+    const id = params?.id;
+    if (!id) {
+      return NextResponse.json({ error: "ID required" }, { status: 400 });
+    }
+    await connectDB();
+    const body = await request.json();
+    const { assignedListingIds } = body;
+    const doc = await Lead.findById(id);
+    if (!doc) {
+      return NextResponse.json({ error: "Not found" }, { status: 404 });
+    }
+    if (Array.isArray(assignedListingIds)) {
+      const previousIds = new Set((doc.assignedListingIds || []).map(normalizeListingId).filter(Boolean));
+      const nextIds = assignedListingIds
+        .map(normalizeListingId)
+        .filter((lid) => lid && mongoose.isValidObjectId(lid))
+        .slice(0, 3);
+      doc.assignedListingIds = nextIds;
+      await doc.save();
+
+      const newlyAssigned = nextIds.filter((lid) => !previousIds.has(lid));
+      if (newlyAssigned.length > 0) {
+        const listings = await Listing.find({ _id: { $in: newlyAssigned }, status: "approved" })
+          .select("email companyName notificationEmails crmUserId primaryContactPerson")
+          .lean();
+        const siteUrl = getPublicSiteUrl(request);
+        for (const listing of listings) {
+          await sendToListingNotifyEmails(listing, (to) =>
+            sendNewWebsiteLeadNotificationToShop({
+              to,
+              listingCompanyName: listing.companyName || "",
+              leadContactName: doc.name,
+              leadContactCompany: doc.company,
+              siteUrl,
+              lead: {
+                name: doc.name,
+                company: doc.company,
+                email: doc.email,
+                phone: doc.phone,
+                city: doc.city,
+                zipCode: doc.zipCode,
+                buyerType: doc.buyerType,
+                motorType: doc.motorType,
+                motorHp: doc.motorHp,
+                voltage: doc.voltage,
+                urgencyLevel: doc.urgencyLevel,
+                industry: doc.industry,
+                problemDescription: doc.problemDescription,
+                message: doc.message,
+              },
+            })
+          );
+          try {
+            await maybeSendLeadPlatformNurtureEmail({
+              listing,
+              siteUrl,
+              source: "admin_assign",
+            });
+          } catch (e) {
+            console.warn("Lead nurture email skipped:", e?.message || e);
+          }
+        }
+      }
+    }
+    return NextResponse.json({
+      ok: true,
+      lead: {
+        ...doc.toObject(),
+        id: doc._id.toString(),
+        _id: undefined,
+      },
+    });
+  } catch (err) {
+    console.error("Update lead error:", err);
+    return NextResponse.json(
+      { error: err.message || "Failed to update" },
+      { status: 500 }
+    );
+  }
+}
+
+export async function DELETE(request, context) {
+  try {
+    const admin = await getAdminFromRequest(request);
+    if (!admin) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    const params = await getParams(context);
+    const id = params?.id;
+    if (!id) {
+      return NextResponse.json({ error: "ID required" }, { status: 400 });
+    }
+    await connectDB();
+    const doc = await Lead.findByIdAndDelete(id);
+    if (!doc) {
+      return NextResponse.json({ error: "Not found" }, { status: 404 });
+    }
+    return NextResponse.json({ ok: true });
+  } catch (err) {
+    console.error("Delete lead error:", err);
+    return NextResponse.json(
+      { error: err.message || "Failed to delete" },
+      { status: 500 }
+    );
+  }
+}

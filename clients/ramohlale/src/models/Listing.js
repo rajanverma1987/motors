@@ -1,0 +1,96 @@
+import mongoose from "mongoose";
+import { computeListingDirectoryScore } from "@/lib/listing-directory-score";
+
+const listingSchema = new mongoose.Schema(
+  {
+    // Contact & company
+    email: { type: String, required: true },
+    /** Extra addresses that receive approval / lead / review emails (login stays `email`). */
+    notificationEmails: { type: [String], default: [] },
+    companyName: { type: String, required: true },
+    logoUrl: { type: String, default: "" },
+    shortDescription: { type: String, default: "" },
+    yearsInBusiness: { type: String, default: "" },
+    phone: { type: String, default: "" },
+    website: { type: String, default: "" },
+    primaryContactPerson: { type: String, default: "" },
+    address: { type: String, default: "" },
+    city: { type: String, default: "" },
+    state: { type: String, default: "" },
+    zipCode: { type: String, default: "" },
+    country: { type: String, default: "United States" },
+    // Services & capabilities (arrays of strings)
+    services: [{ type: String }],
+    /** Prefer not to receive directory leads below this HP (platform floor still applies). */
+    minMotorSizeHP: { type: String, default: "" },
+    maxMotorSizeHP: { type: String, default: "" },
+    maxVoltage: { type: String, default: "" },
+    maxWeightHandled: { type: String, default: "" },
+    motorCapabilities: [{ type: String }],
+    equipmentTesting: [{ type: String }],
+    rewindingCapabilities: [{ type: String }],
+    industriesServed: [{ type: String }],
+    pickupDeliveryAvailable: { type: Boolean, default: false },
+    craneCapacity: { type: String, default: "" },
+    forkliftCapacity: { type: String, default: "" },
+    rushRepairAvailable: { type: Boolean, default: false },
+    turnaroundTime: { type: String, default: "" },
+    certifications: [{ type: String }],
+    shopSizeSqft: { type: String, default: "" },
+    numTechnicians: { type: String, default: "" },
+    numEngineers: { type: String, default: "" },
+    yearsCombinedExperience: { type: String, default: "" },
+    galleryPhotoUrls: [{ type: String }],
+    serviceZipCode: { type: String, default: "" },
+    serviceRadiusMiles: { type: String, default: "" },
+    statesServed: { type: String, default: "" },
+    citiesOrMetrosServed: { type: String, default: "" },
+    areaCoveredFrom: { type: String, default: "" },
+    // Status & review
+    status: { type: String, enum: ["in-review", "approved", "rejected"], default: "in-review" },
+    submittedAt: { type: Date, default: Date.now },
+    reviewedAt: { type: Date },
+    reviewedBy: { type: String },
+    rejectionReason: { type: String },
+    isSeed: { type: Boolean, default: false },
+    /**
+     * Paying / promoted directory placement. Premium Partner listings sort above
+     * all other approved shops in public search and location results.
+     */
+    isPremium: { type: Boolean, default: false },
+    /** Isolated client host slug when provisioned (e.g. cemotor → cemotor.3phaseflow.com). */
+    tenantSlug: { type: String, default: "", trim: true, lowercase: true, index: true },
+    /** Public directory URL segment (no Mongo id): e.g. clearwater-electric-motor-repair-llc */
+    urlSlug: { type: String, default: "" },
+    /** Profile completeness for directory sort (services, capacity, capabilities, coverage). */
+    directoryScore: { type: Number, default: 0 },
+    /** Portal User created via Admin → Onboard to CRM */
+    crmUserId: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null },
+    crmOnboardedAt: { type: Date, default: null },
+  },
+  { timestamps: true }
+);
+
+// Mongoose 9+: pre("save") no longer receives next(); use sync or async/Promise only.
+listingSchema.pre("save", function listingDirectoryScorePreSave() {
+  try {
+    const plain = this.toObject({ depopulate: true });
+    this.directoryScore = computeListingDirectoryScore(plain);
+  } catch {
+    this.directoryScore = 0;
+  }
+});
+
+listingSchema.index(
+  { urlSlug: 1 },
+  {
+    unique: true,
+    partialFilterExpression: { urlSlug: { $type: "string", $ne: "" } },
+  }
+);
+listingSchema.index({ status: 1, submittedAt: -1 });
+listingSchema.index({ status: 1 });
+listingSchema.index({ companyName: 1 });
+listingSchema.index({ status: 1, isPremium: -1, directoryScore: -1, companyName: 1 });
+
+export default mongoose.models.Listing || mongoose.model("Listing", listingSchema);

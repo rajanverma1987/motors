@@ -1,0 +1,322 @@
+/** Field keys + labels for AC / DC / Armature work order forms (values stored on WO + merged to Motor). */
+
+export const AC_WORK_ORDER_FIELDS = [
+  { key: "hp", label: "HP" },
+  { key: "make", label: "Make" },
+  { key: "model", label: "Model" },
+  { key: "frame", label: "Frame" },
+  { key: "type", label: "Type" },
+  { key: "volts", label: "Volts" },
+  { key: "amps", label: "Amps" },
+  { key: "rpm", label: "Rpm" },
+  { key: "poles", label: "Poles" },
+  { key: "hz", label: "HZ" },
+  { key: "phase", label: "Phase" },
+  { key: "wdg_type", label: "Wdg Type" },
+  { key: "slots", label: "Slots" },
+  { key: "coils", label: "Coils" },
+  { key: "grouping", label: "Grouping" },
+  { key: "turns", label: "Turns" },
+  { key: "wire_size", label: "Wire Size" },
+  { key: "wire_in_hand", label: "Wire in Hand" },
+  { key: "span", label: "Span" },
+  { key: "conn", label: "Conn." },
+  { key: "jumper", label: "Jumper" },
+  { key: "conn_end", label: "Conn. End" },
+  { key: "wind_end", label: "Wind End" },
+  { key: "lead_length", label: "Lead/Length" },
+  { key: "core_length", label: "Core Length" },
+  { key: "core_dia", label: "Core Dia." },
+  { key: "b_iron", label: "B. Iron" },
+  { key: "sl_depth", label: "Sl. Depth" },
+  { key: "t_width", label: "T. Width" },
+  { key: "lugs_hole_size", label: "Lugs/Hole Size" },
+  { key: "overloads", label: "Overloads" },
+  { key: "therm", label: "Therm." },
+  { key: "heaters", label: "Heaters" },
+  { key: "head_size", label: "Head Size" },
+  { key: "distance", label: "Distance" },
+  { key: "wire_lbs", label: "Wire lbs." },
+];
+
+/** Keys already shown under motor Identification & specs — hide from “Others” on motor detail. */
+export const AC_WORK_ORDER_KEYS_OVERLAPPING_MOTOR_ASSETS = new Set([
+  "hp",
+  "make",
+  "model",
+  "frame",
+  "type",
+  "volts",
+  "amps",
+  "rpm",
+  "slots",
+  "core_length",
+  "core_dia",
+]);
+
+export const DC_WORK_ORDER_FIELDS = [
+  { key: "hp", label: "HP" },
+  { key: "make", label: "Make" },
+  { key: "model", label: "Model" },
+  { key: "frame", label: "Frame" },
+  { key: "type", label: "Type" },
+  { key: "volts", label: "Volts" },
+  { key: "amps", label: "Amps" },
+  { key: "rpm", label: "Rpm" },
+  { key: "poles", label: "Poles" },
+  { key: "shunt_turns", label: "Shunt Turns" },
+  { key: "no_of_shunts", label: "No of Shunt's" },
+  { key: "connection", label: "Connection" },
+  { key: "shunt_wires_size", label: "Shunt# Wires & Size" },
+  { key: "i_pole_wires_size", label: "I-pole# Wires & Size" },
+  { key: "conn_end", label: "Conn End" },
+  { key: "wind_end", label: "Wind End" },
+  { key: "lead_length", label: "Lead Length" },
+  { key: "lugs_hole_size", label: "Lugs Hole Size" },
+  { key: "overloads", label: "OverLoads" },
+  { key: "thermistors", label: "Thermistors" },
+  { key: "core_length", label: "Core Length" },
+  { key: "inside_diameter", label: "Inside Diameter" },
+  { key: "shunt_pole_dim", label: "Shunt Pole Dim." },
+  { key: "i_pole_dim", label: "I-pole Dim." },
+  { key: "shunt_wire_lbs", label: "Shunt Wire LBS" },
+  { key: "i_pole_wire_lbs", label: "I-pole Wire LBS" },
+  { key: "shunt_lead_marking", label: "Shunt Lead Marking" },
+  { key: "i_pole_lead_markings", label: "I-pole Lead Markings" },
+  { key: "i_pole_turns", label: "I-pole Turns" },
+];
+
+/** DC work order keys already in motor Identification & specs — hide on motor form/detail. */
+const DC_WORK_ORDER_KEYS_OVERLAPPING_MOTOR_ASSETS = new Set([
+  "hp",
+  "make",
+  "model",
+  "frame",
+  "type",
+  "volts",
+  "amps",
+  "rpm",
+  "core_length",
+  "inside_diameter",
+]);
+
+/** DC “Others” section: DC WO fields excluding duplicates of Identification & specs. */
+export const DC_OTHERS_FIELDS = DC_WORK_ORDER_FIELDS.filter(
+  (f) => !DC_WORK_ORDER_KEYS_OVERLAPPING_MOTOR_ASSETS.has(f.key)
+);
+
+/** AC winding fields excluding duplicates of Identification & specs. */
+export const AC_OTHERS_FIELDS = AC_WORK_ORDER_FIELDS.filter(
+  (f) => !AC_WORK_ORDER_KEYS_OVERLAPPING_MOTOR_ASSETS.has(f.key)
+);
+
+export const DC_ARMATURE_FIELDS = [
+  { key: "hp", label: "HP" },
+  { key: "make", label: "Make" },
+  { key: "model", label: "Model" },
+  { key: "frame", label: "Frame" },
+  { key: "type", label: "Type" },
+  { key: "volts", label: "Volts" },
+  { key: "amps", label: "Amps" },
+  { key: "rpm", label: "Rpm" },
+  { key: "poles", label: "Poles" },
+  { key: "span", label: "Span" },
+  { key: "turns", label: "Turns" },
+  { key: "conn", label: "Conn." },
+  { key: "eq", label: "Eq." },
+  { key: "conn_end", label: "Conn. End" },
+  { key: "wind_end", label: "Wind. End" },
+  { key: "wires_in_coil", label: "Wires In Coil" },
+  { key: "wires_in_hand", label: "Wires In Hand" },
+  { key: "wire_size", label: "Wire Size" },
+  { key: "fan", label: "Fan" },
+  { key: "comm_part_no", label: "Comm Part#" },
+  { key: "coil_type", label: "Coil Type" },
+  { key: "slots", label: "Slots" },
+  { key: "bars", label: "Bars" },
+  { key: "iron_l", label: "Iron L." },
+  { key: "iron_diam", label: "Iron Diam." },
+  { key: "br_surf_l", label: "BR.Surf. L." },
+  { key: "br_surf_d", label: "BR. Surf. D" },
+  { key: "riser_diam", label: "Riser Diam." },
+  { key: "stack_teosh", label: "Stack T.E.O.SH:" },
+  { key: "stack_to_riser", label: "Stack to Riser:" },
+  { key: "copper_teosh", label: "Copper T.E.O SH:" },
+  { key: "total_wires_in_riser", label: "Total Wires In Riser" },
+  { key: "total_wires_riser_height", label: "Total Wires In Riser — Height" },
+  { key: "total_wires_riser_width", label: "Total Wires In Riser — Width" },
+];
+
+/** Armature keys that duplicate motor Identification & specs (incl. iron L./diam.). */
+const DC_ARMATURE_KEYS_OVERLAPPING_MOTOR_ASSETS = new Set([
+  ...DC_WORK_ORDER_KEYS_OVERLAPPING_MOTOR_ASSETS,
+  "slots",
+  "bars",
+  "iron_l",
+  "iron_diam",
+]);
+
+/** Armature section on motor form/detail: exclude identification duplicates. */
+export const DC_ARMATURE_OTHERS_FIELDS = DC_ARMATURE_FIELDS.filter(
+  (f) => !DC_ARMATURE_KEYS_OVERLAPPING_MOTOR_ASSETS.has(f.key)
+);
+
+export const JOB_TYPE_OPTIONS = [
+  { value: "complete_motor", label: "Complete Motor" },
+  { value: "field_frame_only", label: "Field Frame Only" },
+  /** DC work orders only — armature winding specs without DC motor tab. */
+  { value: "armature_only", label: "Armature only" },
+];
+
+/**
+ * Persisted jobType for WorkOrder. Armature only is valid for DC motors only.
+ * @param {string} raw
+ * @param {"AC"|"DC"} motorClass
+ */
+export function normalizeWorkOrderJobType(raw, motorClass) {
+  const v = String(raw || "").trim();
+  if (v === "field_frame_only") return "field_frame_only";
+  if (v === "armature_only" && motorClass === "DC") return "armature_only";
+  return "complete_motor";
+}
+
+export const DEFAULT_WORK_ORDER_STATUSES = [
+  "Assigned",
+  "In Progress",
+  "Waiting Parts",
+  "QC",
+  "Completed",
+  "Shipped",
+];
+
+/** @param {string} motorType */
+export function motorClassFromMotorType(motorType) {
+  const t = String(motorType || "").toLowerCase();
+  if (/\bdc\b|direct\s*current|d\.c\./i.test(t)) return "DC";
+  return "AC";
+}
+
+export function emptySpecsFromFields(fieldList) {
+  const o = {};
+  for (const { key } of fieldList) o[key] = "";
+  return o;
+}
+
+/** Nameplate + identification values on Motor → work order spec keys. */
+function motorNameplateSpecMap(motor) {
+  const m = motor || {};
+  return {
+    hp: m.hp,
+    make: m.manufacturer,
+    model: m.model,
+    frame: m.frameSize,
+    volts: m.voltage,
+    amps: m.amps,
+    rpm: m.rpm,
+    type: m.motorType,
+    slots: m.slots,
+    bars: m.bars,
+    core_length: m.coreLength,
+    core_dia: m.coreDiameter,
+    inside_diameter: m.coreDiameter,
+    iron_l: m.coreLength,
+    iron_diam: m.coreDiameter,
+  };
+}
+
+export function prefillSpecsFromMotor(motor, fieldList) {
+  const map = motorNameplateSpecMap(motor);
+  const out = emptySpecsFromFields(fieldList);
+  for (const { key } of fieldList) {
+    if (map[key] != null && String(map[key]).trim() !== "") out[key] = String(map[key]).trim();
+  }
+  return out;
+}
+
+function mergeStoredMotorSpecs(stored, fieldList, base) {
+  const out = { ...base };
+  if (!stored || typeof stored !== "object") return out;
+  for (const { key } of fieldList) {
+    const v = stored[key];
+    if (v != null && String(v).trim() !== "") out[key] = String(v).trim();
+  }
+  return out;
+}
+
+/**
+ * Full motor specs for a new work order (nameplate + motor.acSpecs / dcSpecs / dcArmatureSpecs).
+ * @param {object} motor
+ * @param {"AC"|"DC"} motorClass
+ */
+export function specsFromMotorRecord(motor, motorClass) {
+  const mc = motorClass || motorClassFromMotorType(motor?.motorType);
+  const m = motor || {};
+  if (mc === "AC") {
+    return {
+      acSpecs: mergeStoredMotorSpecs(
+        m.acSpecs,
+        AC_WORK_ORDER_FIELDS,
+        prefillSpecsFromMotor(m, AC_WORK_ORDER_FIELDS)
+      ),
+      dcSpecs: {},
+      armatureSpecs: {},
+    };
+  }
+  if (mc === "DC") {
+    return {
+      acSpecs: {},
+      dcSpecs: mergeStoredMotorSpecs(
+        m.dcSpecs,
+        DC_WORK_ORDER_FIELDS,
+        prefillSpecsFromMotor(m, DC_WORK_ORDER_FIELDS)
+      ),
+      armatureSpecs: mergeStoredMotorSpecs(
+        m.dcArmatureSpecs,
+        DC_ARMATURE_FIELDS,
+        prefillSpecsFromMotor(m, DC_ARMATURE_FIELDS)
+      ),
+    };
+  }
+  return { acSpecs: {}, dcSpecs: {}, armatureSpecs: {} };
+}
+
+/**
+ * Work order specs with empty fields filled from the linked motor record.
+ * Saved work order values take priority.
+ * @param {{ acSpecs?: object, dcSpecs?: object, armatureSpecs?: object }} woSpecs
+ * @param {object} motor
+ * @param {"AC"|"DC"} motorClass
+ */
+export function mergeWorkOrderSpecsWithMotor(woSpecs, motor, motorClass) {
+  const fromMotor = specsFromMotorRecord(motor, motorClass);
+  const fill = (wo, motorSpec, fieldList) => {
+    const out = {};
+    for (const { key } of fieldList) {
+      const w = String(wo?.[key] ?? "").trim();
+      const mv = String(motorSpec?.[key] ?? "").trim();
+      out[key] = w || mv;
+    }
+    return out;
+  };
+  const mc = motorClass || motorClassFromMotorType(motor?.motorType);
+  if (mc === "AC") {
+    return {
+      acSpecs: fill(woSpecs?.acSpecs, fromMotor.acSpecs, AC_WORK_ORDER_FIELDS),
+      dcSpecs: {},
+      armatureSpecs: {},
+    };
+  }
+  if (mc === "DC") {
+    return {
+      acSpecs: {},
+      dcSpecs: fill(woSpecs?.dcSpecs, fromMotor.dcSpecs, DC_WORK_ORDER_FIELDS),
+      armatureSpecs: fill(woSpecs?.armatureSpecs, fromMotor.armatureSpecs, DC_ARMATURE_FIELDS),
+    };
+  }
+  return {
+    acSpecs: woSpecs?.acSpecs && typeof woSpecs.acSpecs === "object" ? woSpecs.acSpecs : {},
+    dcSpecs: woSpecs?.dcSpecs && typeof woSpecs.dcSpecs === "object" ? woSpecs.dcSpecs : {},
+    armatureSpecs:
+      woSpecs?.armatureSpecs && typeof woSpecs.armatureSpecs === "object" ? woSpecs.armatureSpecs : {},
+  };
+}

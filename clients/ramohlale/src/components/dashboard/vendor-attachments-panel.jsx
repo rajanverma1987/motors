@@ -1,0 +1,252 @@
+"use client";
+
+import { useId, useState } from "react";
+import { FiTrash2, FiExternalLink, FiDownload, FiUpload, FiCamera } from "react-icons/fi";
+import SimpleAttachmentPreviewModal, {
+  resolveAttachmentHref,
+} from "@/components/simple/simple-attachment-preview-modal";
+
+/**
+ * @typedef {{ url: string, name: string }} VendorAttachment
+ */
+
+/**
+ * resourceId overrides vendorId when set (e.g. purchase order / sales commission).
+ * resourceLabel drives helper copy ("vendor", "purchase order", …).
+ *
+ * @param {{
+ *   title?: string,
+ *   vendorId?: string | null,
+ *   resourceId?: string | null,
+ *   resourceLabel?: string,
+ *   attachments: VendorAttachment[],
+ *   onAttachmentsChange: (next: VendorAttachment[]) => void,
+ *   pendingFiles: File[],
+ *   onPendingFilesChange: (next: File[]) => void,
+ *   uploading?: boolean,
+ *   onPickFilesForUpload?: (files: File[], resourceId: string | null) => void | Promise<void>,
+ *   hideUpload?: boolean,
+ *   readOnly?: boolean,
+ *   onRemoveSavedRow?: (index: number, row: VendorAttachment) => void | Promise<void>,
+ * }} props
+ */
+export default function VendorAttachmentsPanel({
+  title = "Documents",
+  vendorId,
+  resourceId,
+  resourceLabel = "vendor",
+  attachments,
+  onAttachmentsChange,
+  pendingFiles,
+  onPendingFilesChange,
+  uploading = false,
+  onPickFilesForUpload,
+  hideUpload = false,
+  readOnly = false,
+  onRemoveSavedRow,
+}) {
+  const fileInputId = useId();
+  const cameraInputId = `${fileInputId}-camera`;
+  const [preview, setPreview] = useState(null);
+  const savedResourceId = resourceId !== undefined ? resourceId : vendorId;
+  const isCreate = !savedResourceId;
+  const canUpload = !hideUpload && !readOnly;
+  const canRemove = !readOnly;
+
+  const handleFileChange = async (e) => {
+    if (!canUpload) return;
+    const list = e.target.files;
+    if (!list?.length) return;
+    const files = Array.from(list);
+    e.target.value = "";
+    if (isCreate) {
+      onPendingFilesChange((prev) => [...(Array.isArray(prev) ? prev : []), ...files].slice(0, 50));
+      return;
+    }
+    if (onPickFilesForUpload && savedResourceId) {
+      await onPickFilesForUpload(files, savedResourceId);
+    }
+  };
+
+  const removePending = (index) => {
+    onPendingFilesChange((prev) => (Array.isArray(prev) ? prev : []).filter((_, i) => i !== index));
+  };
+
+  const removeAttachment = (index) => {
+    const row = attachments[index];
+    if (onRemoveSavedRow) {
+      void Promise.resolve(onRemoveSavedRow(index, row));
+      return;
+    }
+    onAttachmentsChange(attachments.filter((_, i) => i !== index));
+  };
+
+  const viewUrl = (row) => {
+    const href = resolveAttachmentHref(row?.url ?? row);
+    const name = typeof row === "object" && row ? row.name || "" : "";
+    const contentType = typeof row === "object" && row ? row.contentType || "" : "";
+    if (!href) return;
+    setPreview({ url: href, name, contentType });
+  };
+
+  const downloadUrl = (row) => {
+    const href = resolveAttachmentHref(row?.url ?? row);
+    const name =
+      (typeof row === "object" && row ? String(row.name || "").trim() : "") || "attachment";
+    if (!href) return;
+    const a = document.createElement("a");
+    a.href = href;
+    a.download = name;
+    a.rel = "noopener noreferrer";
+    a.target = "_blank";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  };
+
+  const hasRows = attachments.length > 0 || pendingFiles.length > 0;
+  const uploadBtnClass = `inline-flex cursor-pointer items-center justify-center gap-1.5 whitespace-nowrap rounded-md border-[0.5px] border-border bg-transparent px-3 py-1 text-sm text-text transition-opacity hover:bg-card hover:border-primary/20 ${
+    uploading ? "pointer-events-none cursor-not-allowed opacity-50" : ""
+  }`;
+
+  return (
+    <div className="w-full min-w-0">
+      <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+        <div>
+          <div className="text-xs font-medium text-secondary">{title}</div>
+          <p className="mt-0.5 text-xs text-secondary">
+            {readOnly
+              ? "Payment proof and related documents."
+              : hideUpload
+                ? "View or remove documents. Removals save immediately."
+                : isCreate
+                  ? `Select files before saving; they upload after the ${resourceLabel} is created.`
+                  : `Upload files stored with this ${resourceLabel}. Save the form to persist removals.`}
+          </p>
+        </div>
+        {canUpload ? (
+          <div className="flex shrink-0 flex-wrap items-center gap-2">
+            <input
+              id={fileInputId}
+              type="file"
+              multiple
+              disabled={uploading}
+              aria-label="Add files"
+              className="sr-only"
+              accept="*/*"
+              onChange={handleFileChange}
+            />
+            <input
+              id={cameraInputId}
+              type="file"
+              accept="image/*"
+              capture="environment"
+              disabled={uploading}
+              aria-label="Take photo"
+              className="sr-only"
+              onChange={handleFileChange}
+            />
+            <label htmlFor={fileInputId} className={uploadBtnClass}>
+              <FiUpload className="h-4 w-4 shrink-0" aria-hidden />
+              {uploading ? "Uploading…" : "Add files"}
+            </label>
+            <label htmlFor={cameraInputId} className={uploadBtnClass} title="Open camera on tablet or phone">
+              <FiCamera className="h-4 w-4 shrink-0" aria-hidden />
+              Take photo
+            </label>
+          </div>
+        ) : null}
+      </div>
+
+      {!hasRows ? (
+        <p className="rounded-md border border-dashed border-border bg-card/50 px-3 py-6 text-center text-sm text-secondary">
+          No documents yet.
+        </p>
+      ) : (
+        <div className="overflow-hidden rounded-lg border border-border">
+          <table className="w-full text-sm">
+            <thead className="border-b border-border bg-card">
+              <tr>
+                <th className="px-3 py-2 text-left font-medium text-title">Name</th>
+                <th className="w-28 px-3 py-2 text-right font-medium text-title">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {attachments.map((row, i) => {
+                return (
+                <tr key={`${row.url}-${i}`} className="border-b border-border last:border-b-0">
+                  <td className="max-w-[20rem] truncate px-3 py-2 text-title" title={row.name || row.url}>
+                    {row.name || row.url || "—"}
+                  </td>
+                  <td className="px-3 py-2 text-right">
+                    <div className="flex justify-end gap-1">
+                      <button
+                        type="button"
+                        className="rounded p-1.5 text-primary hover:bg-primary/10 focus:outline-none focus:ring-2 focus:ring-primary"
+                        aria-label="Preview document"
+                        title="Preview"
+                        onClick={() => viewUrl(row)}
+                      >
+                        <FiExternalLink className="h-4 w-4" aria-hidden />
+                      </button>
+                      <button
+                        type="button"
+                        className="rounded p-1.5 text-primary hover:bg-primary/10 focus:outline-none focus:ring-2 focus:ring-primary"
+                        aria-label="Download document"
+                        title="Download"
+                        onClick={() => downloadUrl(row)}
+                      >
+                        <FiDownload className="h-4 w-4" aria-hidden />
+                      </button>
+                      {canRemove ? (
+                        <button
+                          type="button"
+                          disabled={uploading}
+                          className="rounded p-1.5 text-danger hover:bg-danger/10 focus:outline-none focus:ring-2 focus:ring-danger disabled:opacity-40"
+                          aria-label="Remove from list"
+                          title="Remove"
+                          onClick={() => removeAttachment(i)}
+                        >
+                          <FiTrash2 className="h-4 w-4" aria-hidden />
+                        </button>
+                      ) : null}
+                    </div>
+                  </td>
+                </tr>
+                );
+              })}
+              {!readOnly
+                ? pendingFiles.map((file, i) => (
+                    <tr key={`pending-${file.name}-${i}`} className="border-b border-border last:border-b-0 bg-muted/10">
+                      <td className="max-w-[20rem] truncate px-3 py-2 text-title" title={file.name}>
+                        {file.name}
+                        <span className="ml-2 text-xs text-amber-700">(pending upload)</span>
+                      </td>
+                      <td className="px-3 py-2 text-right">
+                        <button
+                          type="button"
+                          disabled={uploading}
+                          className="rounded p-1.5 text-danger hover:bg-danger/10 focus:outline-none focus:ring-2 focus:ring-danger disabled:opacity-40"
+                          aria-label="Remove file"
+                          onClick={() => removePending(i)}
+                        >
+                          <FiTrash2 className="h-4 w-4" aria-hidden />
+                        </button>
+                      </td>
+                    </tr>
+                  ))
+                : null}
+            </tbody>
+          </table>
+        </div>
+      )}
+      <SimpleAttachmentPreviewModal
+        open={Boolean(preview)}
+        onClose={() => setPreview(null)}
+        url={preview?.url}
+        name={preview?.name}
+        contentType={preview?.contentType}
+      />
+    </div>
+  );
+}
