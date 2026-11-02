@@ -1,4 +1,5 @@
 import { getTransporter } from "@/lib/email-transport";
+import { getPlatformSmtpFrom, getPlatformSmtpTransport } from "@/lib/platform-smtp";
 import { getPublicSiteUrl } from "@/lib/public-site-url";
 import { getBrandLogoAbsoluteUrl } from "@/lib/brand-logo";
 import {
@@ -1247,6 +1248,25 @@ export async function sendTrackPasswordResetEmail({ to, contactName, resetUrl })
     <p>,  3PhaseTrack</p>
   `;
   return sendEmail(to, subject, wrapPlatformBrandedHtml(html));
+}
+
+/** Shop portal password reset (always 3PhaseFlow platform SMTP). */
+export async function sendPortalPasswordResetEmail({ to, contactName, shopName, resetUrl }) {
+  const subject = "Reset your 3PhaseFlow shop portal password";
+  const shop = String(shopName || "").trim();
+  const html = `
+    <p>Hello ${escHtmlEmail(contactName || "there")},</p>
+    <p>We received a request to reset the password for your 3PhaseFlow shop portal${
+      shop ? ` (${escHtmlEmail(shop)})` : ""
+    }.</p>
+    <p>Use the link below to choose a new password. It expires in 60 minutes and can be used once.</p>
+    ${trackShopActionButton("Set a new password", resetUrl)}
+    <p style="font-size:13px;color:#555;">If you did not ask for this, you can ignore this email. Your password stays unchanged.</p>
+    <p>,  3PhaseFlow</p>
+  `;
+  const transport = getPlatformSmtpTransport() || getTransporter();
+  const from = getPlatformSmtpFrom() || fromEmail || process.env.SMTP_USER;
+  return sendEmail(to, subject, wrapPlatformBrandedHtml(html), { transport, from });
 }
 
 /** Email verification for a new 3PhaseTrack facility account. */

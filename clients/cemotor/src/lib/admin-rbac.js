@@ -20,6 +20,7 @@ const ADMIN_ALLOWED = new Set([
   "tenants.read",
   "tenants.provision",
   "tenants.open_shop",
+  "tenants.password_reset",
   "tenants.suspend",
   "nurture.manage",
 ]);

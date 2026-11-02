@@ -18,6 +18,9 @@ const userSchema = new mongoose.Schema(
     lastLoginAt: { type: Date, default: null },
     /** After multi-host migrate: shared-portal login disabled; shop uses this slug host. */
     migratedToSlug: { type: String, default: "", trim: true, lowercase: true },
+    /** SHA-256 of one-time password reset token (plain token only in email link). */
+    passwordResetTokenHash: { type: String, default: "", index: true },
+    passwordResetExpiresAt: { type: Date, default: null },
   },
   { timestamps: true }
 );

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import Button from "@/components/ui/button";
 import Input from "@/components/ui/input";
@@ -11,6 +12,8 @@ import BrandLogo from "@/components/marketing/brand-logo";
 import { portalLandingPath } from "@/lib/portal-view";
 
 const REMEMBER_LOGIN_KEY = "iqmotorbase.rememberLogin";
+const SUPPORT_EMAIL = "contact@3phaseflow.com";
+const MARKETING_URL = "https://3phaseflow.com";
 
 function readRememberedLogin() {
   if (typeof window === "undefined") return { rememberMe: false, email: "", password: "" };
@@ -141,105 +144,233 @@ export default function ShopLoginPage() {
     }
   };
 
+  const supportMailto = `mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent("Shop portal help")}`;
+
   return (
-    <div className="relative flex min-h-screen flex-col bg-white text-[#1f1c1a]">
-      <main className="relative z-10 flex flex-1 flex-col items-center justify-center px-4 py-12 sm:px-6">
-        <div className="w-full max-w-md">
-          <div className="mb-8 flex flex-col items-center text-center">
+    <div className="min-h-screen lg:grid lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)]">
+      {/* Brand panel: charcoal metal logo on a warm light plate (no invert) */}
+      <aside className="relative flex flex-col justify-between overflow-hidden bg-[#1f1c1a] px-8 py-10 text-[#f3f1ef] sm:px-12 sm:py-12 lg:min-h-screen lg:px-14 lg:py-14">
+        <div
+          className="pointer-events-none absolute inset-0"
+          style={{
+            background:
+              "radial-gradient(ellipse 80% 55% at 18% 12%, rgba(196,122,54,0.32), transparent 55%), radial-gradient(ellipse 55% 45% at 92% 88%, rgba(196,122,54,0.14), transparent 50%)",
+          }}
+          aria-hidden
+        />
+
+        <div className="relative z-10">
+          <div className="inline-flex rounded-lg bg-[linear-gradient(180deg,#f7f3ee_0%,#ebe4db_100%)] px-3 py-2.5 shadow-[0_0_0_1px_rgba(196,122,54,0.25),0_10px_28px_-8px_rgba(0,0,0,0.45)]">
             <BrandLogo
               priority
               plain
-              className="h-10 w-auto max-w-[min(100%,14rem)] object-contain sm:h-12"
-              wrapperClassName="justify-center"
+              className="h-9 w-auto max-w-[12.5rem] object-contain object-left sm:h-10 sm:max-w-[14rem]"
             />
-            <p className="mt-4 text-sm font-medium tracking-wide text-neutral-500">3PhaseFlow</p>
-            <h1 className="mt-2 text-2xl font-bold tracking-tight text-neutral-900 sm:text-3xl">
-              Shop portal sign in
-            </h1>
-            <p className="mt-2 max-w-sm text-sm text-neutral-600">
-              Sign in to manage work orders, customers, quotes, and leads for your motor repair shop.
-            </p>
           </div>
+        </div>
 
-          {redirecting ? (
-            <p className="mb-3 text-center text-sm text-neutral-600" role="status">
-              Signed in, opening your portal…
-            </p>
-          ) : null}
+        <div className="relative z-10 mt-14 max-w-md lg:mt-0 lg:pb-6">
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#c47a36]">
+            Shop portal
+          </p>
+          <h1 className="mt-4 text-3xl font-semibold leading-tight tracking-tight text-white sm:text-4xl lg:text-[2.65rem] lg:leading-[1.12]">
+            Your motor repair shop, in one place.
+          </h1>
+          <p className="mt-5 text-base leading-relaxed text-[#cfc9c3] sm:text-[1.05rem]">
+            Sign in to run work orders, customers, quotes, and the floor from this private
+            3PhaseFlow host.
+          </p>
+          <ul className="mt-8 space-y-3.5 text-[0.95rem] text-[#d9d3cd]">
+            <li className="flex gap-3">
+              <span className="mt-2.5 h-1.5 w-1.5 shrink-0 rounded-full bg-[#c47a36]" aria-hidden />
+              Jobs, proposals, and purchase orders
+            </li>
+            <li className="flex gap-3">
+              <span className="mt-2.5 h-1.5 w-1.5 shrink-0 rounded-full bg-[#c47a36]" aria-hidden />
+              Customers, motors, and team time clock
+            </li>
+            <li className="flex gap-3">
+              <span className="mt-2.5 h-1.5 w-1.5 shrink-0 rounded-full bg-[#c47a36]" aria-hidden />
+              Isolated shop data for your business only
+            </li>
+          </ul>
+        </div>
 
-          <Form
-            method="post"
-            action="#"
-            onSubmit={handleSubmit}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") {
-                e.preventDefault();
-                handleSubmit(e);
-              }
-            }}
-            className="border border-neutral-200 bg-white shadow-sm sm:p-8"
+        <div className="relative z-10 mt-12 flex flex-wrap items-center gap-x-5 gap-y-2 border-t border-white/10 pt-6 text-sm text-[#a89f96] lg:mt-0">
+          <a href={supportMailto} className="hover:text-[#c47a36]">
+            Support
+          </a>
+          <a
+            href={MARKETING_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="hover:text-[#c47a36]"
           >
-            <Input
-              label="Email"
-              name="email"
-              type="email"
-              placeholder="you@example.com"
-              value={form.email}
-              onChange={handleChange}
-              required
-              autoComplete="email"
-            />
-            <Input
-              label="Password"
-              name="password"
-              type={showPassword ? "text" : "password"}
-              placeholder="Your password"
-              value={form.password}
-              onChange={handleChange}
-              required
-              autoComplete="current-password"
-              suffix={
-                <button
-                  type="button"
-                  className="px-2 text-xs font-medium text-primary hover:underline"
-                  onClick={() => setShowPassword((on) => !on)}
-                  aria-pressed={showPassword}
-                  aria-label={showPassword ? "Hide password" : "View password"}
-                >
-                  {showPassword ? "Hide" : "View"}
-                </button>
-              }
-            />
-            <Checkbox
-              name="rememberMe"
-              className="mt-4"
-              label="Remember me on this device"
-              help="Saves your email and password on this device and keeps you signed in longer."
-              checked={rememberMe}
-              onChange={(e) => {
-                const on = e.target.checked;
-                setRememberMe(on);
-                if (!on) clearRememberedLogin();
-              }}
-            />
-            {error ? (
-              <p className="mt-4 text-sm text-danger" role="alert">
-                {error}
+            3PhaseFlow.com
+          </a>
+          <span className="text-white/25" aria-hidden>
+            ·
+          </span>
+          <a href={supportMailto} className="hover:text-[#c47a36]">
+            {SUPPORT_EMAIL}
+          </a>
+        </div>
+      </aside>
+
+      {/* Form panel */}
+      <section className="relative flex flex-col bg-[#fbfaf8] text-[#1f1c1a]">
+        <div
+          className="pointer-events-none absolute inset-0 opacity-70"
+          style={{
+            background:
+              "radial-gradient(ellipse 70% 50% at 80% 0%, rgba(196,122,54,0.07), transparent 55%)",
+          }}
+          aria-hidden
+        />
+
+        <div className="relative z-10 flex flex-1 flex-col justify-center px-6 py-12 sm:px-10 lg:px-14 xl:px-20">
+          <div className="mx-auto w-full max-w-[26rem]">
+            <div className="mb-10 lg:hidden">
+              <BrandLogo
+                priority
+                plain
+                className="h-9 w-auto max-w-[12rem] object-contain"
+              />
+            </div>
+
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#9a7348]">
+              Welcome back
+            </p>
+            <h2 className="mt-2 text-3xl font-semibold tracking-tight text-[#1f1c1a]">
+              Sign in
+            </h2>
+            <p className="mt-2 text-[0.95rem] text-neutral-500">
+              Use your shop email and password to open the portal.
+            </p>
+
+            {redirecting ? (
+              <p className="mt-6 text-sm text-neutral-600" role="status">
+                Signed in, opening your portal…
               </p>
             ) : null}
-            <div className="mt-6">
-              <Button type="submit" variant="primary" size="lg" className="w-full" disabled={submitting}>
-                {submitting ? "Signing in…" : "Log in"}
-              </Button>
-            </div>
-          </Form>
-        </div>
-      </main>
 
-      <footer className="relative z-10 pb-[max(1.5rem,env(safe-area-inset-bottom))] text-center text-xs text-neutral-500">
-        Powered by{" "}
-        <span className="font-medium text-neutral-800">3PhaseFlow</span>
-      </footer>
+            <Form
+              method="post"
+              action="#"
+              onSubmit={handleSubmit}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  handleSubmit(e);
+                }
+              }}
+              className="!mt-9 !border-0 !bg-transparent !p-0 !shadow-none sm:!p-0"
+            >
+              <Input
+                label="Email"
+                name="email"
+                type="email"
+                placeholder="you@example.com"
+                value={form.email}
+                onChange={handleChange}
+                required
+                autoComplete="email"
+              />
+              <Input
+                label="Password"
+                name="password"
+                type={showPassword ? "text" : "password"}
+                placeholder="Your password"
+                value={form.password}
+                onChange={handleChange}
+                required
+                autoComplete="current-password"
+                className="mt-5"
+                suffix={
+                  <button
+                    type="button"
+                    className="px-2 text-xs font-medium text-primary hover:underline"
+                    onClick={() => setShowPassword((on) => !on)}
+                    aria-pressed={showPassword}
+                    aria-label={showPassword ? "Hide password" : "View password"}
+                  >
+                    {showPassword ? "Hide" : "View"}
+                  </button>
+                }
+              />
+              <div className="mt-5 flex items-start justify-between gap-3">
+                <Checkbox
+                  name="rememberMe"
+                  label="Remember me"
+                  checked={rememberMe}
+                  onChange={(e) => {
+                    const on = e.target.checked;
+                    setRememberMe(on);
+                    if (!on) clearRememberedLogin();
+                  }}
+                />
+                <Link
+                  href="/forgot-password"
+                  className="shrink-0 pt-0.5 text-sm font-medium text-primary hover:underline"
+                >
+                  Forgot password?
+                </Link>
+              </div>
+              {error ? (
+                <p className="mt-4 text-sm text-danger" role="alert">
+                  {error}
+                </p>
+              ) : null}
+              <Button
+                type="submit"
+                variant="primary"
+                size="lg"
+                className="mt-8 w-full"
+                disabled={submitting}
+              >
+                {submitting ? "Signing in…" : "Continue"}
+              </Button>
+            </Form>
+
+            <div className="mt-10 space-y-4 border-t border-neutral-200/80 pt-8">
+              <p className="text-sm text-neutral-600">
+                Need help getting in?
+              </p>
+              <div className="flex flex-col gap-2.5 text-sm">
+                <Link
+                  href="/forgot-password"
+                  className="font-medium text-[#1f1c1a] hover:text-primary"
+                >
+                  Reset your password by email
+                </Link>
+                <a href={supportMailto} className="font-medium text-[#1f1c1a] hover:text-primary">
+                  Email support · {SUPPORT_EMAIL}
+                </a>
+                <a
+                  href={MARKETING_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="font-medium text-neutral-500 hover:text-primary"
+                >
+                  About 3PhaseFlow
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <footer className="relative z-10 px-6 py-5 text-center text-xs text-neutral-400 sm:px-10 lg:px-14 lg:text-left xl:px-20">
+          Powered by{" "}
+          <a
+            href={MARKETING_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="font-medium text-neutral-600 hover:text-primary"
+          >
+            3PhaseFlow
+          </a>
+        </footer>
+      </section>
     </div>
   );
 }
