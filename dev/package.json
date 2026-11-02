@@ -18,6 +18,8 @@
     "lint:client-isolation": "node scripts/check-client-isolation.mjs",
     "bootstrap:multi-host": "node scripts/bootstrap-multi-host-apps.mjs",
     "provision-client": "node scripts/provision-client.mjs",
+    "createCopy": "node scripts/create-copy.mjs",
+    "ensure-client-secrets": "node scripts/ensure-client-secrets.mjs",
     "migrate-shop-data": "node scripts/migrate-shop-data.mjs",
     "migrate-shop-uploads": "node scripts/migrate-shop-uploads.mjs",
     "link-client-mongo": "node scripts/link-client-mongo.mjs",

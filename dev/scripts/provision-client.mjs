@@ -3,8 +3,8 @@
  * Provision an isolated client app under clients/{slug}.
  * Default --from clients/cemotor. Does not auto-register IIS (prints checklist).
  *
- * node scripts/provision-client.mjs --slug acme --company "Acme" --owner-email a@b.com --port 5101
- * node scripts/provision-client.mjs --slug cemotor --from-existing clients/cemotor --owner-email cemotorrepair@gmail.com --port 5100
+ * node scripts/provision-client.mjs --slug acme --company "Acme" --owner-email a@b.com --port 5083
+ * node scripts/provision-client.mjs --slug cemotor --from-existing clients/cemotor --owner-email cemotorrepair@gmail.com --port 5082
  */
 import { config } from "dotenv";
 import {
@@ -40,7 +40,7 @@ function hasFlag(name) {
 const slug = String(arg("slug")).trim().toLowerCase();
 const company = arg("company", slug);
 const ownerEmail = String(arg("owner-email")).trim().toLowerCase();
-const port = Number(arg("port", "5101"));
+const port = Number(arg("port", "5083"));
 const fromExisting = arg("from-existing");
 const from = arg("from", join(root, "clients", "cemotor"));
 const skipDns = hasFlag("skip-dns");

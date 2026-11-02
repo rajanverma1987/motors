@@ -6,8 +6,6 @@ import { hashPassword } from "@/lib/auth-portal";
 import { getPasswordPolicyError } from "@/lib/password-policy";
 import { LIMITS, isValidEmail } from "@/lib/validation";
 import { getPublicSiteUrl } from "@/lib/public-site-url";
-import { sendPortalPasswordResetEmail } from "@/lib/email";
-import { hasPlatformSmtp } from "@/lib/platform-smtp";
 import {
   buildPortalResetUrl,
   hashPortalResetToken,
@@ -16,6 +14,29 @@ import {
 } from "@/lib/portal-password-reset";
 
 export const dynamic = "force-dynamic";
+
+async function requestPlatformResetEmail({ to, contactName, shopName, resetUrl }) {
+  const base = String(process.env.PLATFORM_API_BASE || "").replace(/\/$/, "");
+  const tenantKey = String(process.env.PLATFORM_TENANT_KEY || "").trim();
+  const slug = String(process.env.TENANT_SLUG || "cemotor").trim().toLowerCase();
+  if (!base || !tenantKey) {
+    return { ok: false, error: "PLATFORM_API_BASE / PLATFORM_TENANT_KEY not configured" };
+  }
+  const res = await fetch(`${base}/api/platform/password-reset-email`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${tenantKey}`,
+      "x-tenant-slug": slug,
+    },
+    body: JSON.stringify({ to, contactName, shopName, resetUrl }),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    return { ok: false, error: data.error || `Platform mail failed (${res.status})` };
+  }
+  return { ok: true };
+}
 
 /** Request a reset link. Always answers ok so the endpoint cannot enumerate accounts. */
 export async function POST(request) {
@@ -33,26 +54,22 @@ export async function POST(request) {
     await connectDB();
     const user = await User.findOne({ email });
     if (user && user.canLogin !== false) {
-      if (!hasPlatformSmtp()) {
-        console.error("Portal password reset: platform SMTP not configured");
-      } else {
-        const token = issuePortalPasswordReset(user);
-        await user.save();
-        const base = String(getPublicSiteUrl(request) || "").replace(/\/+$/, "");
-        const resetUrl = buildPortalResetUrl(base, token);
-        try {
-          const mail = await sendPortalPasswordResetEmail({
-            to: user.email,
-            contactName: user.contactName,
-            shopName: user.shopName,
-            resetUrl,
-          });
-          if (!mail?.ok) {
-            console.warn("Portal reset email failed:", mail?.error || "unknown");
-          }
-        } catch (mailErr) {
-          console.warn("Portal reset email failed:", mailErr?.message || mailErr);
+      const token = issuePortalPasswordReset(user);
+      await user.save();
+      const site = String(getPublicSiteUrl(request) || "").replace(/\/+$/, "");
+      const resetUrl = buildPortalResetUrl(site, token);
+      try {
+        const mail = await requestPlatformResetEmail({
+          to: user.email,
+          contactName: user.contactName,
+          shopName: user.shopName,
+          resetUrl,
+        });
+        if (!mail.ok) {
+          console.warn("Portal reset email via platform failed:", mail.error);
         }
+      } catch (mailErr) {
+        console.warn("Portal reset email via platform failed:", mailErr?.message || mailErr);
       }
     }
     return NextResponse.json({ ok: true });

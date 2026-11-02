@@ -3,20 +3,13 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev --hostname 0.0.0.0 -p 5066",
-    "prebuild": "node scripts/write-indexnow-key.mjs",
+    "dev": "next dev --hostname 0.0.0.0 -p 5081",
+    "prebuild": "node ../../dev/scripts/write-indexnow-key.mjs",
     "build": "next build",
-    "postbuild": "node scripts/indexnow-submit.mjs",
-    "start": "next start -p 5066",
+    "postbuild": "node ../../dev/scripts/indexnow-submit.mjs",
+    "start": "next start -p 5081",
     "lint": "eslint",
-    "sitemap": "node scripts/generate-sitemap.js",
-    "git": "node scripts/git-push.js",
-    "backfill:listing-scores": "node scripts/backfill-listing-directory-scores.js",
-    "backfill:quote-write-up": "node scripts/backfill-quote-draft-to-write-up.js",
-    "backfill:job-po-numbers": "node scripts/backfill-job-po-numbers.js",
-    "backfill:simple-portal-dates": "node scripts/backfill-simple-portal-dates.js",
-    "backfill:location-industrial-seo": "node scripts/backfill-location-page-industrial-seo.js",
-    "send:lead-nurture-past": "node scripts/send-lead-nurture-to-past-lead-shops.js"
+    "sitemap": "node ../../dev/scripts/generate-sitemap.js"
   },
   "dependencies": {
     "@simplewebauthn/browser": "^14.0.0",
