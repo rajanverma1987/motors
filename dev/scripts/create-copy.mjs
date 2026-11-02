@@ -177,6 +177,35 @@ if (existsSync(pkgPath)) {
   writeFileSync(pkgPath, JSON.stringify(pkg, null, 2) + "\n");
 }
 
+const webConfigPath = join(dest, "web.config");
+const webConfig = `<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+  <system.web>
+    <customErrors mode="Off" />
+    <pages validateRequest="false" />
+    <httpRuntime requestPathInvalidCharacters="" requestValidationMode="2.0" />
+  </system.web>
+  <system.webServer>
+    <rewrite>
+      <rules>
+        <rule name="Redirect to https" stopProcessing="true">
+          <match url=".*" />
+          <conditions>
+            <add input="{HTTPS}" pattern="off" ignoreCase="true" />
+          </conditions>
+          <action type="Redirect" url="https://{HTTP_HOST}{REQUEST_URI}" redirectType="Permanent" appendQueryString="false" />
+        </rule>
+        <rule name="ReverseProxyToShop" stopProcessing="true">
+          <match url="(.*)" />
+          <action type="Rewrite" url="http://localhost:${port}/{R:1}" />
+        </rule>
+      </rules>
+    </rewrite>
+  </system.webServer>
+</configuration>
+`;
+writeFileSync(webConfigPath, webConfig);
+
 await mongoose.connect(baseUri);
 await mongoose.connection.collection("tenants").updateOne(
   { slug },
