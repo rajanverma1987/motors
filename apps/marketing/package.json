@@ -6,7 +6,7 @@
     "dev": "next dev --hostname 0.0.0.0 -p 5081",
     "prebuild": "node ./scripts/write-indexnow-key.mjs",
     "build": "next build",
-    "postbuild": "node ../../dev/scripts/indexnow-submit.mjs",
+    "postbuild": "node ./scripts/indexnow-submit.mjs",
     "start": "next start -p 5081",
     "lint": "eslint",
     "sitemap": "node ./scripts/generate-sitemap.js"
