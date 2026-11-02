@@ -15,8 +15,8 @@ export default function ListYourShopCta() {
       <Link href="/list-your-electric-motor-services" className={btnPrimary}>
         List your center
       </Link>
-      <Link href="/register" className={btnOutline}>
-        Create free account
+      <Link href="/contact" className={btnOutline}>
+        Contact us
       </Link>
       <p className="text-xs text-secondary mt-2">
         Get listed in our directory and receive qualified leads.

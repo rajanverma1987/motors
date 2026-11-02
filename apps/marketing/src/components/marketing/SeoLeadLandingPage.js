@@ -163,7 +163,7 @@ export default function SeoLeadLandingPage({
                   pricing
                 </Link>
                 , or{" "}
-                <Link href="/register" className="text-primary font-medium hover:underline">
+                <Link href="/contact" className="text-primary font-medium hover:underline">
                   create a free account
                 </Link>
                 .

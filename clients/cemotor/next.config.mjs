@@ -94,14 +94,13 @@ const nextConfig = {
     minimumCacheTTL: 60 * 60 * 24 * 30,
   },
   async headers() {
-    // CSP: allow Microsoft Clarity (https://learn.microsoft.com/en-us/clarity/setup-and-installation/clarity-csp),
-    // Google Analytics, and required Next.js / app sources. If you add stricter rules elsewhere, ensure Clarity stays allowed.
+    // Shop client: no Clarity / GA. Keep PayPal + Next.js sources.
     const contextualAi = "https://contextualaisystems.com";
     const csp = [
       "default-src 'self'",
-      `script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.googletagmanager.com https://www.google-analytics.com https://www.clarity.ms https://*.clarity.ms https://www.paypal.com https://www.sandbox.paypal.com https://www.paypalobjects.com ${contextualAi}`,
-      `connect-src 'self' https://www.google-analytics.com https://www.googletagmanager.com https://www.clarity.ms https://*.clarity.ms https://c.bing.com https://*.bing.com https://www.paypal.com https://www.sandbox.paypal.com https://*.paypal.com https://*.paypalobjects.com ${contextualAi} wss://contextualaisystems.com`,
-      `img-src 'self' data: blob: https://www.clarity.ms https://*.clarity.ms https://c.bing.com https://www.googletagmanager.com https://www.google-analytics.com https://www.paypalobjects.com https://www.paypal.com ${contextualAi}`,
+      `script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.paypal.com https://www.sandbox.paypal.com https://www.paypalobjects.com ${contextualAi}`,
+      `connect-src 'self' https://www.paypal.com https://www.sandbox.paypal.com https://*.paypal.com https://*.paypalobjects.com ${contextualAi} wss://contextualaisystems.com`,
+      `img-src 'self' data: blob: https://www.paypalobjects.com https://www.paypal.com ${contextualAi}`,
       "style-src 'self' 'unsafe-inline'",
       "font-src 'self' data:",
       "frame-src 'self' https://www.paypal.com https://www.sandbox.paypal.com https://*.paypal.com https://www.paypalobjects.com https://*.paypalobjects.com",

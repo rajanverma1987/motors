@@ -108,7 +108,7 @@ export default function HowMotorRepairShopsGetMoreCustomersPage() {
               Add your motor repair shop to our directory
             </Link>{" "}
             and receive qualified leads from companies searching for repair and rewinding services.{" "}
-            <Link href="/register" className="text-primary font-medium hover:underline">
+            <Link href="/contact" className="text-primary font-medium hover:underline">
               Register for free
             </Link>{" "}
             to manage your listing and respond to inquiries.

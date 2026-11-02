@@ -31,6 +31,8 @@ const tenantSchema = new mongoose.Schema(
     port: { type: Number, default: null },
     suspendedAt: { type: Date, default: null },
     migratedToSlug: { type: String, default: "" },
+    /** Last known shop portal use (from shop DB sync or entitlement heartbeat). */
+    lastLoginAt: { type: Date, default: null },
   },
   { timestamps: true }
 );

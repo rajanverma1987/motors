@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { FiEdit2, FiEye, FiLock, FiPlus, FiSlash, FiUnlock } from "react-icons/fi";
+import { FiEdit2, FiEye, FiLock, FiPlus, FiSlash, FiTrash2, FiUnlock } from "react-icons/fi";
 import Badge from "@/components/ui/badge";
 import Button from "@/components/ui/button";
 import Table from "@/components/ui/table";
@@ -298,77 +298,105 @@ export default function AdminIqWireCalculatorPage() {
     }
   };
 
+  const deleteAccount = async (row) => {
+    const ok = await confirm({
+      title: "Delete 3PhaseWire client?",
+      message: `Permanently delete ${row.email}? Saved calculations for this account will also be removed. This cannot be undone.`,
+      confirmLabel: "Delete",
+      cancelLabel: "Cancel",
+      variant: "danger",
+    });
+    if (!ok) return;
+    const ok2 = await confirm({
+      title: "Confirm delete",
+      message: `Delete ${row.email} forever?`,
+      confirmLabel: "Delete",
+      cancelLabel: "Cancel",
+      variant: "danger",
+    });
+    if (!ok2) return;
+    try {
+      const res = await fetch(`/api/admin/mobile-app-accounts/${row.id}`, {
+        method: "DELETE",
+        credentials: "include",
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || "Failed to delete");
+      toast.success("Client deleted.");
+      if (viewAccount?.id === row.id) setViewAccount(null);
+      if (editAccount?.id === row.id) setEditAccount(null);
+      load();
+    } catch (e) {
+      toast.error(e.message || "Failed to delete");
+    }
+  };
+
   const columns = [
     {
-      key: "edit",
-      label: "",
+      key: "actions",
+      label: "Actions",
       render: (_, row) => (
-        <button
-          type="button"
-          onClick={() => openEdit(row)}
-          className="rounded p-1.5 text-primary hover:bg-primary/10 focus:outline-none focus:ring-2 focus:ring-primary"
-          aria-label={`Edit ${row.email}`}
-          title="Edit"
-        >
-          <FiEdit2 className="h-4 w-4" />
-        </button>
-      ),
-    },
-    {
-      key: "view",
-      label: "",
-      render: (_, row) => (
-        <button
-          type="button"
-          onClick={() => setViewAccount(row)}
-          className="rounded p-1.5 text-primary hover:bg-primary/10 focus:outline-none focus:ring-2 focus:ring-primary"
-          aria-label={`View ${row.email}`}
-        >
-          <FiEye className="h-4 w-4" />
-        </button>
-      ),
-    },
-    {
-      key: "revoke",
-      label: "",
-      render: (_, row) => (
-        <button
-          type="button"
-          onClick={() => removeAccess(row)}
-          disabled={!row.unlocked && row.subscriptionStatus === "expired"}
-          className="rounded p-1.5 text-danger hover:bg-danger/10 focus:outline-none focus:ring-2 focus:ring-danger disabled:cursor-not-allowed disabled:opacity-40"
-          aria-label={`Remove access for ${row.email}`}
-          title="Remove access"
-        >
-          <FiLock className="h-4 w-4" />
-        </button>
-      ),
-    },
-    {
-      key: "ban",
-      label: "",
-      render: (_, row) =>
-        row.banned ? (
+        <div className="flex items-center gap-1">
           <button
             type="button"
-            onClick={() => unbanAccount(row)}
+            onClick={() => setViewAccount(row)}
             className="rounded p-1.5 text-primary hover:bg-primary/10 focus:outline-none focus:ring-2 focus:ring-primary"
-            aria-label={`Unban ${row.email}`}
-            title="Unban"
+            aria-label={`View ${row.email}`}
+            title="View"
           >
-            <FiUnlock className="h-4 w-4" />
+            <FiEye className="h-4 w-4" />
           </button>
-        ) : (
           <button
             type="button"
-            onClick={() => banAccount(row)}
-            className="rounded p-1.5 text-danger hover:bg-danger/10 focus:outline-none focus:ring-2 focus:ring-danger"
-            aria-label={`Ban ${row.email}`}
-            title="Ban"
+            onClick={() => openEdit(row)}
+            className="rounded p-1.5 text-primary hover:bg-primary/10 focus:outline-none focus:ring-2 focus:ring-primary"
+            aria-label={`Edit ${row.email}`}
+            title="Edit"
           >
-            <FiSlash className="h-4 w-4" />
+            <FiEdit2 className="h-4 w-4" />
           </button>
-        ),
+          <button
+            type="button"
+            onClick={() => removeAccess(row)}
+            disabled={!row.unlocked && row.subscriptionStatus === "expired"}
+            className="rounded p-1.5 text-danger hover:bg-danger/10 focus:outline-none focus:ring-2 focus:ring-danger disabled:cursor-not-allowed disabled:opacity-40"
+            aria-label={`Remove access for ${row.email}`}
+            title="Remove access"
+          >
+            <FiLock className="h-4 w-4" />
+          </button>
+          {row.banned ? (
+            <button
+              type="button"
+              onClick={() => unbanAccount(row)}
+              className="rounded p-1.5 text-primary hover:bg-primary/10 focus:outline-none focus:ring-2 focus:ring-primary"
+              aria-label={`Unban ${row.email}`}
+              title="Unban"
+            >
+              <FiUnlock className="h-4 w-4" />
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={() => banAccount(row)}
+              className="rounded p-1.5 text-danger hover:bg-danger/10 focus:outline-none focus:ring-2 focus:ring-danger"
+              aria-label={`Ban ${row.email}`}
+              title="Ban"
+            >
+              <FiSlash className="h-4 w-4" />
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={() => deleteAccount(row)}
+            className="rounded p-1.5 text-danger hover:bg-danger/10 focus:outline-none focus:ring-2 focus:ring-danger"
+            aria-label={`Delete ${row.email}`}
+            title="Delete"
+          >
+            <FiTrash2 className="h-4 w-4" />
+          </button>
+        </div>
+      ),
     },
     { key: "name", label: "Name", sortable: true },
     { key: "email", label: "Email", sortable: true },

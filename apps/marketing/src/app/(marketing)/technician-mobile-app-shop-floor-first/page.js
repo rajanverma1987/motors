@@ -51,7 +51,7 @@ export default function TechnicianMobileAppPage() {
           </h2>
           <p className="mt-4 leading-relaxed text-secondary">
             The app is designed for fast shop-floor actions: scan the Tag QR from{" "}
-            <Link href="/dashboard/repair-flow" className="font-medium text-primary hover:underline">
+            <Link href="/motor-repair-shop-management-software" className="font-medium text-primary hover:underline">
               Job Write-Up
             </Link>{" "}
             (it encodes the repair job number), open the assigned work order, update status, and attach testing
@@ -86,7 +86,7 @@ export default function TechnicianMobileAppPage() {
           </h2>
           <p className="mt-4 leading-relaxed text-secondary">
             Small delays from manual updates add up across dozens of jobs. When updates happen at the motor, your{" "}
-            <Link href="/dashboard/job-board" className="font-medium text-primary hover:underline">
+            <Link href="/technician-mobile-app-shop-floor-first" className="font-medium text-primary hover:underline">
               job board
             </Link>{" "}
             reflects real progress immediately, and supervisors can clear blockers sooner.
@@ -100,15 +100,15 @@ export default function TechnicianMobileAppPage() {
           <p className="mt-4 leading-relaxed text-secondary">
             Mobile updates are tied to the same records used by office staff. Work orders are linked to the repair job
             and its primary final quote, so the path from{" "}
-            <Link href="/dashboard/repair-flow" className="font-medium text-primary hover:underline">
+            <Link href="/motor-repair-shop-management-software" className="font-medium text-primary hover:underline">
               Job Write-Up
             </Link>{" "}
             through{" "}
-            <Link href="/dashboard/rfq" className="font-medium text-primary hover:underline">
+            <Link href="/motor-repair-shop-management-software" className="font-medium text-primary hover:underline">
               RFQ
             </Link>{" "}
             to{" "}
-            <Link href="/dashboard/work-orders" className="font-medium text-primary hover:underline">
+            <Link href="/work-order-software-for-motor-repair-shops" className="font-medium text-primary hover:underline">
               work order
             </Link>{" "}
             and invoice stays consistent, with testing data logged as part of the motor history.
@@ -127,7 +127,7 @@ export default function TechnicianMobileAppPage() {
           <p className="mt-4 leading-relaxed text-secondary">
             This works especially well with the mobile app: scan the job Tag QR, review motor context, use calculator results,
             and log updates in one flow. Explore the{" "}
-            <Link href="/dashboards?tab=calculators" className="font-medium text-primary hover:underline">
+            <Link href="/electric-motor-rewinding-cost-calculator" className="font-medium text-primary hover:underline">
               calculators module
             </Link>{" "}
             in the Shop Management System.

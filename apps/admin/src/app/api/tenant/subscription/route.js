@@ -4,6 +4,7 @@ import Tenant from "@/models/Tenant";
 import ShopSubscription from "@/models/ShopSubscription";
 import { verifyTenantKey } from "@/lib/platform-tenant-crypto";
 import { computeEntitlement } from "@/lib/subscription-entitlement";
+import { touchTenantLastLogin } from "@/lib/tenant-shop-last-login";
 
 const hits = new Map();
 
@@ -56,6 +57,11 @@ export async function GET(request) {
     }
   }
   const entitlement = computeEntitlement({ status, expiresAt });
+  try {
+    await touchTenantLastLogin(auth.tenant.slug);
+  } catch {
+    /* non-fatal */
+  }
   return NextResponse.json({
     slug: auth.tenant.slug,
     status,

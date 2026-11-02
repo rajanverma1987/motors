@@ -6,7 +6,6 @@ import { useCallback, useEffect, useState } from "react";
 import {
   FiList,
   FiInbox,
-  FiUsers,
   FiMapPin,
   FiMail,
   FiLogOut,
@@ -15,7 +14,6 @@ import {
   FiCreditCard,
   FiChevronLeft,
   FiChevronRight,
-  FiUserCheck,
   FiBarChart2,
   FiSmartphone,
   FiTool,
@@ -23,18 +21,16 @@ import {
   FiEdit2,
   FiCalendar,
   FiUserPlus,
+  FiServer,
 } from "react-icons/fi";
 import ThemeToggle from "@/components/theme-toggle";
 
 const NAV_ITEMS = [
+  { href: "/admin/demo-requests", label: "Demo requests", icon: FiCalendar },
   { href: "/admin/listings", label: "Listings", icon: FiList },
   { href: "/admin/stats", label: "Listing stats", icon: FiBarChart2 },
-  { href: "/admin/job-postings", label: "Job postings", icon: FiBriefcase },
-  { href: "/admin/talent", label: "Talent", icon: FiUserPlus },
   { href: "/admin/leads", label: "Leads", icon: FiInbox },
-  { href: "/admin/demo-requests", label: "Demo requests", icon: FiCalendar },
-  { href: "/admin/clients", label: "Clients", icon: FiUsers },
-  { href: "/admin/active-clients", label: "Active clients", icon: FiUserCheck },
+  { href: "/admin/tenants", label: "Tenants", icon: FiServer },
   { href: "/admin/subscription-plans", label: "Subscriptions", icon: FiCreditCard },
   { href: "/admin/iqwirecalculator", label: "3PhaseWire", icon: FiSmartphone },
   { href: "/admin/iqmotortrack", label: "3PhaseTrack", icon: FiTool },
@@ -44,6 +40,8 @@ const NAV_ITEMS = [
   { href: "/admin/location-pages", label: "Location pages", icon: FiMapPin },
   { href: "/admin/marketing", label: "Marketing", icon: FiMail },
   { href: "/admin/support", label: "Support", icon: FiLifeBuoy },
+  { href: "/admin/talent", label: "Talent", icon: FiUserPlus },
+  { href: "/admin/job-postings", label: "Job postings", icon: FiBriefcase },
 ];
 
 const STORAGE_KEY = "admin-sidebar-collapsed";
@@ -79,14 +77,12 @@ export default function AdminSidebar() {
 
   return (
     <aside
-      className={`sticky top-0 flex h-screen shrink-0 flex-col overflow-hidden border-r border-border bg-card transition-[width] duration-200 ease-out ${
-        collapsed ? "w-[4.25rem]" : "w-56"
-      }`}
+      className={`sticky top-0 flex h-screen shrink-0 flex-col overflow-hidden border-r border-border bg-card transition-[width] duration-200 ease-out ${collapsed ? "w-[4.25rem]" : "w-56"
+        }`}
     >
       <div
-        className={`flex h-14 shrink-0 items-center border-b border-border ${
-          collapsed ? "justify-center px-1" : "justify-between gap-2 px-3"
-        }`}
+        className={`flex h-14 shrink-0 items-center border-b border-border ${collapsed ? "justify-center px-1" : "justify-between gap-2 px-3"
+          }`}
       >
         {!collapsed && (
           <Link href="/admin" className="min-w-0 truncate font-semibold text-title">
@@ -121,13 +117,11 @@ export default function AdminSidebar() {
               key={item.href}
               href={item.href}
               title={collapsed ? item.label : undefined}
-              className={`flex items-center rounded-md py-2 text-sm font-medium transition-colors ${
-                collapsed ? "justify-center px-2" : "gap-3 px-3"
-              } ${
-                isActive
+              className={`flex items-center rounded-md py-2 text-sm font-medium transition-colors ${collapsed ? "justify-center px-2" : "gap-3 px-3"
+                } ${isActive
                   ? "bg-primary/10 text-primary"
                   : "text-secondary hover:bg-muted/50 hover:text-title"
-              }`}
+                }`}
             >
               {item.icon && <item.icon className="h-5 w-5 shrink-0" aria-hidden />}
               {!collapsed && <span className="truncate">{item.label}</span>}

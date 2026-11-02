@@ -275,7 +275,7 @@ export default function IqwireCalculatorMarketingPage() {
           <p className="mt-6 text-sm text-secondary">
             This is the standalone rewind calculator. It does not sync a shop catalog. Shops on 3PhaseFlow keep CM Best
             Match in the{" "}
-            <Link href="/dashboards?tab=calculators" className="font-medium text-primary hover:underline">
+            <Link href="/electric-motor-rewinding-cost-calculator" className="font-medium text-primary hover:underline">
               dashboard calculators
             </Link>
             .

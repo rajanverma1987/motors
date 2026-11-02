@@ -145,7 +145,7 @@ export default function MotorRepairMarketplaceMarketingPage() {
             control of pricing, credit, and fulfillment while still reaching new demand online.
           </p>
           <div className="mt-10 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
-            <Link href="/register" className="w-full min-w-0 sm:w-auto">
+            <Link href="/contact" className="w-full min-w-0 sm:w-auto">
               <Button variant="primary" size="lg" className="w-full sm:w-auto">
                 Get Shop Management System access
               </Button>
@@ -360,7 +360,7 @@ export default function MotorRepairMarketplaceMarketingPage() {
             and onboarding.
           </p>
           <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
-            <Link href="/register" className="w-full min-w-0 sm:w-auto">
+            <Link href="/contact" className="w-full min-w-0 sm:w-auto">
               <Button variant="primary" size="sm" className="w-full sm:w-auto">
                 Create account
               </Button>

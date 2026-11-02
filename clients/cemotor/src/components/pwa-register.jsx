@@ -37,7 +37,7 @@ export default function PwaRegister() {
      * clients.claim() — which fires controllerchange on this page even though
      * nothing was updated. Reloading there re-loaded every new visitor's first
      * page view and rewrote the referrer to the page's own URL, which wiped out
-     * referrer attribution in Clarity and GA. Only a genuine update (a new worker
+     * referrer attribution. Only a genuine update (a new worker
      * replacing an existing controller) needs the reload to pick up new bundles.
      */
     const hadController = Boolean(navigator.serviceWorker.controller);

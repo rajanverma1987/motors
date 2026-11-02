@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/db";
 import MobileAppAccount from "@/models/MobileAppAccount";
+import MobileSavedCalculation from "@/models/MobileSavedCalculation";
 import { getAdminFromRequest } from "@/lib/auth-admin";
 import {
   mobileAppAccountToAdminJson,
@@ -13,6 +14,30 @@ export const dynamic = "force-dynamic";
 async function getId(context) {
   const params = typeof context.params?.then === "function" ? await context.params : context.params;
   return params?.id;
+}
+
+export async function DELETE(request, context) {
+  try {
+    const admin = await getAdminFromRequest(request);
+    if (!admin) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    const id = await getId(context);
+    if (!id) {
+      return NextResponse.json({ error: "ID required" }, { status: 400 });
+    }
+    await connectDB();
+    const account = await MobileAppAccount.findById(id);
+    if (!account) {
+      return NextResponse.json({ error: "Not found" }, { status: 404 });
+    }
+    await MobileSavedCalculation.deleteMany({ accountId: account._id });
+    await MobileAppAccount.deleteOne({ _id: account._id });
+    return NextResponse.json({ ok: true });
+  } catch (err) {
+    console.error("DELETE admin mobile-app-account:", err);
+    return NextResponse.json({ error: err.message || "Failed to delete" }, { status: 500 });
+  }
 }
 
 export async function PATCH(request, context) {

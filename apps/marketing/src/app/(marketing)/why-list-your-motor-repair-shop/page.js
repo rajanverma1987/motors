@@ -327,7 +327,7 @@ export default function WhyListYourMotorRepairShopPage() {
                 List your electric motor repair center
               </Link>{" "}
               and start receiving qualified leads. You can also{" "}
-              <Link href="/register" className="text-primary font-medium hover:underline">
+              <Link href="/contact" className="text-primary font-medium hover:underline">
                 create an account
               </Link>{" "}
               to manage your listing and respond to inquiries in one place. Questions?{" "}

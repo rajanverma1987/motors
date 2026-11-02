@@ -290,7 +290,7 @@ export default function BenefitsOfMotorRepairDirectoryPage() {
                 List your electric motor repair center
               </Link>{" "}
               in our directory.{" "}
-              <Link href="/register" className="text-primary font-medium hover:underline">
+              <Link href="/contact" className="text-primary font-medium hover:underline">
                 Create a free account
               </Link>{" "}
               to manage your profile and respond to quote requests in one place. Questions?{" "}
