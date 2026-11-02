@@ -4,8 +4,6 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { FiMenu, FiX } from "react-icons/fi";
-import { useAuth } from "@/contexts/auth-context";
-import { DEFAULT_PORTAL_LANDING_PATH } from "@/lib/all-jobs-tabs";
 import BrandLogo from "@/components/marketing/brand-logo";
 import DemoBookingLink from "@/components/marketing/demo-booking-link";
 
@@ -63,11 +61,7 @@ function NavTextLink({ href, label, pathname, className = "", onClick }) {
 
 export default function Navbar() {
   const pathname = usePathname() || "";
-  const { user, mounted } = useAuth();
   const [mobileOpen, setMobileOpen] = useState(false);
-  const dashboardHref = user?.calculatorOnlyAccount
-    ? "/dashboards?tab=calculators"
-    : DEFAULT_PORTAL_LANDING_PATH;
 
   useEffect(() => {
     setMobileOpen(false);
@@ -135,29 +129,12 @@ export default function Navbar() {
 
           <div className="flex shrink-0 items-center gap-1.5 sm:gap-2 md:gap-3">
             <div className="hidden items-center gap-1.5 sm:gap-2 md:gap-3 lg:flex">
-              {mounted && user ? (
-                <Link
-                  href={dashboardHref}
-                  className="inline-flex min-h-11 items-center whitespace-nowrap px-2 py-2 text-sm font-medium text-secondary transition-colors hover:text-title"
-                >
-                  Dashboard
-                </Link>
-              ) : (
-                <>
-                  <Link
-                    href="/login"
-                    className="inline-flex min-h-11 items-center whitespace-nowrap px-2 py-2 text-sm font-medium text-secondary transition-colors hover:text-title"
-                  >
-                    Log in
-                  </Link>
-                  <Link
-                    href="/contact"
-                    className="inline-flex min-h-11 items-center whitespace-nowrap rounded-md border border-border bg-transparent px-2.5 py-2 text-sm font-medium text-text transition-colors hover:border-primary/30 hover:bg-form-bg xl:px-3"
-                  >
-                    Contact us
-                  </Link>
-                </>
-              )}
+              <Link
+                href="/contact"
+                className="inline-flex min-h-11 items-center whitespace-nowrap rounded-md border border-border bg-transparent px-2.5 py-2 text-sm font-medium text-text transition-colors hover:border-primary/30 hover:bg-form-bg xl:px-3"
+              >
+                Contact us
+              </Link>
               <NavTextLink href="/pricing" label="Pricing" pathname={pathname} />
               <DemoBookingLink className="inline-flex min-h-11 items-center whitespace-nowrap rounded-md bg-primary px-3 py-2 text-sm font-semibold text-white transition-opacity hover:opacity-92 xl:px-4">
                 Book a free demo
@@ -221,32 +198,13 @@ export default function Navbar() {
               />
             </div>
             <div className="flex flex-col gap-2 p-4">
-              {mounted && user ? (
-                <Link
-                  href={dashboardHref}
-                  onClick={closeMobile}
-                  className="flex min-h-12 touch-manipulation items-center justify-center rounded-md border border-primary/40 bg-primary/10 px-4 text-sm font-semibold text-primary transition-colors hover:bg-primary/15"
-                >
-                  Dashboard
-                </Link>
-              ) : (
-                <>
-                  <Link
-                    href="/login"
-                    onClick={closeMobile}
-                    className="flex min-h-12 touch-manipulation items-center justify-center rounded-md border border-border px-4 text-sm font-medium text-text transition-colors hover:bg-form-bg"
-                  >
-                    Log in
-                  </Link>
-                  <Link
-                    href="/contact"
-                    onClick={closeMobile}
-                    className="flex min-h-12 touch-manipulation items-center justify-center rounded-md border border-border px-4 text-sm font-medium text-text transition-colors hover:bg-form-bg"
-                  >
-                    Contact us
-                  </Link>
-                </>
-              )}
+              <Link
+                href="/contact"
+                onClick={closeMobile}
+                className="flex min-h-12 touch-manipulation items-center justify-center rounded-md border border-border px-4 text-sm font-medium text-text transition-colors hover:bg-form-bg"
+              >
+                Contact us
+              </Link>
               <NavTextLink
                 href="/pricing"
                 label="Pricing"

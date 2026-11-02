@@ -35,9 +35,12 @@ const key = process.env.GODADDY_API_KEY || "";
 const secret = process.env.GODADDY_API_SECRET || "";
 const domain = process.env.GODADDY_DOMAIN || "3phaseflow.com";
 const hostTarget = process.env.CLIENT_SERVER_HOST || "";
-const recordType = (process.env.GODADDY_RECORD_TYPE || "CNAME").toUpperCase();
-const ttl = Number(process.env.GODADDY_TTL || 600);
 const ip = process.env.CLIENT_SERVER_IP || "";
+// Default A when IP is set (Infodatix: CNAME to sql.infodatixhosting.com often fails; A works)
+const recordType = (
+  process.env.GODADDY_RECORD_TYPE || (ip ? "A" : "CNAME")
+).toUpperCase();
+const ttl = Number(process.env.GODADDY_TTL || 600);
 
 if (!key || !secret) {
   console.error("GODADDY_API_KEY / GODADDY_API_SECRET required");
