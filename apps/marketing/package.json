@@ -4,12 +4,12 @@
   "private": true,
   "scripts": {
     "dev": "next dev --hostname 0.0.0.0 -p 5081",
-    "prebuild": "node ../../dev/scripts/write-indexnow-key.mjs",
+    "prebuild": "node ./scripts/write-indexnow-key.mjs",
     "build": "next build",
     "postbuild": "node ../../dev/scripts/indexnow-submit.mjs",
     "start": "next start -p 5081",
     "lint": "eslint",
-    "sitemap": "node ../../dev/scripts/generate-sitemap.js"
+    "sitemap": "node ./scripts/generate-sitemap.js"
   },
   "dependencies": {
     "@simplewebauthn/browser": "^14.0.0",
