@@ -49,7 +49,7 @@ export function middleware(request) {
 
   if (pathname.startsWith("/dashboard") || pathname.startsWith("/dashboards")) {
     if (!hasPortalCookie) {
-      const loginUrl = new URL("/login", request.url);
+      const loginUrl = new URL("/", request.url);
       const dest = `${pathname}${request.nextUrl.search || ""}`;
       loginUrl.searchParams.set("next", dest);
       return NextResponse.redirect(loginUrl);

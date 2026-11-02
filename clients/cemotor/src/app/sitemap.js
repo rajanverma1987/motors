@@ -1,6 +1,4 @@
-import { getSitemapEntries } from "@/lib/sitemap-url-entries";
-
-/** @type {import('next').MetadataRoute.Sitemap} */
+/** Shop hosts do not publish a public sitemap. */
 export default async function sitemap() {
-  return getSitemapEntries();
+  return [];
 }

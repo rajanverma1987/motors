@@ -20,6 +20,8 @@
     "provision-client": "node scripts/provision-client.mjs",
     "migrate-shop-data": "node scripts/migrate-shop-data.mjs",
     "migrate-shop-uploads": "node scripts/migrate-shop-uploads.mjs",
+    "link-client-mongo": "node scripts/link-client-mongo.mjs",
+    "verify-shop-migrate": "node scripts/verify-shop-migrate.mjs",
     "dns-upsert": "node scripts/dns-upsert.mjs",
     "sitemap": "node scripts/generate-sitemap.js",
     "git": "node scripts/git-push.js",
@@ -65,6 +67,7 @@
     "postcss": "^8.5.25",
     "sharp": "^0.35.5",
     "nanoid": "^3.3.18",
-    "braces": "$braces"
+    "braces": "$braces",
+    "minimatch": "^11.0.4"
   }
 }

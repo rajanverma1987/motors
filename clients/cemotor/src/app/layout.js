@@ -40,11 +40,11 @@ export const metadata = {
   metadataBase: new URL(siteUrl),
   applicationName: "3PhaseFlow",
   title: {
-    default: "Motor Repair Shop Software, Work Orders, Leads & Inventory | 3PhaseFlow",
+    default: "Shop portal | 3PhaseFlow",
     template: "%s | 3PhaseFlow",
   },
   description:
-    "Manage work orders, leads, inventory, and invoicing for your electric motor repair shop, all in one platform. Book a free demo today.",
+    "Sign in to your 3PhaseFlow motor repair shop portal.",
   keywords: [
     "motor repair center software",
     "motor rewinding center software",
@@ -71,32 +71,30 @@ export const metadata = {
   openGraph: {
     type: "website",
     locale: "en_US",
-    siteName: "3PhaseFlow.com",
-    title: "Motor Repair Shop Software | Work Orders, Leads & Inventory | 3PhaseFlow",
-    description:
-      "Manage work orders, leads, inventory, and invoicing for your electric motor repair shop, all in one platform. Book a free demo today.",
+    siteName: "3PhaseFlow",
+    title: "Shop portal | 3PhaseFlow",
+    description: "Sign in to your 3PhaseFlow motor repair shop portal.",
     images: [
       {
         url: "/og-image.png",
         width: 1200,
         height: 630,
-        alt: "3PhaseFlow.com to Motor Repair Center Software",
+        alt: "3PhaseFlow",
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "Motor Repair Shop Software | Work Orders, Leads & Inventory | 3PhaseFlow",
-    description:
-      "Manage work orders, leads, inventory, and invoicing for your electric motor repair shop, all in one platform. Book a free demo today.",
+    title: "Shop portal | 3PhaseFlow",
+    description: "Sign in to your 3PhaseFlow motor repair shop portal.",
     images: ["/og-image.png"],
   },
   robots: {
-    index: true,
-    follow: true,
+    index: false,
+    follow: false,
     googleBot: {
-      index: true,
-      follow: true,
+      index: false,
+      follow: false,
     },
   },
 };

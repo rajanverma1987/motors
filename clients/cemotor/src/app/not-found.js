@@ -1,28 +1,29 @@
-import Navbar from "@/components/marketing/Navbar";
-import Footer from "@/components/marketing/Footer";
-import NotFoundContent from "@/components/marketing/not-found-content";
+import Link from "next/link";
+import BrandLogo from "@/components/marketing/brand-logo";
 
 export const metadata = {
   title: "Page not found",
-  description:
-    "The page you requested is not on 3PhaseFlow. Find motor repair shops, rewinding cost guides, or shop management software from here.",
-  robots: {
-    index: false,
-    follow: true,
-  },
+  robots: { index: false, follow: false },
 };
 
 export default function NotFound() {
   return (
-    <div className="marketing-shell flex min-h-screen flex-col bg-bg pb-[env(safe-area-inset-bottom)]">
-      <a href="#main-content" className="marketing-skip-link">
-        Skip to main content
-      </a>
-      <Navbar />
-      <main id="main-content" tabIndex={-1} className="min-w-0 flex-1 outline-none">
-        <NotFoundContent />
-      </main>
-      <Footer />
+    <div className="flex min-h-screen flex-col items-center justify-center bg-bg px-4 py-12">
+      <BrandLogo
+        plain
+        className="h-9 w-auto max-w-[12rem] object-contain"
+        wrapperClassName="justify-center"
+      />
+      <h1 className="mt-8 text-2xl font-bold text-title">Page not found</h1>
+      <p className="mt-2 max-w-sm text-center text-sm text-secondary">
+        This link is not available on your shop portal.
+      </p>
+      <Link
+        href="/"
+        className="mt-6 inline-flex min-h-11 items-center justify-center rounded-md bg-primary px-4 py-2 text-white hover:opacity-90"
+      >
+        Back to sign in
+      </Link>
     </div>
   );
 }

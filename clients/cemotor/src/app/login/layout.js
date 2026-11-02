@@ -1,12 +1,7 @@
-import { marketingPageMetadata } from "@/lib/marketing-page-metadata";
-
-export const metadata = marketingPageMetadata({
-  path: "/login",
-  title: "Log in",
-  description: "Log in to your 3PhaseFlow.com center portal.",
-  index: false,
-  follow: false,
-});
+export const metadata = {
+  title: "Sign in",
+  robots: { index: false, follow: false },
+};
 
 export default function LoginLayout({ children }) {
   return children;

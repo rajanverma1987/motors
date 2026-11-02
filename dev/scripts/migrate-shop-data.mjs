@@ -132,11 +132,19 @@ for (const { name, filter } of EMAIL_FILTERS) {
   if (!exists) continue;
   const docs = await col.find(filter(ownerEmail)).toArray();
   report.push({ collection: name, count: docs.length });
+  console.log(`… ${name}: ${docs.length}`);
   if (dryRun || docs.length === 0) continue;
   const destCol = dstConn.db.collection(name);
-  for (const doc of docs) {
-    const { _id, ...rest } = doc;
-    await destCol.updateOne({ _id }, { $set: { ...rest, _id } }, { upsert: true });
+  const ops = docs.map((doc) => ({
+    replaceOne: {
+      filter: { _id: doc._id },
+      replacement: doc,
+      upsert: true,
+    },
+  }));
+  const chunk = 500;
+  for (let i = 0; i < ops.length; i += chunk) {
+    await destCol.bulkWrite(ops.slice(i, i + chunk), { ordered: false });
   }
 }
 
