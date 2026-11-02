@@ -43,7 +43,7 @@ export function middleware(request) {
 
   if (pathname.startsWith("/admin") && !pathname.startsWith("/admin/login")) {
     if (!hasAdminCookie) {
-      return NextResponse.redirect(new URL("/admin/login", request.url));
+      return NextResponse.redirect(new URL("/", request.url));
     }
   }
 
