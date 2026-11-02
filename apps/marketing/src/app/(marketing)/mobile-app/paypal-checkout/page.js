@@ -1,0 +1,60 @@
+import { connectDB } from "@/lib/db";
+import MobileAppAccount from "@/models/MobileAppAccount";
+import { getMobileAppBillingPlans, resolvePlanDocForAccount } from "@/lib/mobile-app-subscription";
+
+export const dynamic = "force-dynamic";
+
+export const metadata = {
+  title: "Subscribe | 3PhaseWire",
+  robots: { index: false, follow: false },
+};
+
+function priceLabelForPlan(planDoc, billing) {
+  const cycle = String(planDoc?.billingCycle || "monthly");
+  if (cycle === "yearly") {
+    const usd = Number(planDoc?.customPrice || billing.yearly.usd);
+    return `$${usd.toFixed(2)} / year`;
+  }
+  const usd = Number(planDoc?.customPrice || billing.monthly.usd);
+  return `$${usd.toFixed(2)} / month`;
+}
+
+export default async function MobileAppPaypalCheckoutPage({ searchParams }) {
+  const sp = await searchParams;
+  const checkoutToken = String(sp?.token || "").trim();
+  const billing = await getMobileAppBillingPlans();
+  let priceLabel = `$${Number(billing.monthly.usd).toFixed(2)} / month`;
+
+  if (checkoutToken) {
+    await connectDB();
+    const account = await MobileAppAccount.findOne({ paypalCheckoutToken: checkoutToken });
+    if (account) {
+      const planDoc = await resolvePlanDocForAccount(account);
+      priceLabel = priceLabelForPlan(planDoc, billing);
+    }
+  }
+
+  if (!checkoutToken) {
+    return (
+      <main className="mx-auto flex min-h-[70vh] max-w-lg flex-col items-center justify-center px-6 py-16 text-center">
+        <h1 className="text-2xl font-bold text-title">Subscribe to 3PhaseWire</h1>
+        <p className="mt-3 text-sm text-secondary">This checkout link is incomplete. Go back to the app and tap Subscribe again.</p>
+      </main>
+    );
+  }
+
+  return (
+    <main className="mx-auto flex min-h-[70vh] max-w-lg flex-col items-center justify-center px-6 py-16 text-center">
+      <h1 className="text-2xl font-bold text-title">Subscribe to 3PhaseWire</h1>
+      <p className="mt-3 text-sm text-secondary">
+        {priceLabel}. You will continue on PayPal to approve billing. After you finish, return to the app.
+      </p>
+      <a
+        href={`/api/mobile-app/checkout/go?token=${encodeURIComponent(checkoutToken)}`}
+        className="mt-8 inline-flex min-w-0 max-w-full items-center justify-center whitespace-nowrap rounded-md bg-primary px-6 py-3 text-base font-semibold text-white hover:opacity-90"
+      >
+        Continue to PayPal
+      </a>
+    </main>
+  );
+}

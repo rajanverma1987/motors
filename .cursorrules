@@ -1,4 +1,4 @@
-create every .md files in documnets folder only
+create every .md files in dev/documents folder only
 do all programing in javascript only, no typescript (STRICT)
 be very consistent about theme on every page. (STRICT)
 Make sure to use the already built component for any form and pages (STRICT)

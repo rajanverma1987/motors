@@ -1,0 +1,928 @@
+"use client";
+
+import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useState } from "react";
+import Table from "@/components/ui/table";
+import Badge from "@/components/ui/badge";
+import Button from "@/components/ui/button";
+import Modal from "@/components/ui/modal";
+import { Form } from "@/components/ui/form-layout";
+import SimpleSelect from "@/components/simple/simple-select";
+import SimpleEmployeePaymentHistoryModal from "@/components/simple/simple-employee-payment-history-modal";
+import SimpleEmployeeAttachments from "@/components/simple/simple-employee-attachments";
+import { useAlert, useConfirm } from "@/components/confirm-provider";
+import { FiMail } from "react-icons/fi";
+import { usePreferredTablePageSize } from "@/contexts/user-settings-context";
+import { useAuth } from "@/contexts/auth-context";
+import {
+  SIMPLE_LIST_TABLE_PROPS,
+  SIMPLE_SCREEN_TABLE_WRAP_CLASS,
+} from "@/lib/simple-screen-ui";
+
+const FIELD_INPUT =
+  "h-7 w-full min-w-0 rounded-none border border-border bg-primary/[0.04] px-1.5 text-sm text-title outline-none focus:border-primary focus:ring-1 focus:ring-primary dark:bg-primary/10 dark:text-title";
+const FIELD_LABEL = "shrink-0 whitespace-nowrap text-right text-xs font-bold text-title";
+const SECTION_TITLE = "mb-1.5 text-xs font-bold uppercase tracking-wide text-secondary";
+
+function FieldRow({ label, labelWidth = "6.75rem", children, className = "", controlClassName = "" }) {
+  return (
+    <div className={`flex min-w-0 items-center gap-2.5 ${className}`}>
+      <label className={FIELD_LABEL} style={{ width: labelWidth }}>
+        {label}
+      </label>
+      <div className={`min-w-0 ${controlClassName || "flex-1"}`}>{children}</div>
+    </div>
+  );
+}
+
+const ROLE_OPTIONS = [
+  { value: "", label: "Select role" },
+  { value: "Technician", label: "Technician" },
+  { value: "Lead", label: "Lead" },
+  { value: "Office", label: "Office" },
+  { value: "Supervisor", label: "Supervisor" },
+  { value: "Manager", label: "Manager" },
+  { value: "Other", label: "Other" },
+];
+
+const INITIAL_EMPLOYEE_FORM = {
+  name: "",
+  email: "",
+  role: "",
+  phone: "",
+  password: "",
+  canLogin: false,
+  financialAccess: "role",
+  technicianAppAccess: false,
+  timeClockEnabled: true,
+  employeeNumber: "",
+  department: "",
+  employmentStatus: "Active",
+  hireDate: "",
+  inactiveDate: "",
+  payType: "hourly",
+  hourlyRate: "",
+  scheduledStart: "",
+  scheduledEnd: "",
+  defaultBreakMinutes: "0",
+  attachments: [],
+};
+
+const EMPLOYMENT_STATUS_OPTIONS = [
+  { value: "Active", label: "Active" },
+  { value: "Inactive", label: "Inactive" },
+  { value: "Terminated", label: "Terminated" },
+];
+
+const PAY_TYPE_OPTIONS = [
+  { value: "hourly", label: "Hourly" },
+  { value: "salary", label: "Salary" },
+];
+
+const EMPLOYEE_FORM_ID = "simple-employees-form";
+const EMPLOYEE_DETAIL_FORM_ID = "simple-employees-detail-form";
+
+function buildEmployeePayload(form) {
+  const f = form || {};
+  return {
+    name: f.name ?? "",
+    email: f.email ?? "",
+    role: f.role ?? "",
+    phone: f.phone ?? "",
+    canLogin: Boolean(f.canLogin),
+    financialAccess: f.financialAccess ?? "role",
+    technicianAppAccess: Boolean(f.technicianAppAccess),
+    password: f.password ?? "",
+    timeClockEnabled: f.timeClockEnabled !== false,
+    employeeNumber: f.employeeNumber ?? "",
+    department: f.department ?? "",
+    employmentStatus: f.employmentStatus || "Active",
+    hireDate: f.hireDate ?? "",
+    inactiveDate: f.inactiveDate ?? "",
+    payType: f.payType === "salary" ? "salary" : "hourly",
+    hourlyRate: f.hourlyRate ?? "",
+    scheduledStart: f.scheduledStart ?? "",
+    scheduledEnd: f.scheduledEnd ?? "",
+    defaultBreakMinutes: Number(f.defaultBreakMinutes) || 0,
+  };
+}
+
+function formFromEmployee(dataToUse) {
+  return {
+    name: dataToUse.name ?? "",
+    email: dataToUse.email ?? "",
+    role: dataToUse.role ?? "",
+    phone: dataToUse.phone ?? "",
+    password: "",
+    canLogin: Boolean(dataToUse.canLogin),
+    financialAccess: dataToUse.financialAccess || "role",
+    technicianAppAccess: Boolean(dataToUse.technicianAppAccess),
+    timeClockEnabled: dataToUse.timeClockEnabled !== false,
+    employeeNumber: dataToUse.employeeNumber ?? "",
+    department: dataToUse.department ?? "",
+    employmentStatus: dataToUse.employmentStatus || "Active",
+    hireDate: dataToUse.hireDate ?? "",
+    inactiveDate: dataToUse.inactiveDate ?? "",
+    payType: dataToUse.payType === "salary" ? "salary" : "hourly",
+    hourlyRate: dataToUse.hourlyRate ?? "",
+    scheduledStart: dataToUse.scheduledStart ?? "",
+    scheduledEnd: dataToUse.scheduledEnd ?? "",
+    defaultBreakMinutes: String(dataToUse.defaultBreakMinutes ?? 0),
+    passkeyRegistered: Boolean(dataToUse.passkeyRegistered),
+    attachments: Array.isArray(dataToUse.attachments) ? dataToUse.attachments : [],
+  };
+}
+
+function EmployeeFormFields({
+  form,
+  setForm,
+  saving,
+  editingId,
+  roleOptions,
+  canViewFinancials,
+}) {
+  const pairLabel = "6.25rem";
+  return (
+    <>
+      <p className={SECTION_TITLE}>Employee</p>
+      <div className="grid grid-cols-1 gap-x-3 gap-y-2 sm:grid-cols-2">
+        <FieldRow label="Name" labelWidth={pairLabel}>
+          <input
+            type="text"
+            required
+            disabled={saving}
+            value={form.name}
+            onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+            className={FIELD_INPUT}
+            aria-label="Name"
+          />
+        </FieldRow>
+        <FieldRow label="Email" labelWidth={pairLabel}>
+          <input
+            type="email"
+            disabled={saving}
+            value={form.email}
+            onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
+            className={FIELD_INPUT}
+            aria-label="Email"
+            required={form.timeClockEnabled !== false}
+          />
+        </FieldRow>
+        <FieldRow label="Emp #" labelWidth={pairLabel}>
+          <input
+            type="text"
+            disabled={saving}
+            value={form.employeeNumber || ""}
+            onChange={(e) => setForm((f) => ({ ...f, employeeNumber: e.target.value }))}
+            className={FIELD_INPUT}
+            aria-label="Employee number"
+          />
+        </FieldRow>
+        <FieldRow label="Role" labelWidth={pairLabel}>
+          <SimpleSelect
+            name="role"
+            options={roleOptions}
+            value={form.role}
+            onChange={(e) => setForm((f) => ({ ...f, role: e.target.value }))}
+            placeholder="Select role"
+            disabled={saving}
+            aria-label="Role"
+          />
+        </FieldRow>
+        <FieldRow label="Department" labelWidth={pairLabel}>
+          <input
+            type="text"
+            disabled={saving}
+            value={form.department || ""}
+            onChange={(e) => setForm((f) => ({ ...f, department: e.target.value }))}
+            className={FIELD_INPUT}
+            aria-label="Department"
+          />
+        </FieldRow>
+        <FieldRow label="Status" labelWidth={pairLabel}>
+          <SimpleSelect
+            name="employmentStatus"
+            options={EMPLOYMENT_STATUS_OPTIONS}
+            value={form.employmentStatus || "Active"}
+            onChange={(e) => {
+              const employmentStatus = e.target.value;
+              setForm((f) => ({
+                ...f,
+                employmentStatus,
+                inactiveDate: employmentStatus === "Active" ? "" : f.inactiveDate,
+                ...(employmentStatus === "Inactive"
+                  ? { canLogin: false, technicianAppAccess: false, timeClockEnabled: false }
+                  : {}),
+              }));
+            }}
+            disabled={saving}
+            aria-label="Employment status"
+          />
+        </FieldRow>
+        {form.employmentStatus === "Inactive" ? (
+          <FieldRow label="Inactive date" labelWidth={pairLabel}>
+            <input
+              type="date"
+              readOnly
+              value={form.inactiveDate || ""}
+              className={FIELD_INPUT}
+              aria-label="Inactive date"
+            />
+          </FieldRow>
+        ) : null}
+        <FieldRow label="Hire date" labelWidth={pairLabel}>
+          <input
+            type="date"
+            disabled={saving}
+            value={form.hireDate || ""}
+            onChange={(e) => setForm((f) => ({ ...f, hireDate: e.target.value }))}
+            className={FIELD_INPUT}
+            aria-label="Hire date"
+          />
+        </FieldRow>
+        <FieldRow label="Phone" labelWidth={pairLabel}>
+          <input
+            type="tel"
+            disabled={saving}
+            value={form.phone}
+            onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))}
+            className={FIELD_INPUT}
+            aria-label="Phone"
+          />
+        </FieldRow>
+      </div>
+
+      <p className={SECTION_TITLE}>Schedule and pay</p>
+      <div className="grid grid-cols-1 gap-x-3 gap-y-2 sm:grid-cols-2">
+        <FieldRow label="Shift start" labelWidth={pairLabel}>
+          <input
+            type="time"
+            disabled={saving}
+            value={form.scheduledStart || ""}
+            onChange={(e) => setForm((f) => ({ ...f, scheduledStart: e.target.value }))}
+            className={FIELD_INPUT}
+            aria-label="Scheduled start"
+          />
+        </FieldRow>
+        <FieldRow label="Shift end" labelWidth={pairLabel}>
+          <input
+            type="time"
+            disabled={saving}
+            value={form.scheduledEnd || ""}
+            onChange={(e) => setForm((f) => ({ ...f, scheduledEnd: e.target.value }))}
+            className={FIELD_INPUT}
+            aria-label="Scheduled end"
+          />
+        </FieldRow>
+        <FieldRow label="Break (min)" labelWidth={pairLabel}>
+          <input
+            type="number"
+            min={0}
+            max={240}
+            disabled={saving}
+            value={form.defaultBreakMinutes ?? "0"}
+            onChange={(e) => setForm((f) => ({ ...f, defaultBreakMinutes: e.target.value }))}
+            className={FIELD_INPUT}
+            aria-label="Default break minutes"
+          />
+        </FieldRow>
+        <FieldRow label="Pay type" labelWidth={pairLabel}>
+          <SimpleSelect
+            name="payType"
+            options={PAY_TYPE_OPTIONS}
+            value={form.payType || "hourly"}
+            onChange={(e) => setForm((f) => ({ ...f, payType: e.target.value }))}
+            disabled={saving}
+            aria-label="Pay type"
+          />
+        </FieldRow>
+        <FieldRow label={form.payType === "salary" ? "Salary" : "Hourly rate"} labelWidth={pairLabel}>
+          {canViewFinancials ? (
+            <input
+              type="text"
+              inputMode="decimal"
+              disabled={saving}
+              value={form.hourlyRate || ""}
+              onChange={(e) => setForm((f) => ({ ...f, hourlyRate: e.target.value }))}
+              className={FIELD_INPUT}
+              aria-label={form.payType === "salary" ? "Salary" : "Hourly rate"}
+              placeholder={form.payType === "salary" ? "e.g. 65000" : "e.g. 28.50"}
+            />
+          ) : (
+            <span className="text-xs italic text-secondary">Restricted (financial data)</span>
+          )}
+        </FieldRow>
+        <FieldRow label="Password" labelWidth={pairLabel}>
+          <input
+            type="password"
+            disabled={saving}
+            value={form.password}
+            onChange={(e) => setForm((f) => ({ ...f, password: e.target.value }))}
+            className={FIELD_INPUT}
+            autoComplete="new-password"
+            placeholder={editingId ? "Leave blank to keep current" : "Optional (6 to 128 characters)"}
+            aria-label="Password"
+          />
+        </FieldRow>
+      </div>
+
+      <FieldRow label="Access" className="items-start">
+        <div className="flex flex-col gap-2 py-0.5">
+          <label className="inline-flex items-center gap-2 text-sm text-title">
+            <input
+              type="checkbox"
+              disabled={saving || form.employmentStatus === "Inactive"}
+              checked={form.employmentStatus === "Inactive" ? false : form.timeClockEnabled !== false}
+              onChange={(e) => setForm((f) => ({ ...f, timeClockEnabled: e.target.checked }))}
+              className="h-3.5 w-3.5 rounded-none border-border text-primary focus:ring-primary"
+            />
+            Time clock enabled
+          </label>
+          {form.passkeyRegistered ? (
+            <p className="text-xs text-secondary">Time clock passkey registered on a device.</p>
+          ) : (
+            <p className="text-xs text-secondary">
+              Employee registers a passkey after scanning the shop Time Clock QR.
+            </p>
+          )}
+          <label className="inline-flex items-center gap-2 text-sm text-title">
+            <input
+              type="checkbox"
+              disabled={saving || form.employmentStatus === "Inactive"}
+              checked={form.employmentStatus === "Inactive" ? false : form.canLogin}
+              onChange={(e) => setForm((f) => ({ ...f, canLogin: e.target.checked }))}
+              className="h-3.5 w-3.5 rounded-none border-border text-primary focus:ring-primary"
+            />
+            Can login to Shop Management System
+          </label>
+          <label className="inline-flex items-center gap-2 text-sm text-title">
+            <input
+              type="checkbox"
+              disabled={saving || form.employmentStatus === "Inactive"}
+              checked={form.employmentStatus === "Inactive" ? false : form.technicianAppAccess}
+              onChange={(e) => setForm((f) => ({ ...f, technicianAppAccess: e.target.checked }))}
+              className="h-3.5 w-3.5 rounded-none border-border text-primary focus:ring-primary"
+            />
+            Technician App access
+          </label>
+
+          <div className="mt-1 border-t border-border pt-2">
+            <label className="block text-xs font-bold text-title">Financial information access</label>
+            <p className="mt-0.5 text-[11px] text-secondary">
+              Controls whether this employee can see costs, pricing, margins, invoices, and AP / AR data.
+            </p>
+            <select
+              disabled={saving}
+              value={form.financialAccess || "role"}
+              onChange={(e) => setForm((f) => ({ ...f, financialAccess: e.target.value }))}
+              className="mt-1 h-7 w-full rounded-none border border-border bg-card px-2 text-xs text-title outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+            >
+              <option value="role">Default by role (e.g. Office/Manager allowed, Technician restricted)</option>
+              <option value="allowed">Always allowed (Can view costs, pricing, margins, AP / AR)</option>
+              <option value="restricted">Always restricted (Hide all costs, pricing, margins, AP / AR)</option>
+            </select>
+          </div>
+        </div>
+      </FieldRow>
+
+      <SimpleEmployeeAttachments
+        recordId={editingId}
+        attachments={form.attachments}
+        onAttachmentsChange={(next) => setForm((f) => ({ ...f, attachments: next }))}
+      />
+    </>
+  );
+}
+
+function localTodayIso() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+const SimpleEmployeesPanel = forwardRef(function SimpleEmployeesPanel({ onChanged }, ref) {
+  const alert = useAlert();
+  const confirm = useConfirm();
+  const { canViewFinancials } = useAuth();
+  const [rows, setRows] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = usePreferredTablePageSize();
+  const [totalCount, setTotalCount] = useState(0);
+  const [tableSort, setTableSort] = useState({ key: "name", direction: "asc" });
+  const [createOpen, setCreateOpen] = useState(false);
+  const [editingId, setEditingId] = useState(null);
+  const [saving, setSaving] = useState(false);
+  const [sendingPayroll, setSendingPayroll] = useState(false);
+  const [form, setForm] = useState(INITIAL_EMPLOYEE_FORM);
+  const [detailEmployee, setDetailEmployee] = useState(null);
+
+  const roleOptions = useMemo(() => {
+    const values = new Set(ROLE_OPTIONS.map((o) => o.value));
+    if (form.role && form.role.trim() && !values.has(form.role.trim())) {
+      return [{ value: form.role.trim(), label: form.role.trim() }, ...ROLE_OPTIONS];
+    }
+    return ROLE_OPTIONS;
+  }, [form.role]);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const params = new URLSearchParams({ page: String(page), pageSize: String(pageSize) });
+      if (searchQuery.trim()) params.set("q", searchQuery.trim());
+      if (tableSort?.key) {
+        params.set("sortBy", tableSort.key);
+        params.set("sortDir", tableSort.direction || "asc");
+      }
+      const res = await fetch(`/api/dashboard/employees?${params.toString()}`, {
+        credentials: "include",
+        cache: "no-store",
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || "Failed to load employees");
+      setRows(Array.isArray(data?.items) ? data.items : []);
+      setTotalCount(Number(data?.totalCount) || 0);
+    } catch (err) {
+      await alert({
+        title: "Error",
+        message: err.message || "Failed to load employees",
+        variant: "danger",
+      });
+      setRows([]);
+      setTotalCount(0);
+    } finally {
+      setLoading(false);
+    }
+  }, [alert, page, pageSize, searchQuery, tableSort]);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  const openCreate = () => {
+    setEditingId(null);
+    setForm(INITIAL_EMPLOYEE_FORM);
+    setDetailEmployee(null);
+    setCreateOpen(true);
+  };
+
+  const openEmployeeDetail = async (row) => {
+    if (!row?.id) return;
+    let dataToUse = row;
+    try {
+      const res = await fetch(`/api/dashboard/employees/${row.id}`, { credentials: "include" });
+      if (res.ok) dataToUse = await res.json();
+    } catch {
+      // use row data
+    }
+    setEditingId(dataToUse.id);
+    setForm(formFromEmployee(dataToUse));
+    setCreateOpen(false);
+    setDetailEmployee({
+      employeeId: String(dataToUse.id || "").trim(),
+      name: String(dataToUse.name || "").trim(),
+      employeeNumber: String(dataToUse.employeeNumber || "").trim(),
+    });
+  };
+
+  useImperativeHandle(ref, () => ({
+    openEmployeeById(employeeId) {
+      const id = String(employeeId || "").trim();
+      if (!id) return;
+      void openEmployeeDetail({ id });
+    },
+  }));
+
+  const closeCreate = () => {
+    if (saving) return;
+    setCreateOpen(false);
+    setEditingId(null);
+    setForm(INITIAL_EMPLOYEE_FORM);
+  };
+
+  const closeDetail = () => {
+    if (saving) return;
+    setDetailEmployee(null);
+    setEditingId(null);
+    setForm(INITIAL_EMPLOYEE_FORM);
+  };
+
+  const makeInactive = async () => {
+    if (!editingId || saving) return;
+    const ok1 = await confirm({
+      title: "Make inactive",
+      message:
+        "This records today's date as the inactive date and turns off shop login, the Technician App, and time clock. The employee stays on the Employees tab. They stay on the other tabs only until all pay is recorded.",
+      confirmLabel: "Continue",
+      variant: "danger",
+    });
+    if (!ok1) return;
+    const ok2 = await confirm({
+      title: "Confirm inactive",
+      message: "Make this employee inactive now?",
+      confirmLabel: "Make inactive",
+      variant: "danger",
+    });
+    if (!ok2) return;
+
+    const nextForm = {
+      ...form,
+      employmentStatus: "Inactive",
+      inactiveDate: localTodayIso(),
+      canLogin: false,
+      technicianAppAccess: false,
+      timeClockEnabled: false,
+    };
+    setForm(nextForm);
+    setSaving(true);
+    try {
+      const res = await fetch(`/api/dashboard/employees/${editingId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify(buildEmployeePayload(nextForm)),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || "Failed to update employee");
+      await load();
+      if (typeof onChanged === "function") onChanged();
+      await alert({
+        title: "Inactive",
+        message: `${nextForm.name || "Employee"} is inactive as of ${nextForm.inactiveDate}. App access is off.`,
+      });
+    } catch (err) {
+      await alert({
+        title: "Error",
+        message: err?.message || "Failed to update employee",
+        variant: "danger",
+      });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const makeActive = async () => {
+    if (!editingId || saving) return;
+    const ok = await confirm({
+      title: "Make active",
+      message:
+        "This employee will be Active again and the inactive date will be cleared. Shop login, the Technician App, and time clock stay off until you turn them back on and save.",
+      confirmLabel: "Make active",
+      variant: "primary",
+    });
+    if (!ok) return;
+
+    const nextForm = {
+      ...form,
+      employmentStatus: "Active",
+      inactiveDate: "",
+    };
+    setForm(nextForm);
+    setSaving(true);
+    try {
+      const res = await fetch(`/api/dashboard/employees/${editingId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify(buildEmployeePayload(nextForm)),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || "Failed to update employee");
+      await load();
+      if (typeof onChanged === "function") onChanged();
+      await alert({
+        title: "Active",
+        message: `${nextForm.name || "Employee"} is active again. Turn app access back on if they should be able to sign in.`,
+      });
+    } catch (err) {
+      await alert({
+        title: "Error",
+        message: err?.message || "Failed to update employee",
+        variant: "danger",
+      });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!String(form.name || "").trim()) {
+      await alert({ title: "Error", message: "Name is required.", variant: "danger" });
+      return;
+    }
+    setSaving(true);
+    try {
+      const isEdit = Boolean(editingId);
+      const res = await fetch(
+        isEdit ? `/api/dashboard/employees/${editingId}` : "/api/dashboard/employees",
+        {
+          method: isEdit ? "PATCH" : "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify(buildEmployeePayload(form)),
+        }
+      );
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || (isEdit ? "Failed to update employee" : "Failed to create employee"));
+      await alert({
+        title: "Success",
+        message: isEdit ? "Employee updated." : "Employee added.",
+      });
+      setCreateOpen(false);
+      setDetailEmployee(null);
+      setEditingId(null);
+      setForm(INITIAL_EMPLOYEE_FORM);
+      setLoading(true);
+      await load();
+      onChanged?.();
+    } catch (err) {
+      await alert({
+        title: "Error",
+        message: err.message || "Failed to save employee",
+        variant: "danger",
+      });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const columns = useMemo(
+    () => [
+      {
+        key: "name",
+        label: "Name",
+        sortable: true,
+        render: (v, row) => (
+          <button
+            type="button"
+            className="rounded font-medium text-primary underline-offset-2 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+            onClick={() => void openEmployeeDetail(row)}
+            title="Edit employee and view payment history"
+          >
+            {v || "-"}
+          </button>
+        ),
+      },
+      { key: "employeeNumber", label: "Emp #", sortable: true },
+      { key: "role", label: "Role", sortable: true },
+      { key: "department", label: "Dept", sortable: true },
+      {
+        key: "employmentStatus",
+        label: "Status",
+        sortable: true,
+        render: (_, row) => (
+          <Badge
+            variant={
+              row.employmentStatus === "Active"
+                ? "success"
+                : row.employmentStatus === "Terminated"
+                  ? "danger"
+                  : "default"
+            }
+            className="rounded-full px-2.5 py-0.5 text-xs"
+          >
+            {row.employmentStatus || "Active"}
+          </Badge>
+        ),
+      },
+      { key: "email", label: "Email", sortable: true },
+      { key: "phone", label: "Phone", sortable: true },
+      {
+        key: "timeClockEnabled",
+        label: "Time clock",
+        sortable: true,
+        render: (_, row) => (
+          <Badge
+            variant={row.timeClockEnabled !== false ? "primary" : "default"}
+            className="rounded-full px-2.5 py-0.5 text-xs"
+          >
+            {row.timeClockEnabled !== false ? "On" : "Off"}
+          </Badge>
+        ),
+      },
+      {
+        key: "passkeyRegistered",
+        label: "Passkey",
+        render: (_, row) => (
+          <Badge
+            variant={row.passkeyRegistered ? "success" : "default"}
+            className="rounded-full px-2.5 py-0.5 text-xs"
+          >
+            {row.passkeyRegistered ? "Registered" : "None"}
+          </Badge>
+        ),
+      },
+      {
+        key: "canLogin",
+        label: "Shop Management System login",
+        sortable: true,
+        render: (_, row) => (
+          <Badge variant={row.canLogin ? "success" : "default"} className="rounded-full px-2.5 py-0.5 text-xs">
+            {row.canLogin ? "Yes" : "No"}
+          </Badge>
+        ),
+      },
+      {
+        key: "financialAccess",
+        label: "Financial access",
+        sortable: true,
+        render: (_, row) => {
+          const val = row.financialAccess || "role";
+          const label =
+            val === "allowed"
+              ? "Always allowed"
+              : val === "restricted"
+                ? "Always restricted"
+                : "Role default";
+          const variant = val === "allowed" ? "success" : val === "restricted" ? "danger" : "default";
+          return (
+            <Badge variant={variant} className="rounded-full px-2.5 py-0.5 text-xs">
+              {label}
+            </Badge>
+          );
+        },
+      },
+      {
+        key: "technicianAppAccess",
+        label: "Technician app",
+        sortable: true,
+        render: (_, row) => (
+          <Badge
+            variant={row.technicianAppAccess ? "primary" : "default"}
+            className="rounded-full px-2.5 py-0.5 text-xs"
+          >
+            {row.technicianAppAccess ? "Allowed" : "Off"}
+          </Badge>
+        ),
+      },
+    ],
+    []
+  );
+
+  const generatePayrollSheet = async () => {
+    setSendingPayroll(true);
+    try {
+      const res = await fetch("/api/dashboard/time-clock/payroll-sheet", {
+        method: "POST",
+        credentials: "include",
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || "Failed to send the payroll sheet.");
+      await alert({
+        title: "Payroll sheet sent",
+        message: data.message || "The payroll sheet was emailed.",
+      });
+    } catch (err) {
+      await alert({
+        title: "Could not send payroll sheet",
+        message: err.message || "Failed to send the payroll sheet.",
+        variant: "danger",
+      });
+    } finally {
+      setSendingPayroll(false);
+    }
+  };
+
+  const formFieldProps = {
+    form,
+    setForm,
+    saving,
+    editingId,
+    roleOptions,
+    canViewFinancials,
+  };
+
+  return (
+    <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-3">
+      <div className="flex shrink-0 flex-wrap items-center justify-between gap-2">
+        <p className="text-sm text-secondary">
+          Click an employee name to edit their record and view payment history.
+        </p>
+        <div className="flex shrink-0 flex-wrap items-center gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            disabled={sendingPayroll}
+            onClick={() => void generatePayrollSheet()}
+          >
+            <FiMail className="h-4 w-4 shrink-0" aria-hidden />
+            {sendingPayroll ? "Sending…" : "Generate Payroll Sheet"}
+          </Button>
+          <Button variant="primary" size="sm" onClick={openCreate} className="shrink-0">
+            Add Employee
+          </Button>
+        </div>
+      </div>
+
+      <div className={SIMPLE_SCREEN_TABLE_WRAP_CLASS}>
+      <Table
+        {...SIMPLE_LIST_TABLE_PROPS}
+        columns={columns}
+        data={rows}
+        rowKey="id"
+        loading={loading}
+        emptyMessage={
+          rows.length === 0 ? "No employees yet. Use “Add Employee” to add one." : "No employees match the search."
+        }
+        searchable
+        onSearch={(q) => {
+          setPage(1);
+          setSearchQuery(q);
+        }}
+        searchPlaceholder="Search name, role, email, phone…"
+        onRefresh={async () => {
+          setLoading(true);
+          await load();
+        }}
+        columnSettingsKey="simple-employees"
+        sortState={tableSort}
+        onSort={(key, direction) => {
+          setPage(1);
+          setTableSort({ key, direction });
+        }}
+        pagination={{ page, pageSize, totalCount }}
+        onPageChange={(nextPage, nextPageSize) => {
+          setPage(nextPage);
+          setPageSize(nextPageSize);
+        }}
+        paginateClientSide={false}
+      />
+      </div>
+
+      <Modal
+        open={createOpen}
+        onClose={closeCreate}
+        title="Add Employee"
+        size="xl"
+        width="min(920px, 96vw)"
+        showClose={!saving}
+        closeOnOutsideClick={false}
+        actions={
+          <Button type="submit" form={EMPLOYEE_FORM_ID} variant="primary" size="sm" disabled={saving}>
+            {saving ? "Saving…" : "Save"}
+          </Button>
+        }
+      >
+        <Form
+          id={EMPLOYEE_FORM_ID}
+          onSubmit={handleSubmit}
+          className="flex flex-col gap-3 !space-y-0 !border-0 !bg-transparent !p-0 !shadow-none"
+        >
+          <EmployeeFormFields {...formFieldProps} />
+        </Form>
+      </Modal>
+
+      <SimpleEmployeePaymentHistoryModal
+        open={Boolean(detailEmployee?.employeeId)}
+        onClose={closeDetail}
+        employeeId={detailEmployee?.employeeId}
+        employeeName={detailEmployee?.name}
+        employeeNumber={detailEmployee?.employeeNumber}
+        payType={form.payType}
+        hourlyRate={form.hourlyRate}
+        title={detailEmployee?.name || "Employee"}
+        showClose={!saving}
+        actions={
+          <>
+            {form.employmentStatus === "Inactive" ? (
+              <Button
+                type="button"
+                variant="primary"
+                size="sm"
+                disabled={saving}
+                onClick={() => void makeActive()}
+              >
+                Make active
+              </Button>
+            ) : (
+              <Button
+                type="button"
+                variant="danger"
+                size="sm"
+                disabled={saving}
+                onClick={() => void makeInactive()}
+              >
+                Make inactive
+              </Button>
+            )}
+            <Button type="submit" form={EMPLOYEE_DETAIL_FORM_ID} variant="primary" size="sm" disabled={saving}>
+              {saving ? "Saving…" : "Save"}
+            </Button>
+          </>
+        }
+        leftPanel={
+          <Form
+            id={EMPLOYEE_DETAIL_FORM_ID}
+            onSubmit={handleSubmit}
+            className="flex flex-col gap-3 !space-y-0 !border-0 !bg-transparent !p-0 !shadow-none"
+          >
+            <EmployeeFormFields {...formFieldProps} />
+          </Form>
+        }
+      />
+    </div>
+  );
+});
+
+export default SimpleEmployeesPanel;

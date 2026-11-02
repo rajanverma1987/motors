@@ -13,4 +13,4 @@ Classic `/dashboard` routes will be removed later. Treat `/dashboards` (Simple v
 - **Do not** embed, wrap, or reuse classic `/dashboard` page clients as the long-term UI (e.g. do not mount old RFQ/PO/AR/AP page clients into Simple tabs).
 - Shared UI primitives (`Button`, `Modal`, `Table`, `Tabs`, `Form`, etc.) and shared lib/API helpers are fine to reuse.
 - When in doubt, create a fresh Simple implementation and iterate step by step with the user.
-- Design notes for Simple live in `documents/SimpleProduct.md`.
+- Design notes for Simple live in `dev/documents/SimpleProduct.md`.

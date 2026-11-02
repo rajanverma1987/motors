@@ -1,0 +1,1331 @@
+import { getTransporter } from "@/lib/email-transport";
+import { getPublicSiteUrl } from "@/lib/public-site-url";
+import { getBrandLogoAbsoluteUrl } from "@/lib/brand-logo";
+import {
+  createWorkspaceSmtpTransport,
+  formatWorkspaceSmtpFrom,
+  resolveCustomerMailDelivery,
+} from "@/lib/workspace-smtp";
+import { normalizeWorkspaceSmtpFields, workspaceSmtpIsComplete } from "@/lib/workspace-smtp-fields";
+import {
+  buildQuoteToCustomerEmailContent,
+  buildInvoiceToCustomerEmailContent,
+  buildPoToVendorEmailContent,
+  withDashboardOutboundEmailFooter,
+} from "@/lib/customer-facing-email-content";
+import { shopEmailLogoInlineStyle } from "@/lib/logo-document-scale";
+import {
+  buildCrmWelcomeEmailContent,
+  buildDemoAccountCredentialsEmailContent,
+} from "@/lib/demo-account-credentials-email";
+import { getDemoBookingUrl } from "@/lib/demo-booking-url";
+import {
+  buildLeadContactDetailRowsHtml,
+  getLeadFullContactInEmailUntilDate,
+  shouldIncludeFullLeadContactInShopEmail,
+} from "@/lib/lead-shop-notification-promo";
+
+export {
+  buildCrmWelcomeEmailContent,
+  buildDemoAccountCredentialsEmailContent,
+} from "@/lib/demo-account-credentials-email";
+
+const fromEmail = process.env.EMAIL_FROM || process.env.SMTP_USER || "";
+const marketingFrom = process.env.EMAIL_MARKETING_FROM || fromEmail;
+
+function escHtmlEmail(v) {
+  return v == null ? "" : String(v).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
+
+/** Replace legacy brand domains in outgoing email HTML (templates, env URLs, DB content). */
+function sanitizeEmailBodyHtml(html) {
+  if (!html) return html;
+  return String(html)
+    .replace(/(?:https?:\/\/)?(?:www\.)?(?:motorswinding|iqmotorbase)\.com/gi, (match) =>
+      /^https?:\/\//i.test(match) ? "https://3phaseflow.com" : "3phaseflow.com"
+    )
+    .replace(/@(?:www\.)?(?:motorswinding|iqmotorbase)\.com/gi, "@3phaseflow.com");
+}
+
+/** 3PhaseFlow header for platform / admin emails (logo from brand wordmark). */
+function wrapPlatformBrandedHtml(bodyHtml) {
+  const site = getPublicSiteUrl();
+  const logoUrl = getBrandLogoAbsoluteUrl();
+  if (!logoUrl.startsWith("http")) return bodyHtml;
+  const header = `<div style="margin:0 0 24px 0;padding-bottom:16px;border-bottom:1px solid #e5e7eb"><a href="${escHtmlEmail(site)}" style="text-decoration:none;display:inline-block"><img src="${escHtmlEmail(logoUrl)}" alt="3PhaseFlow" width="280" style="max-width:100%;width:280px;height:auto;display:block;border:0" /></a></div>`;
+  return header + bodyHtml;
+}
+
+export async function sendListingApproved(to, companyName) {
+  const subject = "Congratulations! Your listing is live on 3PhaseFlow.com";
+  const html = `
+    <p>Congratulations${companyName ? ` from ${companyName}` : ""}!</p>
+    <p>Your repair center listing on 3PhaseFlow.com has been <strong>approved</strong> and is now live on our website. Your company is listed in the directory so customers in your area can find and contact you.</p>
+    <p>Thank you for being part of 3PhaseFlow.com.</p>
+    <p>,  3PhaseFlow.com</p>
+  `;
+  return sendEmail(to, subject, wrapPlatformBrandedHtml(html));
+}
+
+/**
+ * Congratulate a shop when their directory listing is upgraded to Premium Partner.
+ * @param {{ to: string, companyName?: string, publicListingUrl?: string }} params
+ */
+export async function sendListingPremiumPartnerEmail({ to, companyName, publicListingUrl }) {
+  const esc = (v) =>
+    v == null ? "" : String(v).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+  const company = (companyName && String(companyName).trim()) || "";
+  const greet = company ? ` ${esc(company)}` : "";
+  const subject = "Congratulations! You are a Premium Partner on 3PhaseFlow.com";
+  const html = `
+    <p>Congratulations${greet}!</p>
+    <p>Your repair center listing is now a <strong>Premium Partner</strong> on 3PhaseFlow.com.</p>
+    <p>That means your shop appears at the top of directory search and location results, with a Premium Partner badge on your listing card and detail page so buyers can spot you quickly.</p>
+    ${
+      publicListingUrl
+        ? `<p><strong>Your public listing:</strong> <a href="${esc(publicListingUrl)}">${esc(publicListingUrl)}</a></p>`
+        : ""
+    }
+    <p>Thank you for partnering with 3PhaseFlow.com. We are glad to help more industrial buyers find your shop.</p>
+    <p>If you have questions about your Premium Partner placement, reply to this email or contact us anytime.</p>
+    <p>The 3PhaseFlow.com team</p>
+  `;
+  return sendEmail(to, subject, wrapPlatformBrandedHtml(html));
+}
+
+export async function sendListingRejected(to, companyName, reason) {
+  const subject = "Update on your 3PhaseFlow.com listing submission";
+  const html = `
+    <p>Hi${companyName ? ` from ${companyName}` : ""},</p>
+    <p>Thank you for submitting your repair center to 3PhaseFlow.com. After review, we are unable to approve your listing at this time.</p>
+    ${reason ? `<p><strong>Reason for rejection:</strong> ${reason}</p>` : "<p>No specific reason was provided.</p>"}
+    <p>If you have questions or would like to resubmit with updates, please reply to this email or contact us.</p>
+    <p>,  3PhaseFlow.com</p>
+  `;
+  return sendEmail(to, subject, wrapPlatformBrandedHtml(html));
+}
+
+export async function sendNewReviewNotification(to, companyName, reviewerName, rating, reviewBody) {
+  const subject = `New customer review on 3PhaseFlow.com to ${companyName}`;
+  const stars = "★".repeat(Math.round(rating)) + "☆".repeat(5 - Math.round(rating));
+  const html = `
+    <p>Hi,</p>
+    <p>A customer left a new review for <strong>${companyName}</strong> on 3PhaseFlow.com.</p>
+    <p><strong>Rating:</strong> ${stars} (${rating}/5)</p>
+    <p><strong>From:</strong> ${reviewerName}</p>
+    <p><strong>Review:</strong></p>
+    <p>${reviewBody.replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/\n/g, "<br />")}</p>
+    <p>,  3PhaseFlow.com</p>
+  `;
+  return sendEmail(to, subject, wrapPlatformBrandedHtml(html));
+}
+
+/** Rewind calculator RFQ, override with REWIND_CALCULATOR_RFQ_EMAIL if needed. */
+const rewindCalculatorRfqEmail = () =>
+  process.env.REWIND_CALCULATOR_RFQ_EMAIL?.trim() || "contact@3PhaseFlow.com";
+
+/**
+ * Notify 3PhaseFlow when a visitor submits an RFQ after using the public rewind ballpark calculator.
+ * @param {{ leadName: string, leadEmail: string, leadPhone?: string, leadCity?: string, leadZip?: string, problemDescription?: string, htmlRows: string }} params
+ */
+export async function sendRewindCalculatorRfqToAdmin(params) {
+  const to = rewindCalculatorRfqEmail();
+  const esc = (v) =>
+    v == null ? "" : String(v).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+  const subject = "Rewind calculator RFQ, 3PhaseFlow.com";
+  const html = `
+    <p>A visitor used the <strong>electric motor rewinding cost calculator</strong> and requested quotes from shops in their area.</p>
+    <table style="border-collapse:collapse;margin-top:12px;">
+      <tbody>
+        <tr><td style="padding:8px 12px;border:1px solid #ddd;font-weight:600;">Name</td><td style="padding:8px 12px;border:1px solid #ddd;">${esc(params.leadName)}</td></tr>
+        <tr><td style="padding:8px 12px;border:1px solid #ddd;font-weight:600;">Email</td><td style="padding:8px 12px;border:1px solid #ddd;">${esc(params.leadEmail)}</td></tr>
+        ${params.leadPhone ? `<tr><td style="padding:8px 12px;border:1px solid #ddd;font-weight:600;">Phone</td><td style="padding:8px 12px;border:1px solid #ddd;">${esc(params.leadPhone)}</td></tr>` : ""}
+        ${params.leadCity ? `<tr><td style="padding:8px 12px;border:1px solid #ddd;font-weight:600;">City</td><td style="padding:8px 12px;border:1px solid #ddd;">${esc(params.leadCity)}</td></tr>` : ""}
+        ${params.leadZip ? `<tr><td style="padding:8px 12px;border:1px solid #ddd;font-weight:600;">ZIP</td><td style="padding:8px 12px;border:1px solid #ddd;">${esc(params.leadZip)}</td></tr>` : ""}
+      </tbody>
+    </table>
+    <p style="margin-top:16px;"><strong>Calculator summary</strong></p>
+    <table style="border-collapse:collapse;">${params.htmlRows}</table>
+    ${params.problemDescription ? `<p style="margin-top:16px;"><strong>Message / notes</strong></p><p>${esc(params.problemDescription).replace(/\n/g, "<br/>")}</p>` : ""}
+    <p>,  3PhaseFlow.com (automated)</p>
+  `;
+  return sendEmail(to, subject, wrapPlatformBrandedHtml(html));
+}
+
+/**
+ * Notify 3PhaseFlow when a visitor downloads a calculator estimate PDF (price enquiry).
+ * @param {{
+ *   leadName: string,
+ *   leadEmail: string,
+ *   leadPhone: string,
+ *   visitorTypeLabel: string,
+ *   sourcePage?: string,
+ *   htmlRows: string,
+ *   estimateRange?: string,
+ *   pdfBuffer?: Buffer,
+ *   pdfFilename?: string,
+ * }} params
+ */
+export async function sendCalculatorPriceEnquiryToAdmin(params) {
+  const to = rewindCalculatorRfqEmail();
+  const esc = (v) =>
+    v == null ? "" : String(v).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+  const subject = "Price Enquiry";
+  const html = `
+    <p>A visitor downloaded a <strong>motor rewind cost calculator estimate PDF</strong> from 3PhaseFlow.com.</p>
+    ${params.pdfBuffer ? "<p><strong>The detailed estimate PDF is attached to this email.</strong></p>" : ""}
+    <table style="border-collapse:collapse;margin-top:12px;">
+      <tbody>
+        <tr><td style="padding:8px 12px;border:1px solid #ddd;font-weight:600;">Name</td><td style="padding:8px 12px;border:1px solid #ddd;">${esc(params.leadName)}</td></tr>
+        <tr><td style="padding:8px 12px;border:1px solid #ddd;font-weight:600;">Email</td><td style="padding:8px 12px;border:1px solid #ddd;">${esc(params.leadEmail)}</td></tr>
+        <tr><td style="padding:8px 12px;border:1px solid #ddd;font-weight:600;">Phone</td><td style="padding:8px 12px;border:1px solid #ddd;">${esc(params.leadPhone)}</td></tr>
+        <tr><td style="padding:8px 12px;border:1px solid #ddd;font-weight:600;">Visitor type</td><td style="padding:8px 12px;border:1px solid #ddd;">${esc(params.visitorTypeLabel)}</td></tr>
+        ${params.sourcePage ? `<tr><td style="padding:8px 12px;border:1px solid #ddd;font-weight:600;">Source page</td><td style="padding:8px 12px;border:1px solid #ddd;">${esc(params.sourcePage)}</td></tr>` : ""}
+        ${params.estimateRange ? `<tr><td style="padding:8px 12px;border:1px solid #ddd;font-weight:600;">Ballpark range</td><td style="padding:8px 12px;border:1px solid #ddd;">${esc(params.estimateRange)}</td></tr>` : ""}
+      </tbody>
+    </table>
+    <p style="margin-top:16px;"><strong>Calculator configuration &amp; estimate</strong></p>
+    <table style="border-collapse:collapse;">${params.htmlRows}</table>
+    <p>,  3PhaseFlow.com (automated)</p>
+  `;
+  return sendEmail(to, subject, wrapPlatformBrandedHtml(html), {
+    attachments: calculatorEstimatePdfAttachments(params.pdfBuffer, params.pdfFilename),
+  });
+}
+
+function calculatorEstimatePdfAttachments(pdfBuffer, pdfFilename) {
+  if (!pdfBuffer || !Buffer.isBuffer(pdfBuffer)) return undefined;
+  return [
+    {
+      filename: pdfFilename || "3PhaseFlow-Motor-Rewind-Estimate.pdf",
+      content: pdfBuffer,
+      contentType: "application/pdf",
+    },
+  ];
+}
+
+/**
+ * Send the detailed estimate PDF to the visitor who requested the download.
+ * @param {{
+ *   toEmail: string,
+ *   customerName: string,
+ *   estimateRange?: string,
+ *   pdfBuffer?: Buffer,
+ *   pdfFilename?: string,
+ * }} params
+ */
+export async function sendCalculatorEstimatePdfToCustomer(params) {
+  const to = String(params.toEmail || "").trim();
+  if (!to) return { ok: false, error: "Customer email is required." };
+
+  const esc = (v) =>
+    v == null ? "" : String(v).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+  const site = getPublicSiteUrl();
+  const name = esc(params.customerName || "there");
+  const rangeLine = params.estimateRange
+    ? `<p>Your ballpark planning range: <strong>${esc(params.estimateRange)}</strong> (US typical rewind shop pricing).</p>`
+    : "";
+
+  const subject = "Your motor rewind cost estimate to 3PhaseFlow.com";
+  const html = `
+    <p>Hi ${name},</p>
+    <p>Thank you for using the <strong>3PhaseFlow.com motor rewind cost calculator</strong>. Your detailed estimate PDF is attached.</p>
+    ${rangeLine}
+    <p>The PDF includes your motor configuration, ballpark range, cost breakdown, and how the estimate was calculated. This is planning guidance only, not a binding shop quote. Final pricing depends on inspection and shop scope.</p>
+    <p>When you are ready for written quotes from qualified repair shops, visit <a href="${esc(site)}">${esc(site)}</a>.</p>
+    <p>,  3PhaseFlow.com</p>
+  `;
+
+  return sendEmail(to, subject, wrapPlatformBrandedHtml(html), {
+    attachments: calculatorEstimatePdfAttachments(params.pdfBuffer, params.pdfFilename),
+  });
+}
+
+/** Notify contact@3PhaseFlow.com when a user has no listings in their area (near-me page). */
+export async function sendNoListingsNearMeNotification(city, state, zip, extra = {}) {
+  const to = "contact@3PhaseFlow.com";
+  const subject = "3PhaseFlow.com to No repair shops in this area (near-me page)";
+  const esc = (v) =>
+    v == null ? "" : String(v).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+  const lat = Number(extra?.lat);
+  const lng = Number(extra?.lng);
+  const hasCoords = Number.isFinite(lat) && Number.isFinite(lng);
+  const locationParts = [city, state, zip].filter(Boolean);
+  const locationLine = locationParts.length
+    ? locationParts.join(", ")
+    : hasCoords
+      ? `${lat.toFixed(5)}, ${lng.toFixed(5)}`
+      : "Location not provided";
+  const html = `
+    <p>A visitor on the <strong>Electric motor repair shops near me</strong> page had no listings in their area.</p>
+    <p><strong>Location details:</strong></p>
+    <ul>
+      ${city ? `<li>City: ${esc(city)}</li>` : ""}
+      ${state ? `<li>State: ${esc(state)}</li>` : ""}
+      ${zip ? `<li>ZIP: ${esc(zip)}</li>` : ""}
+      ${hasCoords ? `<li>Coordinates: ${esc(lat.toFixed(5))}, ${esc(lng.toFixed(5))}</li>` : ""}
+      ${extra?.source ? `<li>Source: ${esc(extra.source)}</li>` : ""}
+    </ul>
+    <p><strong>Summary:</strong> ${esc(locationLine)}</p>
+    <p>Please look for motor repair shops in this area and encourage them to list on the directory.</p>
+    <p>,  3PhaseFlow.com (automated)</p>
+  `;
+  return sendEmail(to, subject, wrapPlatformBrandedHtml(html));
+}
+
+/** Notify a user who signed up for "notify me when there's a listing" that repair shops are now in their area. Links to our site only; no direct shop contact info in the email. */
+export async function sendAreaListedNotification(toEmail, locationLabel, shopListingsPageUrl) {
+  const subject = "repair shops are now in your area to 3PhaseFlow.com";
+  const html = `
+    <p>Good news!</p>
+    <p>We've added repair shops near <strong>${locationLabel || "your area"}</strong> on 3PhaseFlow.com.</p>
+    <p>You asked to be notified when new listings are available in your area. View the full list and details on our site:</p>
+    <p><a href="${shopListingsPageUrl}">View repair shops in your area</a></p>
+    <p>,  3PhaseFlow.com</p>
+  `;
+  return sendEmail(toEmail, subject, wrapPlatformBrandedHtml(html));
+}
+
+/** Send demo request to admin as plain HTML table. Subject: RFQ - 3PhaseFlow Shop Management System Demo. */
+export async function sendDemoRequestToAdmin(fields) {
+  const esc = (v) => (v == null ? "" : String(v).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;"));
+  const rows = [
+    ["Name", fields.name],
+    ["Email", fields.email],
+    ["Phone", fields.phone],
+    ["Shop name", fields.businessName],
+    ["Shop website", fields.website],
+    ["Business type", fields.businessType],
+    ["Team size", fields.teamSize],
+    ["Current tools", fields.currentTools],
+    ["Main problem", fields.mainProblem],
+    ["City", fields.city],
+    ["State", fields.state],
+    ["Source page", fields.sourcePage],
+    ["Date", fields.preferDate],
+    ["Time", fields.preferTime],
+    ["Timezone", fields.timezone],
+  ]
+    .filter(([, v]) => v != null && String(v).trim() !== "")
+    .map(([label, value]) => `<tr><td style="padding:8px 12px;border:1px solid #ddd;font-weight:600;">${esc(label)}</td><td style="padding:8px 12px;border:1px solid #ddd;">${esc(value)}</td></tr>`)
+    .join("");
+  const html = `
+    <p>A visitor requested a Shop Management System demo${fields.sourcePage ? ` (source: ${esc(fields.sourcePage)})` : ""}.</p>
+    <table style="border-collapse:collapse;margin-top:12px;">
+      <tbody>${rows}</tbody>
+    </table>
+    <p style="margin-top:16px;">,  3PhaseFlow.com (contact form)</p>
+  `;
+  return sendEmail("contact@3PhaseFlow.com", "RFQ - 3PhaseFlow Shop Management System Demo.", wrapPlatformBrandedHtml(html));
+}
+
+/** Send thank-you email to client after demo request. */
+export async function sendDemoRequestThankYou(toName, toEmail, availability = {}) {
+  const name = toName ? ` ${toName}` : "";
+  const subject = "We received your demo request to 3PhaseFlow.com";
+  const esc = (v) => (v == null ? "" : String(v).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;"));
+  const preferDate = String(availability?.preferDate || "").trim();
+  const preferTime = String(availability?.preferTime || "").trim();
+  const timezone = String(availability?.timezone || "").trim();
+  const preferenceParts = [preferDate, preferTime, timezone].filter(Boolean);
+  const preferenceLine =
+    preferenceParts.length > 0
+      ? `<p>We saved your submitted preference: <strong>${esc(preferenceParts.join(" · "))}</strong>. If that changes, include updated options in your reply.</p>`
+      : "";
+  const html = `
+    <p>Hi${name},</p>
+    <p>Thank you for requesting a demo of 3PhaseFlow.com.</p>
+    ${preferenceLine}
+    <p>To schedule your meeting, please <strong>reply to this email</strong> with a few dates and times that work for you (include your timezone). We&apos;ll send a calendar invite for a slot that fits your schedule.</p>
+    <p>In the meantime, feel free to explore our <a href="${getPublicSiteUrl()}/electric-motor-repair-shops-listings">repair center directory</a> or learn more about <a href="${getPublicSiteUrl()}/features">our features</a>.</p>
+    <p>,  The 3PhaseFlow.com team</p>
+  `;
+  return sendEmail(toEmail, subject, wrapPlatformBrandedHtml(html));
+}
+
+/** Email address to receive "new listing submitted" and "shop listed" notifications. */
+const listingNotifyEmail = () =>
+  process.env.NOTIFY_LISTING_EMAIL?.trim() ||
+  process.env.ADMIN_EMAIL?.trim() ||
+  "contact@3PhaseFlow.com";
+
+/** Notify admin when someone submits a new listing from list-your-electric-motor-services. */
+export async function sendNewListingSubmittedToAdmin(doc) {
+  const to = listingNotifyEmail();
+  if (!to) return { ok: true };
+  const esc = (v) => (v == null ? "" : String(v).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;"));
+  const rows = [
+    ["Company", doc.companyName],
+    ["Email", doc.email],
+    ["Phone", doc.phone],
+    ["Website", doc.website],
+    ["City", doc.city],
+    ["State", doc.state],
+    ["ZIP", doc.zipCode],
+    ["Primary contact", doc.primaryContactPerson],
+    ["Short description", (doc.shortDescription || "").slice(0, 200)],
+  ]
+    .filter(([, v]) => v != null && String(v).trim() !== "")
+    .map(([label, value]) => `<tr><td style="padding:8px 12px;border:1px solid #ddd;font-weight:600;">${esc(label)}</td><td style="padding:8px 12px;border:1px solid #ddd;">${esc(value)}</td></tr>`)
+    .join("");
+  const html = `
+    <p>A new repair center listing was submitted from the <strong>List your electric motor services</strong> page.</p>
+    <p>Review and approve or reject in the admin: <a href="${getPublicSiteUrl()}/admin/listings">Admin → Listings</a></p>
+    <table style="border-collapse:collapse;margin-top:12px;">
+      <tbody>${rows}</tbody>
+    </table>
+    <p style="margin-top:16px;">,  3PhaseFlow.com (automated)</p>
+  `;
+  return sendEmail(to, "New listing submitted to 3PhaseFlow.com", wrapPlatformBrandedHtml(html));
+}
+
+/** Notify admin when a listing is approved and the shop is now listed on the website. */
+export async function sendShopListedNotificationToAdmin(doc) {
+  const to = listingNotifyEmail();
+  if (!to) return { ok: true };
+  const siteUrl = getPublicSiteUrl();
+  const html = `
+    <p>A repair center has been <strong>approved</strong> and is now listed on the website.</p>
+    <p><strong>${(doc.companyName || "").replace(/</g, "&lt;").replace(/>/g, "&gt;")}</strong><br />
+    Email: ${(doc.email || "").replace(/</g, "&lt;")} | ${[doc.city, doc.state, doc.zipCode].filter(Boolean).join(", ") || ", "}</p>
+    <p><a href="${siteUrl}/admin/listings">View in admin</a> | <a href="${siteUrl}/electric-motor-repair-shops-listings">Public directory</a></p>
+    <p style="margin-top:16px;">,  3PhaseFlow.com (automated)</p>
+  `;
+  return sendEmail(to, "Shop listed on website to 3PhaseFlow.com", wrapPlatformBrandedHtml(html));
+}
+
+/**
+ * Notify a listed repair center when a visitor submits an RFQ from their public listing page.
+ * During the full-contact promo window, the email includes complete lead details (not gated behind login).
+ * @param {{
+ *   to: string,
+ *   listingCompanyName?: string,
+ *   leadContactName?: string,
+ *   leadContactCompany?: string,
+ *   siteUrl?: string,
+ *   lead?: Record<string, unknown> | null,
+ * }} params
+ */
+export async function sendNewWebsiteLeadNotificationToShop({
+  to,
+  listingCompanyName,
+  leadContactName,
+  leadContactCompany,
+  siteUrl,
+  lead = null,
+}) {
+  const esc = (v) =>
+    v == null ? "" : String(v).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+  const base = String(siteUrl || getPublicSiteUrl()).replace(/\/+$/, "");
+  const leadsUrl = `${base}/dashboards?tab=customers`;
+  const loginUrl = `${base}/login`;
+  const demoUrl = getDemoBookingUrl();
+  const includeFull = shouldIncludeFullLeadContactInShopEmail();
+  const untilDate = getLeadFullContactInEmailUntilDate();
+  const leadPayload = lead && typeof lead === "object" ? lead : {};
+  const name = String(leadPayload.name || leadContactName || "").trim();
+  const company = String(leadPayload.company || leadContactCompany || "").trim();
+  const fromLine = [esc(name || "Someone"), company ? ` (${esc(company)})` : ""].join("");
+  const subject = `New industrial lead for ${listingCompanyName || "your shop"} | 3PhaseFlow.com`;
+  const feedbackToMatch = String(fromEmail || "").match(/[\w.+-]+@[\w.-]+\.\w+/);
+  const feedbackTo = (feedbackToMatch && feedbackToMatch[0]) || "contact@3phaseflow.com";
+  const feedbackMailto = `mailto:${encodeURIComponent(feedbackTo)}?subject=${encodeURIComponent(
+    `Lead quality feedback: ${listingCompanyName || "shop"}`
+  )}&body=${encodeURIComponent(
+    [
+      "Lead quality feedback for 3PhaseFlow",
+      "",
+      "1) Was this lead industrial / relevant to your shop? (Yes / Partially / No)",
+      "2) Was motor size (HP) a good fit? (Yes / Too small / Too large / Unclear)",
+      "3) Overall lead quality: Excellent / Good / Fair / Poor",
+      "4) Any comments to improve lead matching?",
+      "",
+      `Lead: ${name || "-"}${company ? ` / ${company}` : ""}`,
+    ].join("\n")
+  )}`;
+
+  const { tableHtml, problemBlock } = includeFull
+    ? buildLeadContactDetailRowsHtml(
+        {
+          name,
+          company,
+          email: leadPayload.email,
+          phone: leadPayload.phone,
+          city: leadPayload.city,
+          zipCode: leadPayload.zipCode,
+          buyerType: leadPayload.buyerType,
+          motorType: leadPayload.motorType,
+          motorHp: leadPayload.motorHp,
+          voltage: leadPayload.voltage,
+          urgencyLevel: leadPayload.urgencyLevel,
+          industry: leadPayload.industry,
+          problemDescription: leadPayload.problemDescription,
+          message: leadPayload.message,
+        },
+        esc
+      )
+    : { tableHtml: "", problemBlock: "" };
+
+  const contactSection = includeFull
+    ? `
+    <p><strong>Full contact details</strong> (included through ${esc(untilDate)} so you can respond immediately):</p>
+    ${tableHtml || `<p><strong>From:</strong> ${fromLine || "A visitor"}</p>`}
+    ${problemBlock}
+    <p style="font-size:13px;color:#555;">You do not need to unlock this lead. Contact info is in this email. Use the shop platform to track follow-up, quotes, and jobs in one place.</p>
+    `
+    : `
+    <p><strong>From:</strong> ${fromLine || "A visitor"}</p>
+    <p>Log in to your shop dashboard to view full contact details and respond in your Shop Management System.</p>
+    `;
+
+  const html = `
+    <p>Hello,</p>
+    <p>You received a new industrial repair inquiry from <strong>3PhaseFlow.com</strong>.</p>
+    ${contactSection}
+    <p><strong>Manage this lead on 3PhaseFlow</strong> (quotes, job tracking, customer history, and more directory leads):</p>
+    <p>
+      <a href="${esc(leadsUrl)}" style="display:inline-block;padding:10px 20px;background:#9a5d33;color:#fff;text-decoration:none;border-radius:6px;margin:0 8px 8px 0;">Open Leads in Shop Management System</a>
+      <a href="${esc(loginUrl)}" style="display:inline-block;padding:10px 20px;background:#fff;color:#9a5d33;border:1px solid #9a5d33;text-decoration:none;border-radius:6px;margin:0 8px 8px 0;">Log in</a>
+    </p>
+    <p style="font-size:13px;color:#555;">If you are not signed in yet, use Log in with your shop email, then open <strong>Leads</strong>. Prefer a walkthrough? <a href="${esc(demoUrl)}">Book a free 30-min demo</a>.</p>
+    <hr style="border:none;border-top:1px solid #e5e7eb;margin:24px 0;" />
+    <p><strong>Quick feedback (2 minutes)</strong></p>
+    <p>We are improving industrial lead matching. Please reply to this email or use the button below:</p>
+    <ul>
+      <li>Was this lead industrial / relevant to your shop?</li>
+      <li>Was motor size (HP) a good fit?</li>
+      <li>Overall quality: Excellent, Good, Fair, or Poor?</li>
+      <li>Any comments to improve matching?</li>
+    </ul>
+    <p><a href="${esc(feedbackMailto)}" style="display:inline-block;padding:10px 20px;background:#1f2937;color:#fff;text-decoration:none;border-radius:6px;">Send lead quality feedback</a></p>
+    <p>Thank you,<br/>3PhaseFlow.com</p>
+  `;
+  return sendEmail(to, subject, wrapPlatformBrandedHtml(html));
+}
+
+/**
+ * Platform nurture for non-paying directory / 3PhaseTrack shops after a repair lead.
+ */
+export async function sendLeadPlatformNurtureEmail({ to, name, bookingUrl, unsubscribeUrl }) {
+  const esc = (v) =>
+    v == null ? "" : String(v).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+  const displayName = String(name || "there").trim() || "there";
+  const cal = String(bookingUrl || "https://cal.com/iqmotorbase/30min").trim();
+  const unsub = String(unsubscribeUrl || "").trim();
+  const subject = "You received a repair lead from 3PhaseFlow: here is how to get more";
+  const html = `
+    <p>Hi ${esc(displayName)},</p>
+    <p>Your shop received a repair inquiry through 3PhaseFlow recently. A buyer in your area found your listing and submitted a request.</p>
+    <p>That lead came through our free directory listing. The platform can do a lot more than that.</p>
+    <p>3PhaseFlow is a shop management system built specifically for electric motor repair, not adapted from auto repair software, not a generic CRM. Work orders with full motor nameplate data, job tracking from intake to test bench, customer and motor history, invoicing, accounts receivable, inventory, QuickBooks sync, and more repair leads from our directory.</p>
+    <p>I wanted to reach out personally because your shop is already in our network and already receiving inquiries. You are not starting from scratch.</p>
+    <p>We are currently offering founder pricing to the first 10 shops, a permanently locked discounted rate. One spot is already taken. If you want to see the platform before the founder spots are gone, I can show you everything in 30 minutes.</p>
+    <p><a href="${esc(cal)}" style="display:inline-block;padding:12px 22px;background:#9a5d33;color:#fff;text-decoration:none;border-radius:6px;font-weight:600;">Book a free 30-min demo</a></p>
+    <p>Book a time here: <a href="${esc(cal)}">${esc(cal)}</a></p>
+    <p>Or just reply to this email and we will find a time that works.</p>
+    <p>Raj<br>+1 (385) 386-3860<br><a href="https://3phaseflow.com">3PhaseFlow.com</a></p>
+    ${
+      unsub
+        ? `<p style="margin-top:28px;padding-top:16px;border-top:1px solid #e5e7eb;font-size:12px;color:#64748b;line-height:1.5;">You received this because your shop received a repair lead through 3PhaseFlow. <a href="${esc(unsub)}" style="color:#64748b;">Unsubscribe</a> from these emails.</p>`
+        : ""
+    }
+  `;
+  return sendEmail(to, subject, wrapPlatformBrandedHtml(html));
+}
+
+/**
+ * Notify a listed repair center when a visitor unlocks their contact info on the public listing page.
+ * @param {{
+ *   to: string,
+ *   listingCompanyName?: string,
+ *   leadContactName?: string,
+ *   siteUrl?: string,
+ *   lead?: Record<string, unknown> | null,
+ * }} params
+ */
+export async function sendContactUnlockNotificationToShop({
+  to,
+  listingCompanyName,
+  leadContactName,
+  siteUrl,
+  lead = null,
+}) {
+  const esc = (v) =>
+    v == null ? "" : String(v).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+  const base = String(siteUrl || getPublicSiteUrl()).replace(/\/+$/, "");
+  const leadsUrl = `${base}/dashboards?tab=customers`;
+  const loginUrl = `${base}/login`;
+  const demoUrl = getDemoBookingUrl();
+  const includeFull = shouldIncludeFullLeadContactInShopEmail();
+  const untilDate = getLeadFullContactInEmailUntilDate();
+  const leadPayload = lead && typeof lead === "object" ? lead : {};
+  const name = String(leadPayload.name || leadContactName || "").trim();
+  const fromLine = esc(name || "Someone");
+  const subject = `Contact info viewed for ${listingCompanyName || "your shop"} | 3PhaseFlow.com`;
+  const { tableHtml } = includeFull
+    ? buildLeadContactDetailRowsHtml(
+        {
+          name,
+          company: leadPayload.company,
+          email: leadPayload.email,
+          phone: leadPayload.phone,
+          city: leadPayload.city,
+          zipCode: leadPayload.zipCode,
+        },
+        esc
+      )
+    : { tableHtml: "" };
+
+  const contactSection = includeFull
+    ? `
+    <p><strong>Visitor contact</strong> (included through ${esc(untilDate)}):</p>
+    ${tableHtml || `<p><strong>${fromLine}</strong></p>`}
+    `
+    : `
+    <p><strong>${fromLine}</strong> viewed your contact information. Log in to view their details in Leads.</p>
+    `;
+
+  const html = `
+    <p>Hello,</p>
+    <p>Someone viewed your contact information on your <strong>3PhaseFlow.com</strong> directory listing.</p>
+    <p>This is a softer lead than a full repair request. They may follow up directly or submit an RFQ later.</p>
+    ${contactSection}
+    <p>
+      <a href="${esc(leadsUrl)}" style="display:inline-block;padding:10px 20px;background:#9a5d33;color:#fff;text-decoration:none;border-radius:6px;margin:0 8px 8px 0;">Open Leads in Shop Management System</a>
+      <a href="${esc(loginUrl)}" style="display:inline-block;padding:10px 20px;background:#fff;color:#9a5d33;border:1px solid #9a5d33;text-decoration:none;border-radius:6px;margin:0 8px 8px 0;">Log in</a>
+    </p>
+    <p style="font-size:13px;color:#555;">Track contacts and convert them to quotes and jobs in 3PhaseFlow. <a href="${esc(demoUrl)}">Book a free demo</a>.</p>
+    <p>Thank you,<br/>3PhaseFlow.com</p>
+  `;
+  return sendEmail(to, subject, wrapPlatformBrandedHtml(html));
+}
+
+/** Send verification code for list-your-electric-motor-services email verification. */
+export async function sendVerificationCodeEmail(to, code) {
+  const subject = "Your 3PhaseFlow.com verification code";
+  const html = `
+    <p>Your verification code for listing your center on 3PhaseFlow.com is:</p>
+    <p style="font-size:24px;font-weight:bold;letter-spacing:4px;font-family:monospace">${code}</p>
+    <p>Enter this code on the website to continue. The code expires in 15 minutes.</p>
+    <p>If you didn't request this, you can ignore this email.</p>
+    <p>,  3PhaseFlow.com</p>
+  `;
+  return sendEmail(to, subject, wrapPlatformBrandedHtml(html));
+}
+
+/** Full HTML as sent (platform logo header + body). */
+export function wrapAdminPlatformEmailHtml(bodyHtml) {
+  return wrapPlatformBrandedHtml(bodyHtml);
+}
+
+export async function sendCrmWelcomeEmail({
+  to,
+  shopName,
+  contactName,
+  userId,
+  plainPassword,
+  planLabel = "",
+  subject: subjectOverride,
+  bodyHtml: bodyOverride,
+}) {
+  const built = buildCrmWelcomeEmailContent({
+    to,
+    shopName,
+    contactName,
+    userId,
+    plainPassword,
+    planLabel,
+  });
+  const subject = subjectOverride?.trim() || built.subject;
+  const bodyHtml = bodyOverride?.trim() || built.bodyHtml;
+  return sendEmail(to, subject, wrapPlatformBrandedHtml(bodyHtml));
+}
+
+export async function sendDemoAccountCredentialsEmail({
+  to,
+  shopName,
+  contactName,
+  userId,
+  plainPassword,
+  planLabel = "",
+  subject: subjectOverride,
+  bodyHtml: bodyOverride,
+}) {
+  const built = buildDemoAccountCredentialsEmailContent({
+    to,
+    shopName,
+    contactName,
+    userId,
+    plainPassword,
+    planLabel,
+  });
+  const subject = subjectOverride?.trim() || built.subject;
+  const bodyHtml = bodyOverride?.trim() || built.bodyHtml;
+  return sendEmail(to, subject, wrapPlatformBrandedHtml(bodyHtml));
+}
+
+/**
+ * Admin seeds a directory listing: notify the business they are featured + Shop Management System login (listing-only tier).
+ */
+export async function sendListingFeaturedAccountEmail({
+  to,
+  shopName,
+  userId,
+  plainPassword,
+  publicListingUrl,
+}) {
+  const site = getPublicSiteUrl();
+  const loginUrl = `${site}/login`;
+  const leadsUrl = `${site}/dashboards?tab=customers`;
+  const directoryUrl = `${site}/dashboards/settings?section=directory-listing`;
+  const contactUrl = `${site}/contact`;
+  const esc = (v) =>
+    v == null ? "" : String(v).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+  const company = (shopName && String(shopName).trim()) || "your business";
+  const subject = "Your Shop Is Live on 3PhaseFlow: Leads Coming Your Way";
+  const html = `
+    <p>Hi ${esc(company)},</p>
+    <p>We have added <strong>${esc(company)}</strong> to the 3PhaseFlow.com public repair shop directory. Customers searching for motor repair and rewinding services in your area will now find your listing and can contact you directly.</p>
+    <p><strong>What this means for you:</strong> 3PhaseFlow is already receiving motor repair service requests from industrial buyers in your region. Your shop will appear in those results and receive incoming leads routed directly to your account.</p>
+    ${publicListingUrl ? `<p><strong>Your public listing:</strong> <a href="${esc(publicListingUrl)}">${esc(publicListingUrl)}</a></p>` : ""}
+    <p>Use the credentials below to log in to your shop dashboard. Once inside, review your <a href="${esc(leadsUrl)}"><strong>Leads</strong></a> and update your <a href="${esc(directoryUrl)}"><strong>Directory listing</strong></a> to make sure all information is accurate. Incomplete listings receive fewer leads. Take 5 minutes to verify your services, contact details, and service area.</p>
+    <table style="border-collapse:collapse;margin:16px 0;">
+      <tbody>
+        <tr><td style="padding:8px 12px;border:1px solid #ddd;font-weight:600;">Login email</td><td style="padding:8px 12px;border:1px solid #ddd;">${esc(to)}</td></tr>
+        <tr><td style="padding:8px 12px;border:1px solid #ddd;font-weight:600;">Account ID</td><td style="padding:8px 12px;border:1px solid #ddd;font-family:monospace;font-size:12px;">${esc(userId)}</td></tr>
+        <tr><td style="padding:8px 12px;border:1px solid #ddd;font-weight:600;">Temporary password</td><td style="padding:8px 12px;border:1px solid #ddd;font-family:monospace;">${esc(plainPassword)}</td></tr>
+      </tbody>
+    </table>
+    <p><a href="${esc(loginUrl)}" style="display:inline-block;padding:10px 20px;background:#9a5d33;color:#fff;text-decoration:none;border-radius:6px;">Log in to your dashboard</a></p>
+    <p><strong>Security:</strong> Change your password after signing in under Settings &gt; Account.</p>
+    <p><strong>Want more leads?</strong> Unlock the full Shop Management System including quotes, job tracking, billing, inventory, and unlimited leads. <a href="${esc(contactUrl)}">Contact us</a> to learn about our paid plans.</p>
+    <p>3PhaseFlow.com</p>
+  `;
+  return sendEmail(to, subject, wrapPlatformBrandedHtml(html));
+}
+
+/**
+ * Admin outreach to active portal clients, feedback request and paid subscription interest.
+ */
+export async function sendActiveClientFeedbackOutreachEmail({ to, contactName, shopName }) {
+  const site = getPublicSiteUrl().replace(/\/$/, "");
+  const esc = (v) =>
+    v == null ? "" : String(v).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+  const greeting = contactName?.trim()
+    ? esc(contactName.trim())
+    : shopName?.trim()
+      ? `team at ${esc(shopName.trim())}`
+      : "there";
+  const pricingUrl = `${site}/pricing`;
+  const subscriptionUrl = `${site}/dashboards/settings?section=subscription`;
+  const contactUrl = `${site}/contact`;
+  const subject = "How is 3PhaseFlow working for your shop?";
+  const html = `
+    <p>Hi ${greeting},</p>
+    <p>Thank you for using <strong>3PhaseFlow.com</strong>${shopName?.trim() ? ` at <strong>${esc(shopName.trim())}</strong>` : ""}. We hope the portal is helping you manage jobs, quotes, and customer communication.</p>
+    <p>We would love your feedback:</p>
+    <ul>
+      <li>What is working well for your shop today?</li>
+      <li>What features or workflows would make 3PhaseFlow more useful?</li>
+      <li>Is there anything confusing or missing from your day-to-day use?</li>
+    </ul>
+    <p>Simply reply to this email with your thoughts, even a few sentences help us prioritize improvements.</p>
+    <p><strong>Interested in a paid subscription?</strong> If you are on a free or trial plan and want full Shop Management System access, calculators, marketplace tools, and ongoing support, we would be happy to walk you through options:</p>
+    <ul>
+      <li><a href="${esc(pricingUrl)}">View plans &amp; pricing</a></li>
+      <li><a href="${esc(subscriptionUrl)}">Manage subscription in your dashboard</a></li>
+      <li><a href="${esc(contactUrl)}">Contact us for a demo or custom quote</a></li>
+    </ul>
+    <p>Reply here or reach out through the contact page if you would like to discuss a paid plan for your shop.</p>
+    <p>Thank you for being part of 3PhaseFlow.com.</p>
+    <p>,  3PhaseFlow.com</p>
+  `;
+  return sendMarketingEmail(to, subject, html);
+}
+
+/**
+ * Admin outreach, listing page stats, free directory benefits, shop management software subscription.
+ */
+export async function sendListingStatsOutreachEmail({
+  to,
+  companyName,
+  listingUrl,
+  monthLabel,
+  visitsThisMonth,
+  visitsOverall,
+  quoteRequestCount,
+}) {
+  const site = getPublicSiteUrl().replace(/\/$/, "");
+  const esc = (v) =>
+    v == null ? "" : String(v).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+  const monthName = monthLabel
+    ? new Date(`${monthLabel}-01T12:00:00Z`).toLocaleString("en-US", {
+      month: "long",
+      year: "numeric",
+      timeZone: "UTC",
+    })
+    : "This month";
+  const fullListingUrl = listingUrl?.startsWith("http") ? listingUrl : `${site}${listingUrl || ""}`;
+  const softwareUrl = `${site}/motor-repair-shop-management-software`;
+  const pricingUrl = `${site}/pricing`;
+  const subscriptionUrl = `${site}/dashboards/settings?section=subscription`;
+  const contactUrl = `${site}/contact`;
+  const subject = `Your 3PhaseFlow listing stats, ${esc(companyName || "repair center")}`;
+  const html = `
+    <p>Hello${companyName?.trim() ? ` from <strong>${esc(companyName.trim())}</strong>` : ""},</p>
+    <p>Your repair center is listed on <strong>3PhaseFlow.com</strong> and customers are finding you online. Here is a snapshot of your listing performance:</p>
+    <table style="border-collapse:collapse;margin:16px 0;">
+      <tbody>
+        <tr><td style="padding:8px 12px;border:1px solid #ddd;font-weight:600;">${esc(monthName)} page visits</td><td style="padding:8px 12px;border:1px solid #ddd;">${esc(String(visitsThisMonth ?? 0))}</td></tr>
+        <tr><td style="padding:8px 12px;border:1px solid #ddd;font-weight:600;">Overall listing page visits</td><td style="padding:8px 12px;border:1px solid #ddd;">${esc(String(visitsOverall ?? 0))}</td></tr>
+        <tr><td style="padding:8px 12px;border:1px solid #ddd;font-weight:600;">Quote requests from your listing</td><td style="padding:8px 12px;border:1px solid #ddd;">${esc(String(quoteRequestCount ?? 0))}</td></tr>
+      </tbody>
+    </table>
+    ${listingUrl ? `<p>View your public listing: <a href="${esc(fullListingUrl)}">${esc(fullListingUrl)}</a></p>` : ""}
+    <p><strong>What you receive for free today</strong></p>
+    <ul>
+      <li>A searchable directory profile so buyers can find your shop by location and services</li>
+      <li>Visibility on 3PhaseFlow.com when customers search for motor repair and rewinding</li>
+      <li>Quote requests routed to your shop when visitors inquire from your listing page</li>
+      <li>Ongoing exposure as our directory and SEO content grow, at no listing fee</li>
+    </ul>
+    <p><strong>Run your whole shop in one place</strong></p>
+    <p>Many shops start with a free directory listing, then move to <strong>3PhaseFlow shop management software</strong> to handle work orders, quotes, inventory, job tracking, customer communication, and more, without juggling spreadsheets and disconnected tools.</p>
+    <ul>
+      <li><a href="${esc(softwareUrl)}">Motor repair shop management software</a></li>
+      <li><a href="${esc(pricingUrl)}">View plans &amp; pricing</a></li>
+      <li><a href="${esc(subscriptionUrl)}">Subscribe from your dashboard</a></li>
+      <li><a href="${esc(contactUrl)}">Contact us for a demo</a></li>
+    </ul>
+    <p>Reply to this email if you have questions about your stats or want help choosing a plan for your shop.</p>
+    <p>Thank you for being part of 3PhaseFlow.com.</p>
+    <p>,  3PhaseFlow.com</p>
+  `;
+  return sendMarketingEmail(to, subject, html);
+}
+
+/**
+ * Notify client when an admin attaches or changes their subscription plan (PayPal approval link or Free Ultimate).
+ */
+export async function sendSubscriptionPlanAttachedEmail({
+  to,
+  shopName,
+  planName,
+  planType,
+  billingCycle,
+  customPrice,
+  currency,
+  approvalUrl,
+}) {
+  const site = getPublicSiteUrl();
+  const esc = (v) =>
+    v == null ? "" : String(v).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+  const subUrl = `${site}/dashboards/settings?section=subscription`;
+  const isPaypal = String(planType || "").toLowerCase() === "paypal";
+  const priceLine =
+    customPrice != null && !Number.isNaN(Number(customPrice))
+      ? `${esc(currency || "USD")} ${Number(customPrice).toFixed(2)}`
+      : "";
+  const subject = isPaypal
+    ? `Subscription plan attached, ${esc(planName || "3PhaseFlow")}`
+    : `Your 3PhaseFlow.com plan: ${esc(planName || "Free Ultimate")}`;
+  const approvalBlock =
+    isPaypal && approvalUrl
+      ? `<p><strong>Complete setup in PayPal:</strong> your administrator assigned a paid plan. Open this link to approve billing (you can also find it under <a href="${esc(subUrl)}">Shop Management System → Subscription</a>):</p>
+         <p><a href="${esc(approvalUrl)}" style="word-break:break-all;">${esc(approvalUrl)}</a></p>`
+      : "";
+  const html = `
+    <p>Hello${shopName ? ` from <strong>${esc(shopName)}</strong>` : ""},</p>
+    <p>A subscription plan has been attached to your 3PhaseFlow.com account.</p>
+    <table style="border-collapse:collapse;margin:16px 0;">
+      <tbody>
+        <tr><td style="padding:8px 12px;border:1px solid #ddd;font-weight:600;">Plan</td><td style="padding:8px 12px;border:1px solid #ddd;">${esc(planName || ", ")}</td></tr>
+        <tr><td style="padding:8px 12px;border:1px solid #ddd;font-weight:600;">Type</td><td style="padding:8px 12px;border:1px solid #ddd;">${esc(planType || ", ")}</td></tr>
+        ${billingCycle ? `<tr><td style="padding:8px 12px;border:1px solid #ddd;font-weight:600;">Billing</td><td style="padding:8px 12px;border:1px solid #ddd;">${esc(billingCycle)}</td></tr>` : ""}
+        ${priceLine ? `<tr><td style="padding:8px 12px;border:1px solid #ddd;font-weight:600;">Amount</td><td style="padding:8px 12px;border:1px solid #ddd;">${priceLine}</td></tr>` : ""}
+      </tbody>
+    </table>
+    ${approvalBlock}
+    <p>Manage subscription anytime: <a href="${esc(subUrl)}">${esc(subUrl)}</a></p>
+    <p>,  3PhaseFlow.com</p>
+  `;
+  return sendEmail(to, subject, wrapPlatformBrandedHtml(html));
+}
+
+/**
+ * Send an email. Uses options.from when provided (e.g. for marketing); otherwise uses default EMAIL_FROM.
+ */
+async function sendEmail(to, subject, html, options = {}) {
+  const transport = options.transport || getTransporter();
+  const from = options.from || fromEmail || process.env.SMTP_USER;
+  const attachments = options.attachments;
+  const sanitizedHtml = sanitizeEmailBodyHtml(html);
+  if (!transport) {
+    console.error("[Email not configured] Set SMTP_USER and SMTP_PASS. To:", to, "Subject:", subject);
+    return { ok: false, error: "Email not configured. Set SMTP_USER and SMTP_PASS." };
+  }
+  try {
+    await transport.sendMail({
+      from,
+      to,
+      subject,
+      html: sanitizedHtml,
+      ...(Array.isArray(options.cc) && options.cc.length ? { cc: options.cc.join(", ") } : {}),
+      ...(attachments && attachments.length ? { attachments } : {}),
+    });
+    return { ok: true };
+  } catch (err) {
+    console.error("Nodemailer error:", err);
+    return { ok: false, error: err.message };
+  }
+}
+
+/** Apply workspace SMTP when userSettings provided in options. */
+function customerMailOptions(options = {}, shopCompanyName = "") {
+  if (options.transport && options.from) {
+    return { transport: options.transport, from: options.from, error: null };
+  }
+  if (options.userSettings) {
+    const mail = resolveCustomerMailDelivery(options.userSettings, shopCompanyName);
+    return { transport: mail.transport, from: mail.from, error: mail.error };
+  }
+  return { transport: getTransporter(), from: fromEmail || process.env.SMTP_USER, error: null };
+}
+
+async function sendCustomerFacingEmail(to, subject, html, options, shopCompanyName) {
+  const extraAttachments = Array.isArray(options.attachments) ? options.attachments : [];
+  const mailOpts = {
+    ...customerMailOptions(options, shopCompanyName),
+    ...(extraAttachments.length ? { attachments: extraAttachments } : {}),
+    ...(Array.isArray(options.cc) && options.cc.length ? { cc: options.cc } : {}),
+  };
+  if (mailOpts.error) return { ok: false, error: mailOpts.error };
+  return sendEmail(to, subject, html, mailOpts);
+}
+
+/** Send email using the marketing "from" address (EMAIL_MARKETING_FROM). Use for admin marketing campaigns. */
+export async function sendMarketingEmail(to, subject, html) {
+  return sendEmail(to, subject, wrapPlatformBrandedHtml(html), { from: marketingFrom });
+}
+
+/** Send quote to customer with link to approve/reject. Uses electric motor shop name in subject and signature (no 3PhaseFlow.com). */
+export async function sendQuoteToCustomer(
+  toEmail,
+  customerName,
+  rfqNumber,
+  respondUrl,
+  shopCompanyName,
+  options = {}
+) {
+  const { subject, html } = buildQuoteToCustomerEmailContent({
+    customerName,
+    rfqNumber,
+    respondUrl,
+    shopCompanyName,
+    logoSrc: options.logoSrc || options.logoAbsoluteUrl,
+    logoDocumentScale: options.logoDocumentScale ?? options.userSettings?.logoDocumentScale,
+    accountsEmailBlock: options.accountsEmailBlock,
+    customMessage: options.customMessage,
+  });
+  const shopName = (shopCompanyName && String(shopCompanyName).trim()) ? shopCompanyName.trim() : "Electric Motor Shop";
+  return sendCustomerFacingEmail(toEmail, subject, html, options, shopName);
+}
+
+/** Email link for repair-flow preliminary quote, customer approves teardown, declines repair, or authorizes scrap. */
+export async function sendRepairFlowPreliminaryToCustomer(
+  toEmail,
+  customerName,
+  jobNumber,
+  respondUrl,
+  shopCompanyName,
+  options = {}
+) {
+  const esc = (v) =>
+    v == null ? "" : String(v).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+  const shopName = (shopCompanyName && String(shopCompanyName).trim()) ? shopCompanyName.trim() : "Electric Motor Shop";
+  const signature = esc(shopName);
+  const jobRef = esc(jobNumber) || "your repair job";
+  const subject = `Preliminary quote, Job ${jobRef} to ${shopName}`;
+  const logoSrc = String(options.logoSrc || options.logoAbsoluteUrl || "").trim();
+  const logoIsHttp = logoSrc.startsWith("http://") || logoSrc.startsWith("https://");
+  const logoIsData = logoSrc.startsWith("data:image/");
+  const logoIsCid = logoSrc.startsWith("cid:");
+  const { heightPx, maxWidthPx, style } = shopEmailLogoInlineStyle(
+    options.logoDocumentScale ?? options.userSettings?.logoDocumentScale
+  );
+  const logoBlock =
+    logoIsHttp || logoIsData || logoIsCid
+      ? `<p style="margin-top:20px;margin-bottom:8px"><img src="${esc(logoSrc)}" alt="${signature}" height="${heightPx}" width="${maxWidthPx}" style="${style}" /></p>`
+      : "";
+  const html = withDashboardOutboundEmailFooter(`
+    <p>Hi${customerName ? ` ${esc(customerName)}` : ""},</p>
+    <p>Your <strong>preliminary (pre-disassembly) quote</strong> for job <strong>${jobRef}</strong> is ready.</p>
+    <p>Open the link below to review the quote and tell us how you would like to proceed: approve disassembly and repair, decline and pick up as-is, or authorize scrap.</p>
+    <p><a href="${esc(respondUrl)}" style="display:inline-block;padding:10px 20px;background:#9a5d33;color:#fff;text-decoration:none;border-radius:6px;">Review preliminary quote</a></p>
+    <p>You can print or save the quote as a PDF from that page.</p>
+    ${typeof options.accountsEmailBlock === "string" && options.accountsEmailBlock.trim() ? options.accountsEmailBlock : ""}
+    ${logoBlock}
+    <p style="margin-top:16px">,  ${signature}</p>
+  `);
+  const extraAttachments = Array.isArray(options.attachments) ? options.attachments : [];
+  return sendEmail(toEmail, subject, html, extraAttachments.length ? { attachments: extraAttachments } : {});
+}
+
+/**
+ * Invoice email to customer, primary CTA is link to view/print (same idea as quote respond link).
+ * Pass options.viewUrl (e.g. /invoice/view/{token}).
+ */
+export async function sendInvoiceToCustomer(
+  toEmail,
+  customerName,
+  invoiceNumber,
+  shopCompanyName,
+  options = {}
+) {
+  const { subject, html } = buildInvoiceToCustomerEmailContent({
+    customerName,
+    invoiceNumber,
+    shopCompanyName,
+    viewUrl: options.viewUrl,
+    totalFormatted: options.totalFormatted,
+    summaryHtml: options.summaryHtml,
+    logoSrc: options.logoSrc || options.logoAbsoluteUrl,
+    logoDocumentScale: options.logoDocumentScale ?? options.userSettings?.logoDocumentScale,
+    accountsEmailBlock: options.accountsEmailBlock,
+    customMessage: options.customMessage,
+  });
+  const shopName = (shopCompanyName && String(shopCompanyName).trim()) ? shopCompanyName.trim() : "Electric Motor Shop";
+  return sendCustomerFacingEmail(toEmail, subject, html, options, shopName);
+}
+
+/** Send purchase order to vendor with link to view, print, and update delivery status. Uses electric motor shop name in subject and signature. */
+export async function sendPoToVendor(toEmail, vendorName, poNumber, viewUrl, shopCompanyName, options = {}) {
+  const { subject, html } = buildPoToVendorEmailContent({
+    vendorName,
+    poNumber,
+    viewUrl,
+    shopCompanyName,
+    logoSrc: options.logoSrc || options.logoAbsoluteUrl,
+    logoDocumentScale: options.logoDocumentScale ?? options.userSettings?.logoDocumentScale,
+    poVendorAddressesHtml: options.poVendorAddressesHtml,
+    customMessage: options.customMessage,
+  });
+  const extraAttachments = Array.isArray(options.attachments) ? options.attachments : [];
+  return sendEmail(toEmail, subject, html, {
+    ...(extraAttachments.length ? { attachments: extraAttachments } : {}),
+    ...(Array.isArray(options.cc) && options.cc.length ? { cc: options.cc } : {}),
+  });
+}
+
+/** Email work order PDF to a recipient (custom email + optional message in body). */
+export async function sendWorkOrderPdfToRecipient(
+  toEmail,
+  workOrderNumber,
+  shopCompanyName,
+  pdfBuffer,
+  options = {}
+) {
+  const esc = (v) =>
+    v == null ? "" : String(v).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+  const shopName = shopCompanyName && String(shopCompanyName).trim() ? shopCompanyName.trim() : "Electric Motor Shop";
+  const woNo = esc(workOrderNumber) || ", ";
+  const subject = `Work order ${woNo} to ${esc(shopName)}`;
+  const instructions = String(options.instructions ?? "").trim();
+  const instructionsBlock = instructions
+    ? `<p style="margin-top:12px;padding:12px;background:#f5f5f4;border-radius:8px;font-size:14px;line-height:1.5;color:#374151"><strong>Message:</strong><br/>${esc(instructions).replace(/\n/g, "<br/>")}</p>`
+    : "";
+  const html = withDashboardOutboundEmailFooter(`
+    <p>Hello,</p>
+    <p>Please find the attached work order <strong>${woNo}</strong> from ${esc(shopName)}.</p>
+    ${instructionsBlock}
+    <p style="margin-top:16px">If you have questions, reply to this email.</p>
+    <p style="margin-top:16px">,  ${esc(shopName)}</p>
+  `);
+  const safeFile = String(workOrderNumber || "work-order")
+    .replace(/[^\w.-]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 80);
+  return sendEmail(toEmail, subject, html, {
+    attachments: [
+      {
+        filename: `Work-Order-${safeFile || "document"}.pdf`,
+        content: pdfBuffer,
+        contentType: "application/pdf",
+      },
+    ],
+  });
+}
+
+/* ------------------------------------------------------------------ *
+ * 3PhaseTrack <-> 3PhaseFlow integration emails (§11)
+ * ------------------------------------------------------------------ */
+
+function trackShopActionButton(label, url) {
+  return `<p><a href="${escHtmlEmail(url)}" style="display:inline-block;padding:10px 20px;background:#9a5d33;color:#fff;text-decoration:none;border-radius:6px;">${escHtmlEmail(label)}</a></p>`;
+}
+
+function trackDetailRows(rows) {
+  const body = rows
+    .filter(([, value]) => String(value ?? "").trim())
+    .map(
+      ([label, value]) =>
+        `<tr><td style="padding:6px 10px;border:1px solid #e5e7eb;font-weight:600;white-space:nowrap;">${escHtmlEmail(label)}</td><td style="padding:6px 10px;border:1px solid #e5e7eb;">${escHtmlEmail(value)}</td></tr>`
+    )
+    .join("");
+  if (!body) return "";
+  return `<table style="border-collapse:collapse;margin:12px 0;font-size:14px;">${body}</table>`;
+}
+
+/**
+ * E1 - a new 3PhaseTrack RFQ reaches a shop. In-app shops get a dashboard link,
+ * email-only shops get a secure single-use response link (§9.7).
+ */
+export async function sendTrackRfqToShop({
+  to,
+  listingCompanyName,
+  facilityName,
+  facilityCity,
+  motorSummary,
+  urgencyLabel,
+  isEmergency,
+  failureDescription,
+  logisticsLabel,
+  neededBackBy,
+  invitedShopCount,
+  actionUrl,
+  actionLabel,
+  respondsBy,
+}) {
+  const urgencyPrefix = isEmergency ? "EMERGENCY: " : "";
+  const subject = `${urgencyPrefix}Motor down RFQ from ${facilityName || "a plant"} to ${listingCompanyName || "your shop"}`;
+  const emergencyBanner = isEmergency
+    ? `<p style="padding:10px 14px;background:#fee2e2;border-left:4px solid #dc2626;font-weight:700;color:#991b1b;">Emergency request. The plant needs a fast response.</p>`
+    : "";
+  const rows = trackDetailRows([
+    ["Plant", facilityName],
+    ["Plant location", facilityCity],
+    ["Motor", motorSummary],
+    ["Urgency", urgencyLabel],
+    ["Logistics", logisticsLabel],
+    ["Needed back by", neededBackBy],
+    ["Sent to", invitedShopCount > 1 ? `${invitedShopCount} shops` : "your shop only"],
+  ]);
+  const closing =
+    respondsBy === "in_app"
+      ? `<p style="font-size:13px;color:#555;">Open the RFQ in your Simple portal to see the full motor detail, the shared datasheet, and to convert it into a Service Proposal.</p>`
+      : `<p style="font-size:13px;color:#555;">This secure link is for your shop only and expires. You can submit a proposal or decline without logging in. Claim your listing on the same page to receive datasheet write-back and convert RFQs in the app.</p>`;
+  const html = `
+    ${emergencyBanner}
+    <p>Hello,</p>
+    <p>A plant using <strong>3PhaseTrack</strong> has a motor down and sent you a request for quote.</p>
+    ${rows}
+    ${failureDescription ? `<p><strong>What happened:</strong><br/>${escHtmlEmail(failureDescription).replace(/\n/g, "<br/>")}</p>` : ""}
+    ${trackShopActionButton(actionLabel || "Open the RFQ", actionUrl)}
+    ${closing}
+    <p>,  3PhaseFlow.com</p>
+  `;
+  return sendEmail(to, subject, wrapPlatformBrandedHtml(html));
+}
+
+/** E2 - the plant added failure details or photos to an open RFQ. */
+export async function sendTrackRfqUpdatedToShop({ to, facilityName, motorSummary, note, actionUrl }) {
+  const subject = `RFQ updated by ${facilityName || "the plant"} to 3PhaseFlow.com`;
+  const html = `
+    <p>Hello,</p>
+    <p><strong>${escHtmlEmail(facilityName || "The plant")}</strong> updated the motor down RFQ you were invited to.</p>
+    ${trackDetailRows([["Motor", motorSummary]])}
+    ${note ? `<p><strong>Update:</strong><br/>${escHtmlEmail(note).replace(/\n/g, "<br/>")}</p>` : ""}
+    ${trackShopActionButton("View the updated RFQ", actionUrl)}
+    <p>,  3PhaseFlow.com</p>
+  `;
+  return sendEmail(to, subject, wrapPlatformBrandedHtml(html));
+}
+
+/** E3 - the plant cancelled the RFQ. */
+export async function sendTrackRfqCancelledToShop({ to, facilityName, motorSummary, reason }) {
+  const subject = `RFQ cancelled by ${facilityName || "the plant"} to 3PhaseFlow.com`;
+  const html = `
+    <p>Hello,</p>
+    <p><strong>${escHtmlEmail(facilityName || "The plant")}</strong> cancelled the motor down RFQ you were invited to. No proposal is needed.</p>
+    ${trackDetailRows([["Motor", motorSummary], ["Reason", reason]])}
+    <p>,  3PhaseFlow.com</p>
+  `;
+  return sendEmail(to, subject, wrapPlatformBrandedHtml(html));
+}
+
+/** E9 - this shop won the job. */
+export async function sendTrackAwardedToShop({
+  to,
+  facilityName,
+  motorSummary,
+  totalPriceLabel,
+  turnaroundLabel,
+  actionUrl,
+}) {
+  const subject = `You won the job: ${facilityName || "plant"} awarded your proposal to 3PhaseFlow.com`;
+  const html = `
+    <p>Congratulations,</p>
+    <p><strong>${escHtmlEmail(facilityName || "The plant")}</strong> awarded your proposal for the motor below.</p>
+    ${trackDetailRows([
+      ["Motor", motorSummary],
+      ["Awarded price", totalPriceLabel],
+      ["Turnaround", turnaroundLabel],
+    ])}
+    ${trackShopActionButton("Open the Service Proposal", actionUrl)}
+    <p style="font-size:13px;color:#555;">Convert the proposal to a JOB when you start work. Datasheet values you save on this job flow back to the plant's motor record with your shop credited.</p>
+    <p>,  3PhaseFlow.com</p>
+  `;
+  return sendEmail(to, subject, wrapPlatformBrandedHtml(html));
+}
+
+/**
+ * E10 - this shop was not selected. Never discloses the winning shop or price (§8.3, §12).
+ */
+export async function sendTrackNotSelectedToShop({ to, facilityName, motorSummary, responded }) {
+  const subject = `RFQ closed by ${facilityName || "the plant"} to 3PhaseFlow.com`;
+  const line = responded
+    ? "Your proposal was not selected this time. The plant awarded the job to another shop."
+    : "The plant has closed this RFQ. No proposal was received from your shop.";
+  const html = `
+    <p>Hello,</p>
+    <p>${escHtmlEmail(line)}</p>
+    ${trackDetailRows([["Motor", motorSummary]])}
+    <p style="font-size:13px;color:#555;">Thank you for your time. Keeping your listing capabilities and turnaround up to date helps you rank higher on the next request.</p>
+    <p>,  3PhaseFlow.com</p>
+  `;
+  return sendEmail(to, subject, wrapPlatformBrandedHtml(html));
+}
+
+/** Facility-side notification for E6 / E7 / E8 / E12 / E13 / E14. */
+export async function sendTrackFacilityNotification({
+  to,
+  headline,
+  motorSummary,
+  rows = [],
+  bodyNote = "",
+  actionUrl,
+  actionLabel = "Open 3PhaseTrack",
+}) {
+  const subject = `${headline} to 3PhaseTrack`;
+  const html = `
+    <p>Hello,</p>
+    <p>${escHtmlEmail(headline)}.</p>
+    ${trackDetailRows([["Motor", motorSummary], ...rows])}
+    ${bodyNote ? `<p>${escHtmlEmail(bodyNote).replace(/\n/g, "<br/>")}</p>` : ""}
+    ${actionUrl ? trackShopActionButton(actionLabel, actionUrl) : ""}
+    <p>,  3PhaseTrack</p>
+  `;
+  return sendEmail(to, subject, wrapPlatformBrandedHtml(html));
+}
+
+/** Platform admin alert when an 3PhaseTrack delivery is out of retries (§11, §14.11). */
+export async function sendTrackDeliveryFailureToAdmin({ eventType, rfqRequestId, listingId, lastError, attempts }) {
+  const to = listingNotifyEmail();
+  if (!to) return { ok: true };
+  const html = `
+    <p>An 3PhaseTrack integration delivery failed after ${escHtmlEmail(String(attempts))} attempts.</p>
+    ${trackDetailRows([
+      ["Event", eventType],
+      ["RFQ", rfqRequestId],
+      ["Listing", listingId],
+      ["Last error", lastError],
+    ])}
+    ${trackShopActionButton("Open the integration log", `${getPublicSiteUrl()}/admin/iqmotortrack`)}
+    <p>,  3PhaseFlow.com (automated)</p>
+  `;
+  return sendEmail(to, "3PhaseTrack delivery failed after retries", wrapPlatformBrandedHtml(html));
+}
+
+/** Password reset for an 3PhaseTrack facility account. */
+export async function sendTrackPasswordResetEmail({ to, contactName, resetUrl }) {
+  const subject = "Reset your 3PhaseTrack password";
+  const html = `
+    <p>Hello ${escHtmlEmail(contactName || "there")},</p>
+    <p>Use the link below to set a new 3PhaseTrack password. It expires in 60 minutes and can be used once.</p>
+    ${trackShopActionButton("Set a new password", resetUrl)}
+    <p style="font-size:13px;color:#555;">If you did not ask for this, you can ignore this email. Your password stays unchanged.</p>
+    <p>,  3PhaseTrack</p>
+  `;
+  return sendEmail(to, subject, wrapPlatformBrandedHtml(html));
+}
+
+/** Email verification for a new 3PhaseTrack facility account. */
+export async function sendTrackVerifyEmail({ to, contactName, verifyUrl, code }) {
+  const subject = "Verify your 3PhaseTrack email";
+  const html = `
+    <p>Hello ${escHtmlEmail(contactName || "there")},</p>
+    <p>Confirm this address to finish setting up your 3PhaseTrack facility account.</p>
+    ${trackShopActionButton("Verify my email", verifyUrl)}
+    <p>Or enter this code in the app: <strong style="font-size:18px;letter-spacing:2px;">${escHtmlEmail(code)}</strong></p>
+    <p style="font-size:13px;color:#555;">The code expires in 24 hours.</p>
+    <p>,  3PhaseTrack</p>
+  `;
+  return sendEmail(to, subject, wrapPlatformBrandedHtml(html));
+}
+
+/**
+ * Payroll hours Excel to a shop notification address.
+ */
+export async function sendPayrollHoursWorkbookEmail({
+  to,
+  shopName = "",
+  periodLabel = "",
+  timeZone = "",
+  filename = "payroll-hours.xlsx",
+  buffer,
+  manual = false,
+  userSettings,
+}) {
+  const shop = String(shopName || "").trim() || "Shop";
+  const period = String(periodLabel || "").trim();
+  const zone = String(timeZone || "").trim();
+  const smtp = normalizeWorkspaceSmtpFields(userSettings);
+  if (!smtp.smtpEnabled || !workspaceSmtpIsComplete(smtp)) {
+    return {
+      ok: false,
+      error:
+        "Shop SMTP is required for the payroll sheet. Configure and enable your shop SMTP in Settings: Email Settings.",
+    };
+  }
+  const transport = createWorkspaceSmtpTransport(smtp);
+  if (!transport) {
+    return {
+      ok: false,
+      error: "Could not create shop SMTP. Check host, username, password, and from email in Settings: Email Settings.",
+    };
+  }
+  const subject = period
+    ? `${shop} payroll hours (${period})`
+    : `${shop} payroll hours`;
+  const html = `
+    <p>Payroll hours for <strong>${escHtmlEmail(shop)}</strong>${period ? ` for <strong>${escHtmlEmail(period)}</strong>` : ""}.</p>
+    <p>The attached Excel file includes punch in, punch out, clocked hours, breaks, and manual hours${zone ? ` in <strong>${escHtmlEmail(zone)}</strong>` : ""}.</p>
+    <p>${manual ? "This sheet was generated from the Employees page." : "This was sent after the last employee punched out for the period."}</p>
+  `;
+  const content = Buffer.isBuffer(buffer) ? buffer : Buffer.from(buffer || []);
+  try {
+    await transport.sendMail({
+      from: formatWorkspaceSmtpFrom(smtp.smtpFromName || shop, smtp.smtpFromEmail),
+      to,
+      subject,
+      html: sanitizeEmailBodyHtml(html),
+      attachments: [
+        {
+          filename: String(filename || "payroll-hours.xlsx"),
+          content,
+          contentType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        },
+      ],
+    });
+    return { ok: true };
+  } catch (err) {
+    console.error("Payroll sheet shop SMTP send failed:", err);
+    return { ok: false, error: err?.message || "Failed to send email via shop SMTP." };
+  } finally {
+    try {
+      transport.close();
+    } catch {
+      /* ignore */
+    }
+  }
+}

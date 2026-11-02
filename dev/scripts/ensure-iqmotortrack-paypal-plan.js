@@ -1,0 +1,30 @@
+/**
+ * Create or update 3PhaseTrack Pro PayPal billing plan: $49/month (slug: iqmotortrack-pro)
+ *
+ * Usage:
+ *   node scripts/ensure-iqmotortrack-paypal-plan.js
+ */
+
+const path = require("path");
+const { devRoot, repoRoot } = require("./_paths.cjs");
+const { createJiti } = require("jiti");
+
+const root = devRoot;
+const repo = repoRoot;
+require("dotenv").config({ path: path.join(repoRoot, ".env.local") });
+require("dotenv").config({ path: path.join(repoRoot, ".env") });
+
+async function main() {
+  const jiti = createJiti(__filename, {
+    alias: { "@": path.join(root, "src") },
+  });
+  const { ensureTrackBillingPlan } = jiti(path.join(root, "src/lib/track-subscription.js"));
+  const plan = await ensureTrackBillingPlan();
+  console.log("3PhaseTrack Pro:", plan);
+  process.exit(0);
+}
+
+main().catch((err) => {
+  console.error(err);
+  process.exit(1);
+});

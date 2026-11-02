@@ -1,0 +1,228 @@
+/**
+ * CM Best Match print: landscape, top-aligned, full table width.
+ * Requires html.cm-best-match-printing (set in beforeprint when #cm-best-match-print-area exists).
+ */
+
+@media print {
+  @page {
+    size: landscape;
+    margin: 6mm;
+  }
+
+  /* Only hijack print when CM results modal content is present */
+  html.cm-best-match-printing,
+  html.cm-best-match-printing body {
+    background: white !important;
+    color: #111 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    height: auto !important;
+    min-height: 0 !important;
+    overflow: visible !important;
+  }
+
+  /*
+   * visibility:hidden still reserves layout — the full app stack stayed on page 1 and pushed
+   * CM content to page 2. Hide non-print roots from layout instead.
+   */
+  html.cm-best-match-printing body > *:not(#cm-best-match-modal-host) {
+    display: none !important;
+  }
+
+  /* Flatten centered modal — start content at top-left of the page */
+  html.cm-best-match-printing #cm-best-match-modal-host {
+    position: static !important;
+    display: block !important;
+    inset: auto !important;
+    top: auto !important;
+    left: auto !important;
+    right: auto !important;
+    bottom: auto !important;
+    z-index: auto !important;
+    width: 100% !important;
+    max-width: none !important;
+    height: auto !important;
+    min-height: 0 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    overflow: visible !important;
+    transform: none !important;
+  }
+
+  html.cm-best-match-printing #cm-best-match-modal-host > div:first-child {
+    display: none !important;
+  }
+
+  html.cm-best-match-printing #cm-best-match-modal-host > div:nth-child(2) {
+    position: static !important;
+    top: auto !important;
+    left: auto !important;
+    right: auto !important;
+    bottom: auto !important;
+    transform: none !important;
+    display: block !important;
+    width: 100% !important;
+    max-width: none !important;
+    height: auto !important;
+    max-height: none !important;
+    min-height: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: none !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    background: white !important;
+    overflow: visible !important;
+  }
+
+  /* Hide modal toolbar (Print / Close) */
+  html.cm-best-match-printing #cm-best-match-modal-host > div:nth-child(2) > div:first-child {
+    display: none !important;
+  }
+
+  html.cm-best-match-printing #cm-best-match-modal-host > div:nth-child(2) > div:last-child {
+    overflow: visible !important;
+    max-height: none !important;
+    min-height: 0 !important;
+    flex: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  html.cm-best-match-printing #cm-best-match-print-area {
+    position: relative !important;
+    top: auto !important;
+    left: auto !important;
+    width: 100% !important;
+    max-width: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: white !important;
+    color: #111 !important;
+    box-shadow: none !important;
+    border: none !important;
+    transform: none !important;
+  }
+
+  .cm-print-hide {
+    display: none !important;
+  }
+
+  html.cm-best-match-printing #cm-best-match-print-area .cm-print-title {
+    font-size: 14pt;
+    font-weight: 700;
+    margin: 0 0 4pt 0;
+    padding: 0;
+  }
+
+  html.cm-best-match-printing #cm-best-match-print-area .cm-print-meta {
+    font-size: 8pt;
+    color: #444;
+    margin: 0 0 8pt 0;
+  }
+
+  html.cm-best-match-printing #cm-best-match-print-area .cm-print-vars {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 4pt 10pt;
+    font-size: 8pt;
+    margin: 0 0 8pt 0;
+    padding: 8pt;
+    border: 1px solid #333;
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  html.cm-best-match-printing #cm-best-match-print-area .cm-print-vars .cm-var-label {
+    display: block;
+    font-weight: 600;
+    color: #222;
+    font-size: 7pt;
+    margin-bottom: 1pt;
+  }
+
+  html.cm-best-match-printing #cm-best-match-print-area .cm-print-vars .cm-var-value {
+    font-weight: 500;
+    font-size: 9pt;
+  }
+
+  html.cm-best-match-printing #cm-best-match-print-area .cm-print-selected {
+    grid-column: 1 / -1;
+    font-size: 7pt;
+    color: #333;
+    margin-top: 2pt;
+  }
+
+  html.cm-best-match-printing #cm-best-match-print-area .cm-results-table-wrap {
+    overflow: visible !important;
+    width: 100% !important;
+    max-width: none !important;
+    border: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  html.cm-best-match-printing #cm-best-match-print-area .cm-results-table {
+    width: 100% !important;
+    max-width: none !important;
+    min-width: 0 !important;
+    table-layout: fixed !important;
+    border-collapse: collapse !important;
+    font-size: 6.5pt !important;
+    line-height: 1.2 !important;
+    break-inside: auto;
+  }
+
+  html.cm-best-match-printing #cm-best-match-print-area .cm-results-table th,
+  html.cm-best-match-printing #cm-best-match-print-area .cm-results-table td {
+    border: 1px solid #222 !important;
+    padding: 2pt 3pt !important;
+    text-align: left !important;
+    vertical-align: top !important;
+    word-wrap: break-word !important;
+    overflow-wrap: break-word !important;
+    hyphens: auto;
+  }
+
+  html.cm-best-match-printing #cm-best-match-print-area .cm-results-table thead {
+    display: table-header-group;
+  }
+
+  html.cm-best-match-printing #cm-best-match-print-area .cm-results-table thead tr {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  /* Wrap header labels (screen uses whitespace-nowrap) — avoids overlap in narrow columns */
+  html.cm-best-match-printing #cm-best-match-print-area .cm-results-table thead th {
+    white-space: normal !important;
+    line-height: 1.2 !important;
+    overflow-wrap: anywhere !important;
+    word-break: break-word !important;
+    vertical-align: bottom !important;
+    padding: 3pt 2pt !important;
+    min-height: 2.4em;
+    background: #1d4ed8 !important;
+    color: white !important;
+    font-weight: 600;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  /* Strong contrast on tinted rows (avoids washed-out body text in print) */
+  html.cm-best-match-printing #cm-best-match-print-area .cm-results-table tbody td {
+    color: #111 !important;
+  }
+
+  html.cm-best-match-printing #cm-best-match-print-area tbody tr.cm-print-row-good {
+    background: #d1fae5 !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  html.cm-best-match-printing #cm-best-match-print-area tbody tr.cm-print-row-mid {
+    background: #fef3c7 !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+}

@@ -1,0 +1,82 @@
+import { NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
+import { connectDB } from "@/lib/db";
+import Listing from "@/models/Listing";
+import { getAdminFromRequest } from "@/lib/auth-admin";
+import { sendListingApproved, sendListingRejected, sendShopListedNotificationToAdmin } from "@/lib/email";
+import { generateUniqueListingUrlSlug } from "@/lib/listing-url-slug";
+import { notifyAreaRequestsForListing } from "@/lib/notify-area-when-listed";
+import { applyListingOnlySubscriptionToShop } from "@/lib/subscription-service";
+import { sendToListingNotifyEmails } from "@/lib/listing-notify-emails";
+
+export async function POST(request) {
+  try {
+    const admin = await getAdminFromRequest(request);
+    if (!admin) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    const body = await request.json();
+    const { ids = [], status: newStatus, rejectionReason = "" } = body;
+    if (!Array.isArray(ids) || ids.length === 0 || !["approved", "rejected"].includes(newStatus)) {
+      return NextResponse.json(
+        { error: "ids (array) and status (approved|rejected) required" },
+        { status: 400 }
+      );
+    }
+    await connectDB();
+    const validIds = ids.filter((id) => typeof id === "string" && /^[a-fA-F0-9]{24}$/.test(id));
+    if (validIds.length === 0) {
+      return NextResponse.json(
+        { error: "No valid listing ids (expected 24-char hex MongoDB ids)" },
+        { status: 400 }
+      );
+    }
+    let updated = 0;
+    for (const id of validIds) {
+      const doc = await Listing.findById(id);
+      if (!doc) continue;
+      doc.status = newStatus;
+      doc.reviewedAt = new Date();
+      doc.reviewedBy = admin;
+      if (newStatus === "rejected") doc.rejectionReason = rejectionReason || "";
+      if (newStatus === "approved" && !(doc.urlSlug || "").trim()) {
+        doc.urlSlug = await generateUniqueListingUrlSlug(doc.companyName, doc._id);
+      }
+      await doc.save();
+      if (newStatus === "approved") {
+        await sendToListingNotifyEmails(doc, (to) => sendListingApproved(to, doc.companyName));
+        try {
+          await applyListingOnlySubscriptionToShop(doc.email);
+        } catch (e) {
+          console.warn("applyListingOnlySubscriptionToShop (bulk approved):", e);
+        }
+        try {
+          await sendShopListedNotificationToAdmin(doc);
+        } catch (e) {
+          console.warn("Shop listed notification email failed:", e);
+        }
+        try {
+          await notifyAreaRequestsForListing(doc);
+        } catch (e) {
+          console.warn("notifyAreaRequestsForListing failed:", e);
+        }
+        const pathSlug = (doc.urlSlug || "").trim();
+        if (pathSlug) revalidatePath(`/electric-motor-repair-shops-listings/${pathSlug}`);
+      } else {
+        await sendToListingNotifyEmails(doc, (to) =>
+          sendListingRejected(to, doc.companyName, doc.rejectionReason)
+        );
+      }
+      updated += 1;
+    }
+    revalidatePath("/electric-motor-repair-shops-listings");
+    revalidatePath("/sitemap.xml");
+    return NextResponse.json({ ok: true, updated });
+  } catch (err) {
+    console.error("Bulk status error:", err);
+    return NextResponse.json(
+      { error: err.message || "Bulk update failed" },
+      { status: 500 }
+    );
+  }
+}

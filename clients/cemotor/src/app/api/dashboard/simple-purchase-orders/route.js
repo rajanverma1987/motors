@@ -1,0 +1,375 @@
+import { NextResponse } from "next/server";
+import { connectDB } from "@/lib/db";
+import SimplePurchaseOrder from "@/models/SimplePurchaseOrder";
+import SimpleServiceProposal from "@/models/SimpleServiceProposal";
+import { getPortalUserFromRequest } from "@/lib/auth-portal";
+import { notRemovedClause } from "@/lib/removed-records";
+import { actorFromPortalUser, recordActivity } from "@/lib/activity-log";
+import {
+  isValidSimplePortalId,
+  sanitizeSimplePortalPayload,
+  serializeSimplePortalDoc,
+} from "@/lib/simple-portal-mongo";
+import { mongoFieldInCalendarRange } from "@/lib/format-date";
+import { emitCrmResourceEvent } from "@/lib/integration-webhooks";
+import { enqueueQuickBooksSync } from "@/lib/quickbooks/triggers";
+import {
+  resolveSimplePoType,
+  SIMPLE_PO_TYPE_JOB,
+} from "@/lib/simple-purchase-order-form";
+
+function poDateRangeClause(from, to) {
+  return mongoFieldInCalendarRange("poCutDate", from, to);
+}
+
+/**
+ * Attach customerName / customerId (and resolve serviceProposalId) from the linked Job.
+ * @param {string} email
+ * @param {Array<Record<string, unknown>>} items
+ */
+async function attachJobCustomerNames(email, items) {
+  if (!Array.isArray(items) || items.length === 0) return items;
+
+  const proposalIds = [];
+  const jobNumbers = [];
+  for (const item of items) {
+    if (resolveSimplePoType(item) !== SIMPLE_PO_TYPE_JOB) continue;
+    const sid = String(item.serviceProposalId || "").trim();
+    const job = String(item.jobNumber || "").trim();
+    if (sid && isValidSimplePortalId(sid)) proposalIds.push(sid);
+    if (job) jobNumbers.push(job);
+  }
+
+  const uniqueIds = [...new Set(proposalIds)];
+  const uniqueJobs = [...new Set(jobNumbers)];
+  if (uniqueIds.length === 0 && uniqueJobs.length === 0) {
+    return items.map((item) => ({ ...item, customerName: "", customerId: "" }));
+  }
+
+  const or = [];
+  if (uniqueIds.length) or.push({ _id: { $in: uniqueIds } });
+  if (uniqueJobs.length) or.push({ documentNumber: { $in: uniqueJobs } });
+
+  const proposals = await SimpleServiceProposal.find({
+    createdByEmail: email,
+    $or: or,
+  })
+    .select({ companyName: 1, documentNumber: 1, customerId: 1 })
+    .lean();
+
+  const byId = new Map();
+  const byJob = new Map();
+  for (const p of proposals || []) {
+    const meta = {
+      id: String(p._id),
+      companyName: String(p.companyName || "").trim(),
+      customerId: String(p.customerId || "").trim(),
+    };
+    byId.set(meta.id, meta);
+    const docNum = String(p.documentNumber || "").trim();
+    if (docNum) byJob.set(docNum, meta);
+  }
+
+  return items.map((item) => {
+    if (resolveSimplePoType(item) !== SIMPLE_PO_TYPE_JOB) {
+      return { ...item, customerName: "", customerId: "" };
+    }
+    const sid = String(item.serviceProposalId || "").trim();
+    const job = String(item.jobNumber || "").trim();
+    const hit = (sid && byId.get(sid)) || (job && byJob.get(job)) || null;
+    return {
+      ...item,
+      customerName: hit?.companyName || "",
+      customerId: hit?.customerId || "",
+      serviceProposalId: sid || hit?.id || "",
+    };
+  });
+}
+
+export async function GET(request) {
+  try {
+    const user = await getPortalUserFromRequest(request);
+    if (!user?.email) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    await connectDB();
+    const email = user.email.trim().toLowerCase();
+    const { searchParams } = new URL(request.url);
+    const serviceProposalId = String(searchParams.get("serviceProposalId") || "").trim();
+    const jobNumber = String(searchParams.get("jobNumber") || "").trim();
+    const vendorId = String(searchParams.get("vendorId") || "").trim();
+    const paymentStatus = String(searchParams.get("paymentStatus") || "").trim();
+    const poTypeFilter = String(searchParams.get("poType") || "").trim().toLowerCase();
+    const from = String(searchParams.get("from") || "").trim().slice(0, 10);
+    const to = String(searchParams.get("to") || "").trim().slice(0, 10);
+    const sortBy = String(searchParams.get("sortBy") || "updatedAt").trim();
+    const sortDir = String(searchParams.get("sortDir") || "desc").toLowerCase() === "asc" ? "asc" : "desc";
+    const includePagination =
+      searchParams.has("page") ||
+      searchParams.has("pageSize") ||
+      searchParams.has("q") ||
+      searchParams.has("sortBy") ||
+      searchParams.has("from") ||
+      searchParams.has("to") ||
+      searchParams.has("paymentStatus") ||
+      searchParams.has("poType") ||
+      searchParams.has("serviceProposalId") ||
+      searchParams.has("jobNumber") ||
+      searchParams.has("vendorId");
+    const page = Math.max(1, Number(searchParams.get("page")) || 1);
+    const pageSize = Math.min(100, Math.max(1, Number(searchParams.get("pageSize")) || 25));
+    const skip = (page - 1) * pageSize;
+    const qText = String(searchParams.get("q") || "").trim();
+    const sortFieldMap = {
+      poNumber: "poNumber",
+      jobNumber: "jobNumber",
+      vendorName: "vendorName",
+      poType: "poType",
+      paymentStatus: "paymentStatus",
+      poCutDate: "poCutDate",
+      dueDate: "dueDate",
+      poInvoiceReceiveDate: "poInvoiceReceiveDate",
+      poItemReceiveDate: "poItemReceiveDate",
+      poPaidDate: "poPaidDate",
+      total: "total",
+      updatedAt: "updatedAt",
+      createdAt: "createdAt",
+    };
+    const sortField = sortFieldMap[sortBy] || "updatedAt";
+    const sort = { [sortField]: sortDir === "asc" ? 1 : -1, updatedAt: -1 };
+
+    const q = { createdByEmail: email };
+    const andParts = [notRemovedClause()];
+    if (vendorId) {
+      andParts.push({ vendorId });
+    }
+    if (serviceProposalId || jobNumber) {
+      const ors = [];
+      if (serviceProposalId) ors.push({ serviceProposalId });
+      if (jobNumber) ors.push({ jobNumber });
+      andParts.push({ $or: ors });
+    }
+    if (paymentStatus) {
+      const escaped = paymentStatus.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      andParts.push({
+        paymentStatus: { $regex: `^${escaped}$`, $options: "i" },
+      });
+    }
+    /** Match resolveSimplePoType: explicit shop/job first, else job link ⇒ job, else shop. */
+    if (poTypeFilter === "job") {
+      andParts.push({
+        $and: [
+          { poType: { $not: { $regex: /^shop$/i } } },
+          {
+            $or: [
+              { poType: { $regex: /^job$/i } },
+              { serviceProposalId: { $gt: "" } },
+              { jobNumber: { $gt: "" } },
+            ],
+          },
+        ],
+      });
+    } else if (poTypeFilter === "shop") {
+      andParts.push({
+        $or: [
+          { poType: { $regex: /^shop$/i } },
+          {
+            $and: [
+              {
+                $or: [
+                  { poType: { $exists: false } },
+                  { poType: null },
+                  { poType: "" },
+                ],
+              },
+              {
+                $or: [
+                  { serviceProposalId: { $exists: false } },
+                  { serviceProposalId: null },
+                  { serviceProposalId: "" },
+                ],
+              },
+              {
+                $or: [
+                  { jobNumber: { $exists: false } },
+                  { jobNumber: null },
+                  { jobNumber: "" },
+                ],
+              },
+            ],
+          },
+        ],
+      });
+    }
+    if (from || to) {
+      const dateClause = poDateRangeClause(from, to);
+      if (dateClause) andParts.push(dateClause);
+    }
+    if (qText) {
+      const rx = new RegExp(qText.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i");
+      andParts.push({
+        $or: [
+          { poNumber: rx },
+          { jobNumber: rx },
+          { vendorName: rx },
+          { paymentStatus: rx },
+        ],
+      });
+    }
+    if (andParts.length === 1) Object.assign(q, andParts[0]);
+    else if (andParts.length > 1) q.$and = andParts;
+
+    const baseForCards = { createdByEmail: email };
+    const cardAnd = [notRemovedClause()];
+    if (poTypeFilter === "job") {
+      cardAnd.push({
+        $and: [
+          { poType: { $not: { $regex: /^shop$/i } } },
+          {
+            $or: [
+              { poType: { $regex: /^job$/i } },
+              { serviceProposalId: { $gt: "" } },
+              { jobNumber: { $gt: "" } },
+            ],
+          },
+        ],
+      });
+    } else if (poTypeFilter === "shop") {
+      cardAnd.push({
+        $or: [
+          { poType: { $regex: /^shop$/i } },
+          {
+            $and: [
+              {
+                $or: [
+                  { poType: { $exists: false } },
+                  { poType: null },
+                  { poType: "" },
+                ],
+              },
+              {
+                $or: [
+                  { serviceProposalId: { $exists: false } },
+                  { serviceProposalId: null },
+                  { serviceProposalId: "" },
+                ],
+              },
+              {
+                $or: [
+                  { jobNumber: { $exists: false } },
+                  { jobNumber: null },
+                  { jobNumber: "" },
+                ],
+              },
+            ],
+          },
+        ],
+      });
+    }
+    if (from || to) {
+      const dateClause = poDateRangeClause(from, to);
+      if (dateClause) cardAnd.push(dateClause);
+    }
+    if (qText) {
+      const rx = new RegExp(qText.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i");
+      cardAnd.push({
+        $or: [{ poNumber: rx }, { jobNumber: rx }, { vendorName: rx }, { paymentStatus: rx }],
+      });
+    }
+    if (cardAnd.length === 1) Object.assign(baseForCards, cardAnd[0]);
+    else if (cardAnd.length > 1) baseForCards.$and = cardAnd;
+
+    const [totalCount, list, paymentBuckets] = await Promise.all([
+      SimplePurchaseOrder.countDocuments(q),
+      SimplePurchaseOrder.find(q).sort(sort).skip(skip).limit(pageSize).lean(),
+      SimplePurchaseOrder.aggregate([
+        { $match: baseForCards },
+        {
+          $group: {
+            _id: { $ifNull: ["$paymentStatus", "Unpaid"] },
+            count: { $sum: 1 },
+            amount: {
+              $sum: { $convert: { input: "$grandTotal", to: "double", onError: 0, onNull: 0 } },
+            },
+          },
+        },
+      ]),
+    ]);
+    const items = await attachJobCustomerNames(
+      email,
+      list.map((doc) => serializeSimplePortalDoc(doc))
+    );
+    if (!includePagination) return NextResponse.json(items);
+    return NextResponse.json({
+      items,
+      page,
+      pageSize,
+      totalCount,
+      paymentBuckets: (paymentBuckets || []).map((r) => ({
+        paymentStatus: String(r._id || "Unpaid"),
+        count: Number(r.count) || 0,
+        amount: Number(r.amount) || 0,
+      })),
+    });
+  } catch (err) {
+    console.error("Dashboard list simple purchase orders error:", err);
+    return NextResponse.json({ error: "Failed to list purchase orders" }, { status: 500 });
+  }
+}
+
+export async function POST(request) {
+  try {
+    const user = await getPortalUserFromRequest(request);
+    if (!user?.email) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    await connectDB();
+    const email = user.email.trim().toLowerCase();
+    const body = await request.json().catch(() => ({}));
+    const payload = sanitizeSimplePortalPayload(body);
+    delete payload.removedAt;
+    delete payload.removedByEmail;
+    const doc = await SimplePurchaseOrder.create({
+      ...payload,
+      createdByEmail: email,
+      poType: String(payload.poType || "job").trim().toLowerCase() || "job",
+      serviceProposalId: String(payload.serviceProposalId || "").trim(),
+      jobNumber: String(payload.jobNumber || "").trim(),
+      poNumber: String(payload.poNumber || "").trim(),
+      vendorId: String(payload.vendorId || "").trim(),
+      vendorName: String(payload.vendorName || "").trim(),
+      paymentStatus: String(payload.paymentStatus || "Unpaid").trim() || "Unpaid",
+      poCutDate: payload.poCutDate ?? null,
+      dueDate: payload.dueDate ?? null,
+    });
+    const item = serializeSimplePortalDoc(doc);
+    void emitCrmResourceEvent({
+      ownerEmail: email,
+      collection: "purchaseOrders",
+      action: "created",
+      resourceId: item.id,
+      data: item,
+    });
+    enqueueQuickBooksSync({
+      ownerEmail: email,
+      trigger: "purchaseOrder",
+      previous: null,
+      next: typeof doc.toObject === "function" ? doc.toObject() : doc,
+    });
+    const actor = actorFromPortalUser(user);
+    await recordActivity({
+      ownerEmail: email,
+      ...actor,
+      action: "saved",
+      recordKind: "purchaseOrder",
+      recordId: item.id,
+      recordNumber: String(item.poNumber || "").trim(),
+      partyName: String(item.vendorName || "").trim(),
+      summary: `Saved purchase order ${String(item.poNumber || "").trim()}.`,
+    });
+    return NextResponse.json({ ok: true, item }, { status: 201 });
+  } catch (err) {
+    console.error("Dashboard create simple purchase order error:", err);
+    return NextResponse.json({ error: err.message || "Failed to create purchase order" }, { status: 500 });
+  }
+}

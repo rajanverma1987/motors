@@ -1,0 +1,256 @@
+import { NextResponse } from "next/server";
+import { connectDB } from "@/lib/db";
+import Listing from "@/models/Listing";
+import { getAdminFromRequest } from "@/lib/auth-admin";
+import { buildEmailToCrmUserIdMap, resolveListingCrmUserId } from "@/lib/listing-crm";
+import { checkRateLimit } from "@/lib/rate-limit";
+import { isValidEmail, LIMITS, clampString, clampArray } from "@/lib/validation";
+import { sendNewListingSubmittedToAdmin } from "@/lib/email";
+import { saveUploadedLogoFile, sanitizeListingLogoUrlForCreate } from "@/lib/logo-upload";
+import { parseAdminSortParams, mongoSortFromAdmin } from "@/lib/admin-table-sort";
+
+const LISTING_ADMIN_SORT_KEYS = ["companyName", "email", "city", "state", "status", "isPremium", "isSeed", "submittedAt"];
+
+const STR = (v, max = LIMITS.shortText.max) => clampString(v, max);
+const URL_MAX = LIMITS.url.max;
+
+export async function POST(request) {
+  const { allowed } = await checkRateLimit(request, "listing-submit", 10);
+  if (!allowed) {
+    return NextResponse.json({ error: "Too many submissions. Try again later." }, { status: 429 });
+  }
+  try {
+    await connectDB();
+    const contentType = request.headers.get("content-type") || "";
+    let body;
+    let logoUrlFromUpload = null;
+
+    if (contentType.includes("multipart/form-data")) {
+      const form = await request.formData();
+      const dataStr = form.get("data");
+      if (!dataStr || typeof dataStr !== "string") {
+        return NextResponse.json({ error: "Invalid form data" }, { status: 400 });
+      }
+      try {
+        body = JSON.parse(dataStr);
+      } catch {
+        return NextResponse.json({ error: "Invalid JSON in form" }, { status: 400 });
+      }
+      const logo = form.get("logo");
+      if (logo && typeof logo.arrayBuffer === "function" && logo.size > 0) {
+        try {
+          logoUrlFromUpload = await saveUploadedLogoFile(logo);
+        } catch (e) {
+          return NextResponse.json(
+            { error: e.message || "Logo upload failed" },
+            { status: 400 }
+          );
+        }
+      }
+    } else {
+      body = await request.json();
+    }
+
+    const {
+      email,
+      companyName,
+      logoUrl: logoUrlBody,
+      shortDescription,
+      yearsInBusiness,
+      phone,
+      website,
+      primaryContactPerson,
+      address,
+      city,
+      state,
+      zipCode,
+      country,
+      services,
+      minMotorSizeHP,
+      maxMotorSizeHP,
+      maxVoltage,
+      maxWeightHandled,
+      motorCapabilities,
+      equipmentTesting,
+      rewindingCapabilities,
+      industriesServed,
+      pickupDeliveryAvailable,
+      craneCapacity,
+      forkliftCapacity,
+      rushRepairAvailable,
+      turnaroundTime,
+      certifications,
+      shopSizeSqft,
+      numTechnicians,
+      numEngineers,
+      yearsCombinedExperience,
+      galleryPhotoUrls,
+      serviceZipCode,
+      serviceRadiusMiles,
+      statesServed,
+      citiesOrMetrosServed,
+      areaCoveredFrom,
+    } = body;
+
+    if (!email || !companyName) {
+      return NextResponse.json(
+        { error: "Email and company name required" },
+        { status: 400 }
+      );
+    }
+    if (!isValidEmail(email)) {
+      return NextResponse.json(
+        { error: "Please enter a valid email address." },
+        { status: 400 }
+      );
+    }
+
+    const logoUrl =
+      logoUrlFromUpload != null
+        ? logoUrlFromUpload
+        : sanitizeListingLogoUrlForCreate(logoUrlBody, URL_MAX);
+
+    const doc = await Listing.create({
+      email: (email.trim().toLowerCase()).slice(0, LIMITS.email.max),
+      companyName: STR(companyName, LIMITS.companyName.max),
+      logoUrl: STR(logoUrl, URL_MAX),
+      shortDescription: STR(shortDescription, 500),
+      yearsInBusiness: STR(yearsInBusiness),
+      phone: STR(phone, 30),
+      website: STR(website, URL_MAX),
+      primaryContactPerson: STR(primaryContactPerson),
+      address: STR(address, 300),
+      city: STR(city, LIMITS.city.max),
+      state: STR(state, LIMITS.state.max),
+      zipCode: STR(zipCode, LIMITS.zip.max),
+      country: STR(country, 100) || "United States",
+      services: clampArray(services),
+      minMotorSizeHP: STR(minMotorSizeHP),
+      maxMotorSizeHP: STR(maxMotorSizeHP),
+      maxVoltage: STR(maxVoltage),
+      maxWeightHandled: STR(maxWeightHandled),
+      motorCapabilities: clampArray(motorCapabilities),
+      equipmentTesting: clampArray(equipmentTesting),
+      rewindingCapabilities: clampArray(rewindingCapabilities),
+      industriesServed: clampArray(industriesServed),
+      pickupDeliveryAvailable: !!pickupDeliveryAvailable,
+      craneCapacity: STR(craneCapacity),
+      forkliftCapacity: STR(forkliftCapacity),
+      rushRepairAvailable: !!rushRepairAvailable,
+      turnaroundTime: STR(turnaroundTime),
+      certifications: clampArray(certifications),
+      shopSizeSqft: STR(shopSizeSqft),
+      numTechnicians: STR(numTechnicians),
+      numEngineers: STR(numEngineers),
+      yearsCombinedExperience: STR(yearsCombinedExperience),
+      galleryPhotoUrls: clampArray(galleryPhotoUrls, 30).map((u) => STR(u, URL_MAX)),
+      serviceZipCode: STR(serviceZipCode, 20),
+      serviceRadiusMiles: STR(serviceRadiusMiles),
+      statesServed: STR(statesServed, 500),
+      citiesOrMetrosServed: STR(citiesOrMetrosServed, 1000),
+      areaCoveredFrom: STR(areaCoveredFrom, 300),
+      status: "in-review",
+    });
+
+    try {
+      await sendNewListingSubmittedToAdmin(doc);
+    } catch (e) {
+      console.warn("New listing notification email failed:", e);
+    }
+
+    return NextResponse.json({ ok: true, id: doc._id.toString() });
+  } catch (err) {
+    console.error("Create listing error:", err);
+    return NextResponse.json(
+      { error: err.message || "Failed to create listing" },
+      { status: 500 }
+    );
+  }
+}
+
+function mapListingAdminRows(list, emailMap) {
+  return list.map((l) => {
+    const resolved = resolveListingCrmUserId(l, emailMap);
+    return {
+      ...l,
+      id: l._id.toString(),
+      _id: undefined,
+      crmUserId: resolved,
+    };
+  });
+}
+
+export async function GET(request) {
+  try {
+    const admin = await getAdminFromRequest(request);
+    if (!admin) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    await connectDB();
+    const { searchParams } = new URL(request.url);
+    const exportAll = searchParams.get("export") === "1" || searchParams.get("export") === "all";
+
+    // Full-collection export for CSV (ignores page / status / search filters).
+    if (exportAll) {
+      const list = await Listing.find({})
+        .sort({ submittedAt: -1 })
+        .lean();
+      const emailMap = await buildEmailToCrmUserIdMap(list.map((l) => l.email));
+      const listWithId = mapListingAdminRows(list, emailMap);
+      return NextResponse.json({
+        items: listWithId,
+        page: 1,
+        pageSize: listWithId.length,
+        totalCount: listWithId.length,
+        export: true,
+      });
+    }
+
+    const status = searchParams.get("status");
+    const page = Math.max(1, Number(searchParams.get("page")) || 1);
+    const pageSize = Math.min(100, Math.max(1, Number(searchParams.get("pageSize")) || 25));
+    const skip = (page - 1) * pageSize;
+    const qText = String(searchParams.get("q") || "").trim();
+    let q = {};
+    if (status === "in-review") {
+      q = { status: { $in: ["in-review", "pending"] } };
+    } else if (status === "approved" || status === "rejected") {
+      q = { status };
+    }
+    if (qText) {
+      const rx = new RegExp(qText.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i");
+      q = {
+        ...q,
+        $or: [
+          { companyName: rx },
+          { email: rx },
+          { city: rx },
+          { state: rx },
+          { status: rx },
+        ],
+      };
+    }
+    const { sortBy, sortDir } = parseAdminSortParams(searchParams, {
+      allowedKeys: LISTING_ADMIN_SORT_KEYS,
+      defaultKey: "submittedAt",
+      defaultDir: "desc",
+    });
+    const [totalCount, list] = await Promise.all([
+      Listing.countDocuments(q),
+      Listing.find(q)
+        .sort(mongoSortFromAdmin(sortBy, sortDir, { location: "city" }))
+        .skip(skip)
+        .limit(pageSize)
+        .lean(),
+    ]);
+    const emailMap = await buildEmailToCrmUserIdMap(list.map((l) => l.email));
+    const listWithId = mapListingAdminRows(list, emailMap);
+    return NextResponse.json({ items: listWithId, page, pageSize, totalCount });
+  } catch (err) {
+    console.error("List listings error:", err);
+    return NextResponse.json(
+      { error: "Failed to list" },
+      { status: 500 }
+    );
+  }
+}

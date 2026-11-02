@@ -1,0 +1,9 @@
+.env
+.env.*
+!.env.example
+apps/*/.env
+clients/*/.env
+**/node_modules/**
+**/.next/**
+shop_uploads/**
+public/uploads/**

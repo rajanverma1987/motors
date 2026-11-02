@@ -1,0 +1,965 @@
+"use client";
+
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
+import { useRouter } from "next/navigation";
+import { FiLock } from "react-icons/fi";
+import Button from "@/components/ui/button";
+import Checkbox from "@/components/ui/checkbox";
+import Select from "@/components/ui/select";
+import Textarea from "@/components/ui/textarea";
+import Input from "@/components/ui/input";
+import Tabs from "@/components/ui/tabs";
+import { FormContainer, FormSectionTitle } from "@/components/ui/form-layout";
+import { useToast } from "@/components/toast-provider";
+import { useAuth } from "@/contexts/auth-context";
+import { useUserSettings } from "@/contexts/user-settings-context";
+import SettingsControlledDropdownsPanel from "@/components/dashboard/settings-controlled-dropdowns-panel";
+import SettingsProductDropdownsPanel from "@/components/dashboard/settings-product-dropdowns-panel";
+import {
+  USER_SETTINGS_DEFAULTS,
+  mergeUserSettings,
+} from "@/lib/user-settings";
+import {
+  WEEKDAY_OPTIONS,
+  allowedWeekEndDays,
+  normalizeShopWeek,
+} from "@/lib/shop-week";
+import { resolveWorkspaceSmtpSecure } from "@/lib/workspace-smtp-fields";
+import { applyDashboardDisplay } from "@/lib/apply-dashboard-zoom";
+import {
+  DISPLAY_ZOOM_DEFAULT,
+  DISPLAY_ZOOM_MAX,
+  DISPLAY_ZOOM_MIN,
+  DISPLAY_ZOOM_STEP,
+  normalizeZoomLevel,
+} from "@/lib/display-zoom";
+import {
+  DISPLAY_FONT_SIZE_DEFAULT,
+  DISPLAY_FONT_SIZE_MAX,
+  DISPLAY_FONT_SIZE_MIN,
+  DISPLAY_FONT_SIZE_STEP,
+  normalizeFontSizeLevel,
+} from "@/lib/display-font-size";
+import {
+  LOGO_DOCUMENT_SCALE_DEFAULT,
+  LOGO_DOCUMENT_SCALE_MAX,
+  LOGO_DOCUMENT_SCALE_MIN,
+  LOGO_DOCUMENT_SCALE_STEP,
+  normalizeLogoDocumentScale,
+} from "@/lib/logo-document-scale";
+import Slider from "@/components/ui/slider";
+import { PrintShopLogo } from "@/components/dashboard/print-shop-logo";
+import { DISPLAY_CURRENCIES } from "@/lib/format-currency";
+import { normalizePortalUi, settingsPathForPortalUi } from "@/lib/portal-view";
+
+const PAGE_SIZE_OPTIONS = [
+  { value: "10", label: "10 rows" },
+  { value: "25", label: "25 rows" },
+  { value: "50", label: "50 rows" },
+  { value: "100", label: "100 rows" },
+];
+
+const WEEKDAY_SELECT_OPTIONS = WEEKDAY_OPTIONS.map((d) => ({
+  value: String(d.value),
+  label: d.label,
+}));
+
+const ACCOUNTS_PAYMENT_TERMS_OPTIONS = [
+  { value: "on_receipt", label: "Due on receipt" },
+  { value: "net15", label: "NET 15" },
+  { value: "net30", label: "NET 30" },
+  { value: "net45", label: "NET 45" },
+  { value: "net60", label: "NET 60" },
+];
+
+export default function SettingsPageClient() {
+  const router = useRouter();
+  const toast = useToast();
+  const { user, mounted, isEmployee } = useAuth();
+  const effectiveIsEmployee = isEmployee ?? Boolean(
+    user?.isEmployee ?? (user?.authType === "employee" || Boolean(user?.employeeId))
+  );
+  const { settings: savedSettings, refresh: refreshContext } = useUserSettings();
+  const savedZoomRef = useRef(savedSettings?.zoomLevel);
+  savedZoomRef.current = savedSettings?.zoomLevel;
+  const savedFontRef = useRef(savedSettings?.fontSizeLevel);
+  savedFontRef.current = savedSettings?.fontSizeLevel;
+  const [activeTab, setActiveTab] = useState("account");
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [draft, setDraft] = useState(() => ({ ...USER_SETTINGS_DEFAULTS }));
+  const [logoUploading, setLogoUploading] = useState(false);
+  const logoInputRef = useRef(null);
+  const [pwCurrent, setPwCurrent] = useState("");
+  const [pwNew, setPwNew] = useState("");
+  const [pwConfirm, setPwConfirm] = useState("");
+  const [pwSaving, setPwSaving] = useState(false);
+  const [smtpPasswordInput, setSmtpPasswordInput] = useState("");
+  const [smtpTesting, setSmtpTesting] = useState(false);
+
+  useEffect(() => {
+    if (mounted && effectiveIsEmployee) {
+      router.replace("/dashboard");
+    }
+  }, [mounted, effectiveIsEmployee, router]);
+
+  const load = useCallback(async () => {
+    if (effectiveIsEmployee) {
+      setLoading(false);
+      return;
+    }
+    setLoading(true);
+    try {
+      const r = await fetch("/api/dashboard/settings", {
+        credentials: "include",
+        cache: "no-store",
+      });
+      const d = await r.json();
+      if (r.ok) {
+        setDraft(mergeUserSettings(d.settings));
+      }
+    } finally {
+      setLoading(false);
+    }
+  }, [effectiveIsEmployee]);
+
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  /** Live preview on Display tab; revert to saved zoom when leaving settings without a full navigation remount. */
+  useEffect(() => {
+    if (loading) return;
+    applyDashboardDisplay({
+      zoomLevel: draft.zoomLevel,
+      fontSizeLevel: draft.fontSizeLevel,
+    });
+    return () =>
+      applyDashboardDisplay({
+        zoomLevel: savedZoomRef.current,
+        fontSizeLevel: savedFontRef.current,
+      });
+  }, [draft.zoomLevel, draft.fontSizeLevel, loading]);
+
+  const updateDraft = (patch) => setDraft((prev) => ({ ...prev, ...patch }));
+
+  async function handlePasswordChange(e) {
+    e?.preventDefault?.();
+    if (pwNew !== pwConfirm) {
+      toast.error("New password and confirmation do not match.");
+      return;
+    }
+    if ((pwNew || "").length < 10) {
+      toast.error("New password must be at least 6 characters.");
+      return;
+    }
+    setPwSaving(true);
+    try {
+      const r = await fetch("/api/dashboard/account/password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          currentPassword: pwCurrent,
+          newPassword: pwNew,
+        }),
+      });
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.error || "Could not update password.");
+      setPwCurrent("");
+      setPwNew("");
+      setPwConfirm("");
+      toast.success("Password updated.");
+    } catch (err) {
+      toast.error(err.message || "Could not update password.");
+    } finally {
+      setPwSaving(false);
+    }
+  }
+
+  async function handleSave() {
+    setSaving(true);
+    try {
+      const payload = { ...draft };
+      delete payload.smtpPassword;
+      delete payload.smtpPasswordConfigured;
+      if (smtpPasswordInput.trim()) {
+        payload.smtpPassword = smtpPasswordInput.trim();
+      }
+      const previousUi = normalizePortalUi(savedSettings?.portalUi);
+      const r = await fetch("/api/dashboard/settings", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify(payload),
+      });
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.error || "Save failed");
+      const merged = mergeUserSettings(d.settings);
+      setDraft(merged);
+      setSmtpPasswordInput("");
+      await refreshContext();
+      applyDashboardDisplay({
+        zoomLevel: merged.zoomLevel,
+        fontSizeLevel: merged.fontSizeLevel,
+      });
+      const nextUi = normalizePortalUi(merged.portalUi);
+      if (previousUi !== nextUi) {
+        window.location.assign(settingsPathForPortalUi(nextUi));
+        return;
+      }
+      toast.success("Settings saved.");
+    } catch (e) {
+      toast.error(e.message || "Could not save settings.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleTestSmtp() {
+    setSmtpTesting(true);
+    try {
+      const body = {
+        smtpEnabled: true,
+        smtpHost: draft.smtpHost,
+        smtpPort: draft.smtpPort,
+        smtpSecure: draft.smtpSecure,
+        smtpUser: draft.smtpUser,
+        smtpFromEmail: draft.smtpFromEmail,
+        smtpFromName: draft.smtpFromName,
+      };
+      if (smtpPasswordInput.trim()) {
+        body.smtpPassword = smtpPasswordInput.trim();
+      }
+      const r = await fetch("/api/dashboard/settings/smtp/test", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify(body),
+      });
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.error || "SMTP test failed");
+      toast.success(d.message || "SMTP connection successful.");
+    } catch (e) {
+      toast.error(e.message || "SMTP test failed.");
+    } finally {
+      setSmtpTesting(false);
+    }
+  }
+
+  async function handleLogoFile(e) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    setLogoUploading(true);
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      const r = await fetch("/api/dashboard/settings/logo", {
+        method: "POST",
+        body: fd,
+        credentials: "include",
+      });
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.error || "Upload failed");
+      setDraft(mergeUserSettings(d.settings));
+      await refreshContext();
+      toast.success("Logo updated. It appears in the header and on quote/PO emails.");
+    } catch (err) {
+      toast.error(err.message || "Could not upload logo.");
+    } finally {
+      setLogoUploading(false);
+    }
+  }
+
+  async function handleRemoveLogo() {
+    setLogoUploading(true);
+    try {
+      const r = await fetch("/api/dashboard/settings/logo", {
+        method: "DELETE",
+        credentials: "include",
+      });
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.error || "Remove failed");
+      setDraft(mergeUserSettings(d.settings));
+      await refreshContext();
+      toast.success("Logo removed.");
+    } catch (err) {
+      toast.error(err.message || "Could not remove logo.");
+    } finally {
+      setLogoUploading(false);
+    }
+  }
+
+  const settingsTabs = useMemo(
+    () => [
+      {
+        id: "account",
+        label: "Account",
+        children: (
+          <div className="flex flex-col gap-8 pb-24">
+            <FormContainer>
+              <FormSectionTitle as="h2">Account</FormSectionTitle>
+              <p className="text-sm text-secondary">
+                Signed in as{" "}
+                <span className="font-medium text-title">{user?.email ?? "—"}</span>
+              </p>
+              {user?.shopName && (
+                <p className="mt-1 text-sm text-secondary">
+                  Shop: <span className="text-title">{user.shopName}</span>
+                </p>
+              )}
+            </FormContainer>
+            <FormContainer>
+              <FormSectionTitle as="h2">Password</FormSectionTitle>
+              <p className="mb-4 text-sm text-secondary">
+                If your account was created by our team, you received a temporary password by email—change it here
+                after you sign in. This does not affect the sticky <strong className="text-title">Save changes</strong>{" "}
+                bar for other settings (save those separately).
+              </p>
+              <form className="flex max-w-[33.6rem] flex-col gap-4" onSubmit={handlePasswordChange}>
+                <Input
+                  type="password"
+                  label="Current password"
+                  name="currentPassword"
+                  autoComplete="current-password"
+                  value={pwCurrent}
+                  onChange={(e) => setPwCurrent(e.target.value)}
+                />
+                <Input
+                  type="password"
+                  label="New password"
+                  name="newPassword"
+                  autoComplete="new-password"
+                  value={pwNew}
+                  onChange={(e) => setPwNew(e.target.value)}
+                />
+                <Input
+                  type="password"
+                  label="Confirm new password"
+                  name="confirmPassword"
+                  autoComplete="new-password"
+                  value={pwConfirm}
+                  onChange={(e) => setPwConfirm(e.target.value)}
+                />
+                <Button type="submit" variant="secondary" disabled={pwSaving}>
+                  {pwSaving ? "Updating…" : "Update password"}
+                </Button>
+              </form>
+            </FormContainer>
+          </div>
+        ),
+      },
+      {
+        id: "accounts",
+        label: "Accounts",
+        children: (
+          <div className="flex flex-col gap-8 pb-24">
+            <FormContainer>
+              <FormSectionTitle as="h2">Company billing</FormSectionTitle>
+              <p className="mb-4 text-sm text-secondary">
+                Remittance and billing address for your shop (e.g. for invoices, statements, and accounts
+                receivable). Shown on customer-facing documents when you wire this field in templates.
+              </p>
+              <Textarea
+                label="Billing address"
+                value={draft.accountsBillingAddress ?? ""}
+                onChange={(e) => updateDraft({ accountsBillingAddress: e.target.value })}
+                rows={6}
+                placeholder={"Your company legal name\nStreet\nCity, ST ZIP\nPhone · AP email"}
+              />
+            </FormContainer>
+            <FormContainer>
+              <FormSectionTitle as="h2">Shipping</FormSectionTitle>
+              <p className="mb-4 text-sm text-secondary">
+                Ship-from or return address (motor pickup, parts shipping, warehouse). Use if different from
+                billing.
+              </p>
+              <Textarea
+                label="Shipping address"
+                value={draft.accountsShippingAddress ?? ""}
+                onChange={(e) => updateDraft({ accountsShippingAddress: e.target.value })}
+                rows={6}
+                placeholder={"Company name\nDock / receiving\nStreet\nCity, ST ZIP"}
+              />
+            </FormContainer>
+            <FormContainer>
+              <FormSectionTitle as="h2">Payment terms</FormSectionTitle>
+              <p className="mb-4 text-sm text-secondary">
+                Default payment terms for your shop. Use for invoices, quotes, and vendor expectations. You
+                can still override per document later when that is supported.
+              </p>
+              <div className="max-w-[33.6rem]">
+                <Select
+                  label="Standard terms"
+                  options={ACCOUNTS_PAYMENT_TERMS_OPTIONS}
+                  value={draft.accountsPaymentTerms || "net30"}
+                  onChange={(e) =>
+                    updateDraft({
+                      accountsPaymentTerms: (e.target.value || "net30").toLowerCase(),
+                    })
+                  }
+                  searchable={false}
+                />
+              </div>
+            </FormContainer>
+            <FormContainer>
+              <FormSectionTitle as="h2">Payment options (invoice)</FormSectionTitle>
+              <p className="mb-4 text-sm text-secondary">
+                Bank transfer details, Zelle/Venmo, or a link to pay online (Stripe, PayPal, etc.). Shown at
+                the bottom of printed invoices and on the invoice link you email to customers. URLs become
+                clickable on the web view.
+              </p>
+              <Textarea
+                label="How to pay"
+                value={draft.invoicePaymentOptions ?? ""}
+                onChange={(e) => updateDraft({ invoicePaymentOptions: e.target.value })}
+                rows={8}
+                placeholder={
+                  "Bank: Your Shop LLC\nRouting: …\nAccount: …\n\nOr pay online:\nhttps://pay.example.com/invoice"
+                }
+              />
+            </FormContainer>
+            <FormContainer>
+              <FormSectionTitle as="h2">Thank-you note (invoice)</FormSectionTitle>
+              <p className="mb-4 text-sm text-secondary">
+                Short closing line at the bottom of the invoice (after payment options). Leave blank to hide.
+              </p>
+              <Textarea
+                label="Thank-you message"
+                value={draft.invoiceThankYouNote ?? ""}
+                onChange={(e) => updateDraft({ invoiceThankYouNote: e.target.value })}
+                rows={2}
+                placeholder="Thank you for your business!"
+              />
+            </FormContainer>
+          </div>
+        ),
+      },
+      {
+        id: "branding",
+        label: "Branding",
+        children: (
+          <div className="flex flex-col gap-8 pb-24">
+            <FormContainer>
+              <FormSectionTitle as="h2">Company logo</FormSectionTitle>
+              <p className="mb-4 text-sm text-secondary">
+                Shown in the dashboard header. Included on printed quotes, invoices, purchase orders, and in emails
+                when you send a document (PNG, JPEG, GIF, or WebP, max 2MB).
+              </p>
+              <div className="flex flex-wrap items-start gap-6">
+                <div className="flex min-h-[5rem] min-w-[120px] items-center justify-center rounded-lg border border-border bg-form-bg px-4 py-3">
+                  {draft.logoUrl ? (
+                    <PrintShopLogo
+                      logoUrl={draft.logoUrl}
+                      alt="Your logo"
+                      scale={normalizeLogoDocumentScale(draft.logoDocumentScale)}
+                      preferApi
+                    />
+                  ) : (
+                    <span className="text-sm text-secondary">No logo</span>
+                  )}
+                </div>
+                <div className="flex flex-col gap-2">
+                  <input
+                    ref={logoInputRef}
+                    type="file"
+                    accept="image/jpeg,image/png,image/gif,image/webp"
+                    className="hidden"
+                    onChange={handleLogoFile}
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    disabled={logoUploading}
+                    onClick={() => logoInputRef.current?.click()}
+                  >
+                    {logoUploading ? "Working…" : draft.logoUrl ? "Replace logo" : "Upload logo"}
+                  </Button>
+                  {draft.logoUrl && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="text-danger border-danger/40 hover:bg-danger/10"
+                      disabled={logoUploading}
+                      onClick={handleRemoveLogo}
+                    >
+                      Remove logo
+                    </Button>
+                  )}
+                </div>
+              </div>
+              <div className="mt-6 max-w-md">
+                <Slider
+                  id="settings-branding-logo-size"
+                  label="Logo size on documents"
+                  help="Applies to printed quotes, invoices, purchase orders, datasheets, and logos in customer or vendor emails. Dashboard header logo is unchanged."
+                  min={LOGO_DOCUMENT_SCALE_MIN}
+                  max={LOGO_DOCUMENT_SCALE_MAX}
+                  step={LOGO_DOCUMENT_SCALE_STEP}
+                  value={normalizeLogoDocumentScale(draft.logoDocumentScale ?? LOGO_DOCUMENT_SCALE_DEFAULT)}
+                  valueDisplay={`${normalizeLogoDocumentScale(draft.logoDocumentScale ?? LOGO_DOCUMENT_SCALE_DEFAULT)}%${normalizeLogoDocumentScale(draft.logoDocumentScale ?? LOGO_DOCUMENT_SCALE_DEFAULT) ===
+                      LOGO_DOCUMENT_SCALE_DEFAULT
+                      ? " (default)"
+                      : ""
+                    }`}
+                  onChange={(e) =>
+                    updateDraft({ logoDocumentScale: normalizeLogoDocumentScale(e.target.value) })
+                  }
+                />
+                <p className="mt-2 text-xs text-secondary">
+                  Preview above matches printed documents. Drag the slider, then click Save changes.
+                </p>
+              </div>
+            </FormContainer>
+          </div>
+        ),
+      },
+      {
+        id: "display",
+        label: "Display",
+        children: (
+          <div className="flex flex-col gap-8 pb-24">
+            <FormContainer>
+              <FormSectionTitle as="h2">Zoom level</FormSectionTitle>
+              <p className="mb-4 max-w-[42rem] text-sm text-secondary">
+                Makes text and controls larger or smaller across the signed-in dashboard only (not your whole browser).
+                Drag the slider to preview; click Save changes to keep your setting. Zoom affects overall layout; font
+                size scales text proportionally while keeping spacing closer to default.
+              </p>
+              <div className="max-w-md space-y-6">
+                <Slider
+                  id="settings-display-zoom"
+                  label="Zoom level"
+                  min={DISPLAY_ZOOM_MIN}
+                  max={DISPLAY_ZOOM_MAX}
+                  step={DISPLAY_ZOOM_STEP}
+                  value={normalizeZoomLevel(draft.zoomLevel ?? DISPLAY_ZOOM_DEFAULT)}
+                  valueDisplay={`${normalizeZoomLevel(draft.zoomLevel ?? DISPLAY_ZOOM_DEFAULT)}%${normalizeZoomLevel(draft.zoomLevel ?? DISPLAY_ZOOM_DEFAULT) === DISPLAY_ZOOM_DEFAULT
+                      ? " (default)"
+                      : ""
+                    }`}
+                  onChange={(e) =>
+                    updateDraft({ zoomLevel: normalizeZoomLevel(e.target.value) })
+                  }
+                />
+                <Slider
+                  id="settings-display-font-size"
+                  label="Font size"
+                  min={DISPLAY_FONT_SIZE_MIN}
+                  max={DISPLAY_FONT_SIZE_MAX}
+                  step={DISPLAY_FONT_SIZE_STEP}
+                  value={normalizeFontSizeLevel(draft.fontSizeLevel ?? DISPLAY_FONT_SIZE_DEFAULT)}
+                  valueDisplay={`${normalizeFontSizeLevel(draft.fontSizeLevel ?? DISPLAY_FONT_SIZE_DEFAULT)}%${normalizeFontSizeLevel(draft.fontSizeLevel ?? DISPLAY_FONT_SIZE_DEFAULT) ===
+                      DISPLAY_FONT_SIZE_DEFAULT
+                      ? " (default)"
+                      : ""
+                    }`}
+                  onChange={(e) =>
+                    updateDraft({ fontSizeLevel: normalizeFontSizeLevel(e.target.value) })
+                  }
+                />
+              </div>
+            </FormContainer>
+            <FormContainer>
+              <FormSectionTitle as="h2">Currency</FormSectionTitle>
+              <p className="mb-4 text-sm text-secondary">
+                Quotes, purchase orders, and other money fields on the dashboard are shown in this currency. Stored amounts are unchanged; only display formatting updates.
+              </p>
+              <div className="max-w-[33.6rem]">
+                <Select
+                  label="Display currency"
+                  options={DISPLAY_CURRENCIES}
+                  value={draft.currency || "USD"}
+                  onChange={(e) =>
+                    updateDraft({ currency: (e.target.value || "USD").toUpperCase() })
+                  }
+                  searchable
+                />
+              </div>
+            </FormContainer>
+            <FormContainer>
+              <FormSectionTitle as="h2">Lists & tables</FormSectionTitle>
+              <p className="mb-4 text-sm text-secondary">
+                Default pagination for data tables across the dashboard (customers, quotes, leads, etc.).
+              </p>
+              <div className="max-w-xs">
+                <Select
+                  label="Rows per page"
+                  options={PAGE_SIZE_OPTIONS}
+                  value={String(draft.tablePageSize)}
+                  onChange={(e) =>
+                    updateDraft({ tablePageSize: Number(e.target.value) || 25 })
+                  }
+                  searchable={false}
+                />
+              </div>
+              <div className="mt-4">
+                <Checkbox
+                  name="compactTables"
+                  label="Compact table rows"
+                  help="Tighter row height on list and summary tables across the dashboard."
+                  checked={!!draft.compactTables}
+                  onChange={(e) => updateDraft({ compactTables: e.target.checked })}
+                />
+              </div>
+            </FormContainer>
+            <FormContainer>
+              <FormSectionTitle as="h2">Calendar & dates</FormSectionTitle>
+              <p className="mb-3 max-w-[42rem] text-sm text-secondary">
+                Shop week used on Employees → Punches for This week, Previous week, and By weeks.
+                End day lists only days before the start day. A week is at least 3 days long.
+              </p>
+              <div className="grid max-w-xl grid-cols-1 gap-3 sm:grid-cols-2">
+                <Select
+                  label="Week start"
+                  options={WEEKDAY_SELECT_OPTIONS}
+                  value={String(draft.weekStartDay ?? 0)}
+                  onChange={(e) => {
+                    const weekStartDay = Number(e.target.value);
+                    const week = normalizeShopWeek(weekStartDay, draft.weekEndDay);
+                    updateDraft(week);
+                  }}
+                  searchable={false}
+                />
+                <Select
+                  label="Week end"
+                  options={allowedWeekEndDays(draft.weekStartDay ?? 0).map((day) => ({
+                    value: String(day),
+                    label: WEEKDAY_OPTIONS.find((o) => o.value === day)?.label || String(day),
+                  }))}
+                  value={String(draft.weekEndDay ?? 6)}
+                  onChange={(e) => {
+                    const week = normalizeShopWeek(draft.weekStartDay, Number(e.target.value));
+                    updateDraft(week);
+                  }}
+                  searchable={false}
+                />
+              </div>
+            </FormContainer>
+            <FormContainer>
+              <FormSectionTitle as="h2">Document number prefixes</FormSectionTitle>
+              <p className="mb-4 max-w-[42rem] text-sm text-secondary">
+                Applied when creating new repair jobs, invoices (from a quote), work orders, and shop purchase orders.
+                Letters, digits, hyphen, and underscore only (max 16 characters). Hyphens are added automatically for
+                repair jobs and work orders if you omit one (e.g.{" "}
+                <span className="font-mono text-title">ACME</span> becomes <span className="font-mono text-title">ACME-</span>
+                ). If a quote RFQ# or work-order segment already starts with your prefix, it is not added again.
+              </p>
+              <div className="flex max-w-md flex-col gap-4">
+                <Input
+                  label="Repair job prefix"
+                  value={draft.prefixRepairJob ?? ""}
+                  onChange={(e) => updateDraft({ prefixRepairJob: e.target.value })}
+                  placeholder="RF-"
+                  autoComplete="off"
+                  maxLength={16}
+                />
+                <p className="-mt-2 text-xs text-secondary">Leave blank for default RF-00001 style.</p>
+                <Input
+                  label="Job / RFQ / quote ID prefix"
+                  value={draft.prefixInvoice ?? ""}
+                  onChange={(e) => updateDraft({ prefixInvoice: e.target.value })}
+                  placeholder="CEMR"
+                  autoComplete="off"
+                  maxLength={16}
+                />
+                <p className="-mt-2 text-xs text-secondary">
+                  Unified job number prefix (e.g. CEMR- + A00001). Same ID on RFQ, quote, then invoices (CEMR-A00001-1) and work orders
+                  (W-CEMR-A00001-1).
+                </p>
+                <Input
+                  label="Work order prefix"
+                  value={draft.prefixWorkOrder ?? ""}
+                  onChange={(e) => updateDraft({ prefixWorkOrder: e.target.value })}
+                  placeholder="W-"
+                  autoComplete="off"
+                  maxLength={16}
+                />
+                <p className="-mt-2 text-xs text-secondary">Replaces the default W- before the RFQ or job segment (e.g. WO-A00001-1).</p>
+                <Input
+                  label="Shop PO prefix"
+                  value={draft.prefixShopPo ?? ""}
+                  onChange={(e) => updateDraft({ prefixShopPo: e.target.value })}
+                  placeholder="P"
+                  autoComplete="off"
+                  maxLength={16}
+                />
+                <p className="-mt-2 text-xs text-secondary">
+                  Leave blank for default P-A0001 style. New Shop PO numbers use your prefix plus -A0001, -A0002, and so on
+                  (e.g. CEMR-A0001). The next number is shown when you create a Shop PO and saved when you click Save.
+                </p>
+              </div>
+            </FormContainer>
+          </div>
+        ),
+      },
+      {
+        id: "smtp",
+        label: "SMTP",
+        children: (
+          <div className="flex flex-col gap-8 pb-24">
+            <FormContainer>
+              <FormSectionTitle as="h2">Customer email (SMTP)</FormSectionTitle>
+              <p className="mb-4 text-sm text-secondary">
+                When enabled, quotes and invoices sent to customers use your shop&apos;s SMTP server and from address
+                instead of 3PhaseFlow.com. Save settings after entering credentials, then test the connection.
+              </p>
+              <div className="flex flex-col gap-4">
+                <Checkbox
+                  name="smtpEnabled"
+                  label="Use my shop SMTP for customer emails"
+                  help="Applies to Send to customer on RFQs and invoices."
+                  checked={!!draft.smtpEnabled}
+                  onChange={(e) => updateDraft({ smtpEnabled: e.target.checked })}
+                />
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <Input
+                    label="SMTP host"
+                    value={draft.smtpHost ?? ""}
+                    onChange={(e) => updateDraft({ smtpHost: e.target.value })}
+                    placeholder="smtp.gmail.com"
+                    help="Mail server hostname — not your email address."
+                    autoComplete="off"
+                  />
+                  <Input
+                    label="SMTP port"
+                    type="number"
+                    min={1}
+                    max={65535}
+                    value={String(draft.smtpPort ?? 587)}
+                    onChange={(e) => {
+                      const port = Math.round(Number(e.target.value) || 587);
+                      updateDraft({
+                        smtpPort: e.target.value,
+                        smtpSecure: resolveWorkspaceSmtpSecure(port, draft.smtpSecure),
+                      });
+                    }}
+                    placeholder="587"
+                  />
+                </div>
+                <p className="-mt-2 text-xs text-secondary">
+                  Port 587 uses STARTTLS (leave SSL/TLS off). Port 465 uses SSL/TLS (turned on automatically).
+                </p>
+                <Checkbox
+                  name="smtpSecure"
+                  label="Use SSL/TLS (implicit — port 465 only)"
+                  help="For port 587, keep this off; the connection upgrades with STARTTLS automatically."
+                  checked={!!draft.smtpSecure}
+                  onChange={(e) => {
+                    const port = Math.round(Number(draft.smtpPort) || 587);
+                    updateDraft({
+                      smtpSecure: resolveWorkspaceSmtpSecure(port, e.target.checked),
+                    });
+                  }}
+                />
+                <Input
+                  label="SMTP username"
+                  value={draft.smtpUser ?? ""}
+                  onChange={(e) => updateDraft({ smtpUser: e.target.value })}
+                  placeholder="you@yourshop.com"
+                  autoComplete="off"
+                />
+                <Input
+                  type="password"
+                  label="SMTP password"
+                  value={smtpPasswordInput}
+                  onChange={(e) => setSmtpPasswordInput(e.target.value)}
+                  placeholder={
+                    draft.smtpPasswordConfigured
+                      ? "Leave blank to keep saved password"
+                      : "App password or SMTP password"
+                  }
+                  autoComplete="new-password"
+                />
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <Input
+                    label="From email"
+                    type="email"
+                    value={draft.smtpFromEmail ?? ""}
+                    onChange={(e) => updateDraft({ smtpFromEmail: e.target.value })}
+                    placeholder="billing@yourshop.com"
+                    autoComplete="off"
+                  />
+                  <Input
+                    label="From name (optional)"
+                    value={draft.smtpFromName ?? ""}
+                    onChange={(e) => updateDraft({ smtpFromName: e.target.value })}
+                    placeholder={user?.shopName || "Your shop name"}
+                    autoComplete="off"
+                  />
+                </div>
+                <div className="flex flex-wrap items-center gap-3 pt-1">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    disabled={smtpTesting}
+                    onClick={handleTestSmtp}
+                  >
+                    {smtpTesting ? "Testing…" : "Test SMTP connection"}
+                  </Button>
+                  {draft.smtpPasswordConfigured ? (
+                    <span className="text-xs text-secondary">Password saved on server.</span>
+                  ) : null}
+                </div>
+              </div>
+            </FormContainer>
+          </div>
+        ),
+      },
+      {
+        id: "status",
+        label: "Status",
+        children: <SettingsControlledDropdownsPanel draft={draft} setDraft={setDraft} />,
+      },
+      {
+        id: "product-dropdowns",
+        label: "Dropdowns",
+        children: <SettingsProductDropdownsPanel draft={draft} setDraft={setDraft} />,
+      },
+      {
+        id: "inventory",
+        label: "Inventory",
+        children: (
+          <div className="flex flex-col gap-8 pb-24">
+            <FormContainer>
+              <FormSectionTitle as="h2">Inventory locations</FormSectionTitle>
+              <p className="mb-4 text-sm text-secondary">
+                Bin, shelf, or warehouse labels used when editing parts on the master inventory page (dropdown). One
+                location per line.
+              </p>
+              <Textarea
+                label="Locations (one per line)"
+                value={
+                  Array.isArray(draft.inventoryLocations) ? draft.inventoryLocations.join("\n") : ""
+                }
+                onChange={(e) => {
+                  // Keep raw lines while typing: allow newlines (incl. trailing) and spaces; trim/normalize on save via API.
+                  const lines = e.target.value.split("\n");
+                  updateDraft({ inventoryLocations: lines.slice(0, 50) });
+                }}
+                rows={10}
+                placeholder={"Shelf A1\nBin 12\nReceiving dock"}
+              />
+            </FormContainer>
+          </div>
+        ),
+      },
+      {
+        id: "more",
+        label: "More",
+        children: (
+          <div className="flex flex-col gap-8 pb-24">
+            <FormContainer className="border border-dashed border-border bg-card/50">
+              <FormSectionTitle as="h2">More settings</FormSectionTitle>
+              <p className="text-sm text-secondary">
+                Additional preferences (work order defaults, job board, integrations, etc.) can be added here. Check back after updates or ask your administrator.
+              </p>
+            </FormContainer>
+          </div>
+        ),
+      },
+    ],
+    [
+      draft.accountsBillingAddress,
+      draft.accountsShippingAddress,
+      draft.accountsPaymentTerms,
+      draft.invoicePaymentOptions,
+      draft.invoiceThankYouNote,
+      draft.compactTables,
+      draft.currency,
+      draft.zoomLevel,
+      draft.fontSizeLevel,
+      draft.leadEmailAlerts,
+      draft.logoUrl,
+      draft.logoDocumentScale,
+      draft.marketingTips,
+      draft.tablePageSize,
+      draft.weekStartDay,
+      draft.weekEndDay,
+      draft.prefixRepairJob,
+      draft.prefixInvoice,
+      draft.prefixWorkOrder,
+      draft.prefixShopPo,
+      draft.smtpEnabled,
+      draft.smtpHost,
+      draft.smtpPort,
+      draft.smtpSecure,
+      draft.smtpUser,
+      draft.smtpFromEmail,
+      draft.smtpFromName,
+      draft.smtpPasswordConfigured,
+      smtpPasswordInput,
+      smtpTesting,
+      draft.workOrderStatusTileColors,
+      draft.controlledDropdowns,
+      draft.productDropdowns,
+      draft.inventoryLocations,
+      logoUploading,
+      user?.email,
+      user?.shopName,
+      user?.calculatorOnlyAccount,
+      draft.portalUi,
+      pwCurrent,
+      pwNew,
+      pwConfirm,
+      pwSaving,
+    ]
+  );
+
+  if (mounted && effectiveIsEmployee) {
+    return (
+      <div className="flex flex-1 items-center justify-center py-16">
+        <div className="max-w-md rounded-xl border border-border bg-card p-6 text-center shadow-sm">
+          <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-danger/10 text-danger">
+            <FiLock className="h-6 w-6" aria-hidden />
+          </div>
+          <h2 className="text-lg font-semibold text-title">Access Restricted</h2>
+          <p className="mt-2 text-sm text-secondary">
+            Settings are only available to the main shop login.
+          </p>
+          <div className="mt-5">
+            <Button
+              type="button"
+              variant="primary"
+              size="sm"
+              onClick={() => router.replace("/dashboard")}
+            >
+              Return to Dashboard
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (loading) {
+    return (
+      <div className="w-full min-w-0 py-10">
+        <p className="text-secondary">Loading settings…</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex min-h-0 w-full min-w-0 flex-1 flex-col">
+      <div className="mb-8 shrink-0 border-b border-border pb-6">
+        <h1 className="text-2xl font-bold text-title">Settings</h1>
+        <p className="mt-1 text-sm text-secondary">
+          Shop defaults, display, billing, and integrations.
+        </p>
+      </div>
+
+      <Tabs defaultTab="account" value={activeTab} onChange={setActiveTab} tabs={settingsTabs} />
+
+      <div className="sticky bottom-0 -mx-4 border-t border-border bg-bg/95 px-4 py-4 backdrop-blur supports-[backdrop-filter]:bg-bg/80">
+        <Button variant="primary" onClick={handleSave} disabled={saving}>
+          {saving ? "Saving…" : "Save changes"}
+        </Button>
+      </div>
+    </div>
+  );
+}

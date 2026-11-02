@@ -1,0 +1,143 @@
+import { NextResponse } from "next/server";
+import mongoose from "mongoose";
+import { connectDB } from "@/lib/db";
+import Listing from "@/models/Listing";
+import User from "@/models/User";
+import { getAdminFromRequest } from "@/lib/auth-admin";
+import { hashPassword } from "@/lib/auth-portal";
+import { applyListingOnlySubscriptionToShop } from "@/lib/subscription-service";
+import { isValidEmail, LIMITS, clampString } from "@/lib/validation";
+import { sendCrmWelcomeEmail } from "@/lib/email";
+import { allowsMultipleListingsForEmail } from "@/lib/listing-shared-email";
+
+/**
+ * POST: Create a portal User from a directory listing (shop name, contact from listing),
+ * set password, and assign Directory listing (listing-only) subscription tier.
+ */
+export async function POST(request, context) {
+  try {
+    const admin = await getAdminFromRequest(request);
+    if (!admin) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const params = typeof context.params?.then === "function" ? await context.params : context.params;
+    const id = params?.id;
+    if (!id || !mongoose.isValidObjectId(id)) {
+      return NextResponse.json({ error: "Invalid listing ID" }, { status: 400 });
+    }
+
+    const body = await request.json().catch(() => ({}));
+    const password = typeof body?.password === "string" ? body.password : "";
+    const shopName = clampString(body?.shopName ?? "", LIMITS.name.max);
+    const contactName = clampString(body?.contactName ?? "", LIMITS.name.max);
+
+    if (password.length < LIMITS.password.min || password.length > LIMITS.password.max) {
+      return NextResponse.json(
+        { error: `Password must be between ${LIMITS.password.min} and ${LIMITS.password.max} characters.` },
+        { status: 400 }
+      );
+    }
+
+    await connectDB();
+    const listing = await Listing.findById(id);
+    if (!listing) {
+      return NextResponse.json({ error: "Listing not found" }, { status: 404 });
+    }
+
+    if (listing.crmUserId) {
+      return NextResponse.json(
+        {
+          error: "This listing was already onboarded to the Shop Management System.",
+          code: "ALREADY_ONBOARDED",
+          userId: String(listing.crmUserId),
+        },
+        { status: 409 }
+      );
+    }
+
+    const email = (listing.email || "").trim().toLowerCase().slice(0, LIMITS.email.max);
+    if (!isValidEmail(email)) {
+      return NextResponse.json({ error: "Listing has invalid email; fix the listing first." }, { status: 400 });
+    }
+
+    const existing = await User.findOne({ email });
+    if (existing && !allowsMultipleListingsForEmail(email)) {
+      return NextResponse.json(
+        {
+          error: "A portal account with this email already exists. Use Registered clients to manage subscription and access.",
+          code: "USER_EXISTS",
+          userId: String(existing._id),
+        },
+        { status: 409 }
+      );
+    }
+
+    if (existing && allowsMultipleListingsForEmail(email)) {
+      listing.crmUserId = existing._id;
+      listing.crmOnboardedAt = new Date();
+      await listing.save();
+      return NextResponse.json({
+        ok: true,
+        linkedExistingUser: true,
+        user: {
+          id: String(existing._id),
+          email: existing.email,
+          shopName: existing.shopName || "",
+          contactName: existing.contactName || "",
+        },
+      });
+    }
+
+    const finalShopName = shopName || clampString(listing.companyName, LIMITS.name.max);
+    const finalContactName = contactName || clampString(listing.primaryContactPerson, LIMITS.name.max);
+
+    const passwordHash = await hashPassword(password);
+    const user = await User.create({
+      email,
+      passwordHash,
+      shopName: finalShopName,
+      contactName: finalContactName,
+      canLogin: true,
+      listingOnlyAccount: true,
+    });
+
+    try {
+      await applyListingOnlySubscriptionToShop(user.email);
+    } catch (subErr) {
+      console.error("Listing-only subscription on admin onboard:", subErr);
+    }
+
+    listing.crmUserId = user._id;
+    listing.crmOnboardedAt = new Date();
+    await listing.save();
+
+    try {
+      await sendCrmWelcomeEmail({
+        to: user.email,
+        shopName: user.shopName || listing.companyName || "",
+        contactName: user.contactName || "",
+        userId: String(user._id),
+        plainPassword: password,
+      });
+    } catch (mailErr) {
+      console.error("CRM welcome email failed:", mailErr);
+    }
+
+    return NextResponse.json({
+      ok: true,
+      user: {
+        id: String(user._id),
+        email: user.email,
+        shopName: user.shopName || "",
+        contactName: user.contactName || "",
+      },
+    });
+  } catch (err) {
+    console.error("Admin listing onboard error:", err);
+    return NextResponse.json(
+      { error: err.message || "Onboard failed" },
+      { status: 500 }
+    );
+  }
+}

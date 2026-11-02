@@ -1,7 +1,10 @@
 # See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 
 # dependencies
+/dev/node_modules
 /node_modules
+/dev/vendor/**/node_modules
+/dev/vendor/**/package-lock.json
 vendor/**/node_modules
 vendor/**/package-lock.json
 /.pnp
@@ -16,7 +19,9 @@ vendor/**/package-lock.json
 /coverage
 
 # next.js
+/dev/.next/
 /.next/
+/dev/out/
 /out/
 
 # production
@@ -27,10 +32,25 @@ vendor/**/package-lock.json
 *.pem
 
 # project docs (not for repo)
+/dev/documents
 /documents
 
 # uploaded listing photos
+/dev/public/uploads
 /public/uploads
+
+# per-shop upload roots (multi-host)
+/shop_uploads/**
+!/shop_uploads/.gitkeep
+!/shop_uploads/**/.gitkeep
+
+# per-app installs / builds
+/apps/*/node_modules
+/apps/*/.next
+/clients/*/node_modules
+/clients/*/.next
+/clients/*/.env
+/apps/*/.env
 
 # debug
 npm-debug.log*

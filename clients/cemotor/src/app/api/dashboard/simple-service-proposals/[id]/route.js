@@ -1,0 +1,255 @@
+import { NextResponse } from "next/server";
+import { connectDB } from "@/lib/db";
+import SimpleServiceProposal from "@/models/SimpleServiceProposal";
+import { getPortalUserFromRequest } from "@/lib/auth-portal";
+import {
+  isValidSimplePortalId,
+  sanitizeSimplePortalPayload,
+  serializeSimplePortalDoc,
+} from "@/lib/simple-portal-mongo";
+import {
+  applySimpleServiceProposalInventoryLifecycle,
+  releaseInventoryReservationsForSimple,
+} from "@/lib/inventory-service";
+import { emitCrmResourceEvent } from "@/lib/integration-webhooks";
+import {
+  notifySimpleJobBoardDeleted,
+  notifySimpleJobBoardFromSp,
+} from "@/lib/job-board-emit";
+import { enqueueQuickBooksSync } from "@/lib/quickbooks/triggers";
+import { assertSimplePortalJobNumberAvailable } from "@/lib/simple-portal-job-numbers";
+import { loadMergedSettingsForEmail } from "@/lib/simple-service-proposal-list-query";
+import {
+  emitTrackProposalDeleted,
+  emitTrackProposalSideEffects,
+  stripTrackOwnedFields,
+} from "@/lib/track-proposal-hooks";
+import { getListingIdsForUser } from "@/lib/dashboard-leads-scope";
+import Listing from "@/models/Listing";
+import { actorFromPortalUser, activityChanges, recordActivity } from "@/lib/activity-log";
+
+/** Company name and listing id used when reporting back to 3PhaseTrack (§9.8). */
+async function trackShopIdentity(email) {
+  const listingIds = await getListingIdsForUser(email);
+  if (listingIds.length === 0) return { shopName: email, listingId: "" };
+  const listing = await Listing.findById(listingIds[0]).select("companyName").lean();
+  return { shopName: String(listing?.companyName || email), listingId: listingIds[0] };
+}
+
+function getParams(context) {
+  return typeof context.params?.then === "function"
+    ? context.params
+    : Promise.resolve(context.params || {});
+}
+
+export async function GET(request, context) {
+  try {
+    const user = await getPortalUserFromRequest(request);
+    if (!user?.email) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    const params = await getParams(context);
+    const id = String(params?.id || "").trim();
+    if (!isValidSimplePortalId(id)) {
+      return NextResponse.json({ error: "Invalid id" }, { status: 400 });
+    }
+    await connectDB();
+    const email = user.email.trim().toLowerCase();
+    const doc = await SimpleServiceProposal.findOne({ _id: id, createdByEmail: email }).lean();
+    if (!doc) {
+      return NextResponse.json({ error: "Not found" }, { status: 404 });
+    }
+    return NextResponse.json({ ok: true, item: serializeSimplePortalDoc(doc) });
+  } catch (err) {
+    console.error("Dashboard get simple service proposal error:", err);
+    return NextResponse.json({ error: "Failed to load service proposal" }, { status: 500 });
+  }
+}
+
+export async function PUT(request, context) {
+  try {
+    const user = await getPortalUserFromRequest(request);
+    if (!user?.email) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    const params = await getParams(context);
+    const id = String(params?.id || "").trim();
+    if (!isValidSimplePortalId(id)) {
+      return NextResponse.json({ error: "Invalid id" }, { status: 400 });
+    }
+    await connectDB();
+    const email = user.email.trim().toLowerCase();
+    const previous = await SimpleServiceProposal.findOne({ _id: id, createdByEmail: email }).lean();
+    if (!previous) {
+      return NextResponse.json({ error: "Not found" }, { status: 404 });
+    }
+    const body = await request.json().catch(() => ({}));
+    const payload = stripTrackOwnedFields(sanitizeSimplePortalPayload(body));
+    const nextDocumentNumber = String(payload.documentNumber || payload.quote || "").trim();
+    const prevDocumentNumber = String(previous.documentNumber || previous.quote || "").trim();
+    if (
+      nextDocumentNumber &&
+      nextDocumentNumber.toLowerCase() !== prevDocumentNumber.toLowerCase()
+    ) {
+      try {
+        await assertSimplePortalJobNumberAvailable(email, nextDocumentNumber, id);
+      } catch (numErr) {
+        if (numErr?.code === "DUPLICATE_JOB_NUMBER") {
+          return NextResponse.json({ error: numErr.message }, { status: 409 });
+        }
+        throw numErr;
+      }
+    }
+    const update = {
+      ...payload,
+      customerId: String(payload.customerId ?? "").trim(),
+      documentNumber: nextDocumentNumber,
+      quote: nextDocumentNumber || String(payload.quote ?? "").trim(),
+      recordType: String(payload.recordType || "RFQ").trim().toUpperCase() || "RFQ",
+      status: String(payload.status ?? "").trim(),
+      jobStatus: String(payload.jobStatus ?? "").trim(),
+      dateCreated: payload.dateCreated ?? null,
+      date: payload.date ?? payload.dateCreated ?? null,
+      companyName: String(payload.companyName ?? "").trim(),
+    };
+    delete update.removedAt;
+    delete update.removedByEmail;
+    const doc = await SimpleServiceProposal.findOneAndUpdate(
+      { _id: id, createdByEmail: email },
+      { $set: update },
+      { new: true }
+    ).lean();
+    if (!doc) {
+      return NextResponse.json({ error: "Not found" }, { status: 404 });
+    }
+
+    const item = serializeSimplePortalDoc(doc);
+    try {
+      await applySimpleServiceProposalInventoryLifecycle(email, id, previous, doc);
+    } catch (invErr) {
+      console.error("Simple SP inventory lifecycle:", invErr);
+      return NextResponse.json(
+        {
+          error: invErr.message || "Saved, but inventory reserve/consume failed",
+          item,
+        },
+        { status: 500 }
+      );
+    }
+
+    void emitCrmResourceEvent({
+      ownerEmail: email,
+      collection: "serviceProposals",
+      action: "updated",
+      resourceId: item.id,
+      data: item,
+    });
+    void notifySimpleJobBoardFromSp(email, previous, doc);
+    enqueueQuickBooksSync({
+      ownerEmail: email,
+      trigger: "serviceProposal",
+      previous,
+      next: doc,
+    });
+    const changes = activityChanges("proposal", previous, doc);
+    if (changes.length) {
+      const actor = actorFromPortalUser(user);
+      await recordActivity({
+        ownerEmail: email,
+        ...actor,
+        action: "saved",
+        recordKind: "proposal",
+        recordId: item.id,
+        recordNumber: String(doc.documentNumber || "").trim(),
+        partyName: String(doc.companyName || "").trim(),
+        summary: changes.map((c) => `${c.field}: ${c.from || "(empty)"} to ${c.to || "(empty)"}`).join(". "),
+        changes,
+      });
+    }
+    if (String(doc.sourceSystem || "") === "3PhaseTrack") {
+      const [identity, mergedSettings] = await Promise.all([
+        trackShopIdentity(email),
+        loadMergedSettingsForEmail(email),
+      ]);
+      await emitTrackProposalSideEffects({
+        previous,
+        next: doc,
+        shopName: identity.shopName,
+        listingId: identity.listingId,
+        mergedSettings,
+      });
+    }
+    return NextResponse.json({ ok: true, item });
+  } catch (err) {
+    console.error("Dashboard update simple service proposal error:", err);
+    return NextResponse.json({ error: err.message || "Failed to update service proposal" }, { status: 500 });
+  }
+}
+
+export async function DELETE(request, context) {
+  try {
+    const user = await getPortalUserFromRequest(request);
+    if (!user?.email) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    const params = await getParams(context);
+    const id = String(params?.id || "").trim();
+    if (!isValidSimplePortalId(id)) {
+      return NextResponse.json({ error: "Invalid id" }, { status: 400 });
+    }
+    await connectDB();
+    const email = user.email.trim().toLowerCase();
+    const existing = await SimpleServiceProposal.findOne({ _id: id, createdByEmail: email }).lean();
+    if (!existing) {
+      return NextResponse.json({ error: "Not found" }, { status: 404 });
+    }
+    if (!existing.removedAt) {
+      return NextResponse.json(
+        { error: "Remove this record from the list before deleting it." },
+        { status: 400 }
+      );
+    }
+
+    try {
+      await releaseInventoryReservationsForSimple(email, id);
+    } catch (invErr) {
+      console.error("Simple SP inventory release on delete:", invErr);
+      return NextResponse.json(
+        { error: invErr.message || "Failed to release inventory before delete" },
+        { status: 500 }
+      );
+    }
+
+    const deleted = await SimpleServiceProposal.findOneAndDelete({ _id: id, createdByEmail: email }).lean();
+    if (!deleted) {
+      return NextResponse.json({ error: "Not found" }, { status: 404 });
+    }
+    void emitCrmResourceEvent({
+      ownerEmail: email,
+      collection: "serviceProposals",
+      action: "deleted",
+      resourceId: id,
+      data: serializeSimplePortalDoc(deleted),
+    });
+    if (String(deleted.recordType || "").toUpperCase() === "JOB") {
+      void notifySimpleJobBoardDeleted(email, id);
+    }
+    await emitTrackProposalDeleted(deleted);
+    const actor = actorFromPortalUser(user);
+    await recordActivity({
+      ownerEmail: email,
+      ...actor,
+      action: "deleted",
+      recordKind: "proposal",
+      recordId: id,
+      recordNumber: String(deleted.documentNumber || "").trim(),
+      partyName: String(deleted.companyName || "").trim(),
+      summary: `Proposal ${String(deleted.documentNumber || id).trim()} deleted permanently.`,
+      snapshot: deleted,
+    });
+    return NextResponse.json({ ok: true, id });
+  } catch (err) {
+    console.error("Dashboard delete simple service proposal error:", err);
+    return NextResponse.json({ error: "Failed to delete service proposal" }, { status: 500 });
+  }
+}

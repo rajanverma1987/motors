@@ -1,0 +1,166 @@
+import { connectDB } from "@/lib/db";
+import LocationPage from "@/models/LocationPage";
+import { SEO_INDUSTRIAL_MIN_HP } from "@/lib/seo-industrial-lead-framing";
+
+/**
+ * Stored LocationPage.title for city/state (visible H1 + related links).
+ * @param {string} city
+ * @param {string} state
+ */
+export function buildIndustrialLocationPageTitle(city, state) {
+  const c = String(city || "").trim();
+  const s = String(state || "").trim();
+  if (c && s) return `Industrial Motor Repair & Rewinding Shops in ${c}, ${s}`;
+  if (s) return `Industrial Motor Repair & Rewinding Shops in ${s}`;
+  if (c) return `Industrial Motor Repair & Rewinding Shops in ${c}`;
+  return "Industrial Motor Repair & Rewinding Shops";
+}
+
+/**
+ * Stored LocationPage.metaDescription (SERP description when set).
+ * @param {string} city
+ * @param {string} state
+ */
+export function buildIndustrialLocationPageMetaDescription(city, state) {
+  const c = String(city || "").trim();
+  const s = String(state || "").trim();
+  const area = c && s ? `${c}, ${s}` : c || s || "your area";
+  return (
+    `Find industrial electric motor repair and rewinding shops in ${area} ` +
+    `for plant and facility motors ${SEO_INDUSTRIAL_MIN_HP} HP and above. ` +
+    `Not for residential, pool, or spa motors.`
+  );
+}
+
+export async function getLocationPageBySlug(slug, options = {}) {
+  const { activeOnly = true } = options;
+  if (!slug || typeof slug !== "string") return null;
+  await connectDB();
+  const query = { slug: slug.trim().toLowerCase() };
+  if (activeOnly) query.status = "active";
+  const doc = await LocationPage.findOne(query).lean();
+  if (!doc) return null;
+  return {
+    ...doc,
+    id: doc._id.toString(),
+    _id: undefined,
+  };
+}
+
+export async function getActiveLocationPagesForSitemap() {
+  await connectDB();
+  const list = await LocationPage.find({ status: "active" })
+    .select("slug updatedAt")
+    .lean();
+  return list.map((l) => ({
+    slug: l.slug,
+    updatedAt: l.updatedAt,
+  }));
+}
+
+/**
+ * Build a URL-safe slug from city and state (e.g. "Atlanta", "Georgia" -> "atlanta-georgia").
+ */
+function slugFromCityState(city, state) {
+  const parts = [city, state]
+    .filter(Boolean)
+    .map((s) =>
+      String(s)
+        .trim()
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-|-$/g, "")
+    )
+    .filter(Boolean);
+  if (parts.length === 0) return "";
+  return parts.join("-");
+}
+
+/**
+ * Ensure a location page exists for this area. If none exists, create one (so "Find more shops in same area" can link to it).
+ * Call when a listing is approved so location pages grow automatically.
+ * Returns the location page (existing or newly created), or null if city+state are missing.
+ */
+export async function ensureLocationPageForArea(city, state, zip) {
+  const c = (city || "").trim();
+  const s = (state || "").trim();
+  const slug = slugFromCityState(c, s);
+  if (!slug) return null;
+
+  await connectDB();
+  const existing = await LocationPage.findOne({ slug }).lean();
+  if (existing) return { ...existing, id: existing._id.toString(), _id: undefined };
+
+  const doc = await LocationPage.create({
+    slug,
+    title: buildIndustrialLocationPageTitle(c, s),
+    metaDescription: buildIndustrialLocationPageMetaDescription(c, s),
+    city: c,
+    state: s,
+    zip: (zip || "").trim(),
+    status: "active",
+  });
+  try {
+    const { revalidatePath } = await import("next/cache");
+    revalidatePath(`/motor-repair-shop/${slug}`);
+    revalidatePath("/sitemap.xml");
+  } catch (e) {
+    console.warn("ensureLocationPageForArea revalidate:", e?.message || e);
+  }
+  return { ...doc.toObject(), id: doc._id.toString(), _id: undefined };
+}
+
+/**
+ * Find an active location page that matches the given city and state (for "same area" link on listing page).
+ * Prefers exact city+state match; otherwise first page that matches state.
+ */
+export async function getLocationPageForArea(city, state) {
+  if (!city && !state) return null;
+  await connectDB();
+  const c = (city || "").trim().toLowerCase();
+  const s = (state || "").trim().toLowerCase();
+  const pages = await LocationPage.find({ status: "active" }).lean();
+  const exact = pages.find(
+    (p) =>
+      (p.city || "").trim().toLowerCase() === c &&
+      (p.state || "").trim().toLowerCase() === s
+  );
+  if (exact) {
+    return { ...exact, id: exact._id.toString(), _id: undefined };
+  }
+  const stateOnly = pages.find((p) => (p.state || "").trim().toLowerCase() === s);
+  if (stateOnly) {
+    return { ...stateOnly, id: stateOnly._id.toString(), _id: undefined };
+  }
+  return null;
+}
+
+/**
+ * Other active location pages in the same state/region (exclude current slug).
+ */
+export async function getRelatedLocationPages(page, limit = 8) {
+  if (!page?.slug) return [];
+  await connectDB();
+  const state = String(page.state || "").trim();
+  const city = String(page.city || "").trim();
+  const query = { status: "active", slug: { $ne: page.slug } };
+  if (state) {
+    query.state = new RegExp(`^${escapeRegExp(state)}$`, "i");
+  } else if (city) {
+    query.city = new RegExp(`^${escapeRegExp(city)}$`, "i");
+  }
+  const list = await LocationPage.find(query)
+    .select("slug title city state")
+    .sort({ title: 1 })
+    .limit(limit)
+    .lean();
+  return list.map((l) => ({
+    slug: l.slug,
+    title: l.title,
+    label: [l.city, l.state].filter(Boolean).join(", ") || l.title,
+  }));
+}
+
+function escapeRegExp(value) {
+  return String(value).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}

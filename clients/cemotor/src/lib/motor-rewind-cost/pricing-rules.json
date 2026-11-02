@@ -1,0 +1,11 @@
+{
+  "laborSlabs": [
+    { "upToHp": 5, "laborUsd": 380 },
+    { "upToHp": 10, "laborUsd": 720 },
+    { "upToHp": 20, "laborUsd": 1350 },
+    { "upToHp": 40, "laborUsd": 2400 },
+    { "upToHp": 75, "laborUsd": 4200 },
+    { "upToHp": 9999, "laborUsd": 6500 }
+  ],
+  "defaultLaborPerHpUsd": 78
+}

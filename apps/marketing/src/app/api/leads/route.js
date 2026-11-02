@@ -1,0 +1,364 @@
+import mongoose from "mongoose";
+import { NextResponse } from "next/server";
+import { connectDB } from "@/lib/db";
+import Lead from "@/models/Lead";
+import Listing from "@/models/Listing";
+import { getAdminFromRequest } from "@/lib/auth-admin";
+import { checkRateLimit } from "@/lib/rate-limit";
+import { isValidEmail, LIMITS, clampString, clampArray } from "@/lib/validation";
+import { getPublicSiteUrl } from "@/lib/public-site-url";
+import { getAllListingsForLocationArea } from "@/lib/listings-public";
+import { industryTagToListingKey } from "@/lib/industry-pages";
+import { sendNewWebsiteLeadNotificationToShop, sendRewindCalculatorRfqToAdmin } from "@/lib/email";
+import { sanitizeCalculatorContext } from "@/lib/motor-rewind-cost/sanitize-calculator-context";
+import { computeCustomerRewindBallpark } from "@/lib/motor-rewind-cost/calculate";
+import { parseAdminSortParams, sortAndPaginateAdminRows } from "@/lib/admin-table-sort";
+import { sendToListingNotifyEmails } from "@/lib/listing-notify-emails";
+import { maybeSendLeadPlatformNurtureEmail } from "@/lib/lead-nurture";
+import {
+  filterListingsForLeadHp,
+  notRoutedUserMessage,
+  qualifyWebsiteLead,
+} from "@/lib/lead-qualification";
+
+const LEAD_ADMIN_SORT_KEYS = ["name", "email", "source", "assignedTo", "createdAt"];
+
+async function enrichLeadsWithListingNames(leads) {
+  const idSet = new Set();
+  for (const lead of leads) {
+    if (lead.sourceListingId) idSet.add(lead.sourceListingId);
+    for (const id of lead.assignedListingIds || []) {
+      if (id) idSet.add(id);
+    }
+  }
+
+  const validIds = [...idSet].filter((id) => mongoose.isValidObjectId(id));
+  const nameMap = new Map();
+  if (validIds.length > 0) {
+    const listings = await Listing.find({ _id: { $in: validIds } })
+      .select("companyName")
+      .lean();
+    for (const doc of listings) {
+      nameMap.set(doc._id.toString(), doc.companyName || "");
+    }
+  }
+
+  return leads.map((lead) => ({
+    ...lead,
+    sourceListingName: lead.sourceListingId ? nameMap.get(lead.sourceListingId) || "" : "",
+    assignedToNames: (lead.assignedListingIds || []).map((id) => nameMap.get(id) || ""),
+  }));
+}
+
+export async function POST(request) {
+  const { allowed } = await checkRateLimit(request, "lead", 20);
+  if (!allowed) {
+    return NextResponse.json({ error: "Too many submissions. Try again later." }, { status: 429 });
+  }
+  try {
+    await connectDB();
+    const body = await request.json();
+    const {
+      name,
+      email,
+      phone,
+      message,
+      listingId,
+      company,
+      city,
+      state,
+      zipCode,
+      motorType,
+      motorHp,
+      voltage,
+      problemDescription,
+      urgencyLevel,
+      buyerType,
+      industry,
+      motorPhotos,
+      calculatorContext: rawCalculatorContext,
+    } = body;
+    if (!name || !email) {
+      return NextResponse.json(
+        { error: "Name and email required" },
+        { status: 400 }
+      );
+    }
+    if (!isValidEmail(email)) {
+      return NextResponse.json(
+        { error: "Please enter a valid email address." },
+        { status: 400 }
+      );
+    }
+
+    const qualification = qualifyWebsiteLead({
+      company,
+      motorHp,
+      buyerType,
+      motorType,
+      problemDescription,
+      message,
+      voltage,
+    });
+    if (!qualification.ok) {
+      return NextResponse.json(
+        { error: qualification.reason || "Invalid lead details." },
+        { status: qualification.httpStatus || 400 }
+      );
+    }
+
+    let sourceListingId = "";
+    let assignedListingIds = [];
+    /** Shops to email after create (listing page or city-matched leads). */
+    const listingNotifyTargets = [];
+    const rawListingId = listingId != null ? String(listingId).trim() : "";
+    const routeToShops = Boolean(qualification.routeToShops);
+
+    if (rawListingId) {
+      if (!mongoose.isValidObjectId(rawListingId)) {
+        return NextResponse.json({ error: "Invalid listing reference." }, { status: 400 });
+      }
+      const listingDoc = await Listing.findOne({ _id: rawListingId, status: "approved" })
+        .select(
+          "_id email companyName notificationEmails crmUserId primaryContactPerson minMotorSizeHP maxMotorSizeHP"
+        )
+        .lean();
+      if (!listingDoc) {
+        return NextResponse.json(
+          { error: "Listing not found or not available for inquiries." },
+          { status: 400 }
+        );
+      }
+      sourceListingId = listingDoc._id.toString();
+      if (routeToShops) {
+        const hpOk =
+          filterListingsForLeadHp(
+            [
+              {
+                id: sourceListingId,
+                minMotorSizeHP: listingDoc.minMotorSizeHP,
+                maxMotorSizeHP: listingDoc.maxMotorSizeHP,
+              },
+            ],
+            qualification.parsedHp
+          ).length > 0;
+        if (hpOk) {
+          assignedListingIds = [sourceListingId];
+          listingNotifyTargets.push(listingDoc);
+        }
+      }
+    } else if (routeToShops) {
+      const matchCity = clampString(city, LIMITS.city.max);
+      const matchState = clampString(state, LIMITS.city.max);
+      const matchZip = clampString(zipCode, LIMITS.zip.max);
+      if (matchCity || matchState || matchZip) {
+        const matches = await getAllListingsForLocationArea({
+          city: matchCity,
+          state: matchState,
+          zip: matchZip,
+        });
+        const hpFiltered = filterListingsForLeadHp(matches, qualification.parsedHp);
+        const industryKey = industryTagToListingKey(clampString(industry, LIMITS.shortText.max));
+        const sortedMatches =
+          industryKey && hpFiltered.length > 1
+            ? [...hpFiltered].sort((a, b) => {
+                const aMatch = (a.industriesServed || []).includes(industryKey) ? 0 : 1;
+                const bMatch = (b.industriesServed || []).includes(industryKey) ? 0 : 1;
+                if (aMatch !== bMatch) return aMatch - bMatch;
+                return 0;
+              })
+            : hpFiltered;
+        const topMatches = sortedMatches.slice(0, 3);
+        assignedListingIds = topMatches.map((listing) => listing.id);
+        listingNotifyTargets.push(...topMatches);
+      }
+    }
+
+    const sanitizedCalc = sanitizeCalculatorContext(rawCalculatorContext);
+    let serverBreakdown = null;
+    let problemOut = clampString(problemDescription, LIMITS.message.max);
+    let messageOut = clampString(message, LIMITS.message.max);
+    if (sanitizedCalc) {
+      try {
+        const calcInput = {
+          ...sanitizedCalc.form,
+          slots: Number(sanitizedCalc.form.slots),
+          voltage: Number(sanitizedCalc.form.voltage),
+        };
+        const bd = computeCustomerRewindBallpark(calcInput);
+        const prefix = `[Rewind calculator ballpark ≈ $${bd.ballparkTotal} USD; equiv. ${bd.motorHp} HP]\n\n`;
+        problemOut = clampString(`${prefix}${(problemDescription || "").trim()}`, LIMITS.message.max);
+        messageOut = clampString(
+          JSON.stringify({
+            source: "rewind-calculator",
+            ballparkUsd: bd.ballparkTotal,
+            motorHp: bd.motorHp,
+            page: sanitizedCalc.sourcePage || "",
+          }),
+          LIMITS.message.max,
+        );
+        serverBreakdown = bd;
+      } catch (e) {
+        console.warn("Calculator context recompute failed:", e);
+      }
+    }
+
+    const cityParts = [clampString(city, LIMITS.city.max), clampString(state, LIMITS.city.max)].filter(Boolean);
+    const cityOut = cityParts.length ? cityParts.join(", ").slice(0, LIMITS.city.max) : clampString(city, LIMITS.city.max);
+
+    const routed = listingNotifyTargets.length > 0;
+    const qualificationStatus = routed
+      ? "qualified"
+      : routeToShops
+        ? "no_matching_shop"
+        : qualification.status;
+    const qualificationReason = routed
+      ? ""
+      : routeToShops
+        ? "No matching industrial shops for this HP and location."
+        : qualification.reason || "";
+
+    const doc = await Lead.create({
+      name: clampString(name, LIMITS.name.max),
+      email: (email.trim().toLowerCase()).slice(0, LIMITS.email.max),
+      phone: clampString(phone, 30),
+      message: messageOut,
+      company: clampString(company, LIMITS.companyName.max),
+      city: cityOut,
+      zipCode: clampString(zipCode, LIMITS.zip.max),
+      motorType: clampString(motorType, LIMITS.shortText.max),
+      motorHp: clampString(motorHp, LIMITS.shortText.max),
+      voltage: clampString(voltage, LIMITS.shortText.max),
+      problemDescription: problemOut,
+      urgencyLevel: clampString(urgencyLevel, LIMITS.shortText.max),
+      buyerType: clampString(buyerType, LIMITS.shortText.max),
+      qualificationStatus: clampString(qualificationStatus, LIMITS.shortText.max),
+      qualificationReason: clampString(qualificationReason, LIMITS.message.max),
+      industry: clampString(industry, LIMITS.shortText.max),
+      motorPhotos: clampArray(motorPhotos, 20),
+      sourceListingId: clampString(sourceListingId, 50),
+      assignedListingIds,
+      leadSource: "website",
+    });
+
+    const siteUrl = getPublicSiteUrl(request);
+    for (const listing of listingNotifyTargets) {
+      await sendToListingNotifyEmails(listing, (to) =>
+        sendNewWebsiteLeadNotificationToShop({
+          to,
+          listingCompanyName: listing.companyName || "",
+          leadContactName: doc.name,
+          leadContactCompany: doc.company,
+          siteUrl,
+          lead: {
+            name: doc.name,
+            company: doc.company,
+            email: doc.email,
+            phone: doc.phone,
+            city: doc.city,
+            zipCode: doc.zipCode,
+            buyerType: doc.buyerType,
+            motorType: doc.motorType,
+            motorHp: doc.motorHp,
+            voltage: doc.voltage,
+            urgencyLevel: doc.urgencyLevel,
+            industry: doc.industry,
+            problemDescription: doc.problemDescription,
+            message: doc.message,
+          },
+        })
+      );
+      try {
+        await maybeSendLeadPlatformNurtureEmail({
+          listing,
+          siteUrl,
+          source: "website",
+        });
+      } catch (e) {
+        console.warn("Lead nurture email skipped:", e?.message || e);
+      }
+    }
+
+    if (sanitizedCalc && serverBreakdown) {
+      try {
+        const esc = (v) =>
+          v == null ? "" : String(v).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+        const rows = [
+          ["Equiv. HP", serverBreakdown.motorHp],
+          ["Copper & wire (est.)", `$${serverBreakdown.copperCost}`],
+          ["Insulation / varnish (est.)", `$${serverBreakdown.materialCost}`],
+          ["Labor band (est.)", `$${serverBreakdown.laborUsd}`],
+          ["Ballpark total (USD)", `$${serverBreakdown.ballparkTotal}`],
+        ]
+          .map(
+            ([a, b]) =>
+              `<tr><td style="padding:6px 10px;border:1px solid #ddd;font-weight:600;">${esc(a)}</td><td style="padding:6px 10px;border:1px solid #ddd;">${esc(b)}</td></tr>`,
+          )
+          .join("");
+        await sendRewindCalculatorRfqToAdmin({
+          leadName: doc.name,
+          leadEmail: doc.email,
+          leadPhone: doc.phone,
+          leadCity: doc.city,
+          leadZip: doc.zipCode,
+          problemDescription: doc.problemDescription,
+          htmlRows: rows,
+        });
+      } catch (e) {
+        console.warn("Rewind calculator RFQ admin email failed:", e);
+      }
+    }
+
+    return NextResponse.json({
+      ok: true,
+      id: doc._id.toString(),
+      routed,
+      qualificationStatus: doc.qualificationStatus || "",
+      message: routed
+        ? ""
+        : notRoutedUserMessage(qualificationStatus) ||
+          qualificationReason ||
+          "Request received. It was not sent to shops.",
+    });
+  } catch (err) {
+    console.error("Create lead error:", err);
+    return NextResponse.json(
+      { error: err.message || "Failed to submit" },
+      { status: 500 }
+    );
+  }
+}
+
+export async function GET(request) {
+  try {
+    const admin = await getAdminFromRequest(request);
+    if (!admin) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    await connectDB();
+    const { searchParams } = new URL(request.url);
+    const page = Math.max(1, Number(searchParams.get("page")) || 1);
+    const pageSize = Math.min(100, Math.max(1, Number(searchParams.get("pageSize")) || 25));
+    const { sortBy, sortDir } = parseAdminSortParams(searchParams, {
+      allowedKeys: LEAD_ADMIN_SORT_KEYS,
+      defaultKey: "createdAt",
+      defaultDir: "desc",
+    });
+    const q = {};
+    const list = await Lead.find(q).sort({ createdAt: -1 }).lean();
+    const listWithId = list.map((l) => ({
+      ...l,
+      id: l._id.toString(),
+      _id: undefined,
+    }));
+    const enriched = await enrichLeadsWithListingNames(listWithId);
+    const { items, totalCount } = sortAndPaginateAdminRows(enriched, { sortBy, sortDir }, page, pageSize);
+    return NextResponse.json({ items, page, pageSize, totalCount });
+  } catch (err) {
+    console.error("List leads error:", err);
+    return NextResponse.json(
+      { error: "Failed to list" },
+      { status: 500 }
+    );
+  }
+}

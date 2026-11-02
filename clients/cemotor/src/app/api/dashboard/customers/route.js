@@ -1,0 +1,254 @@
+import { NextResponse } from "next/server";
+import { connectDB } from "@/lib/db";
+import Customer from "@/models/Customer";
+import { getPortalUserFromRequest } from "@/lib/auth-portal";
+import { isValidEmail, LIMITS, clampString } from "@/lib/validation";
+import {
+  LISTING_ONLY_UPGRADE_MESSAGE,
+  LISTING_ONLY_MAX_CUSTOMERS,
+} from "@/lib/listing-account-messages";
+import { TRIAL_CUSTOMER_CAP_CODE, TRIAL_MAX_CUSTOMERS, TRIAL_UPGRADE_BODY } from "@/lib/trial-subscription-messages";
+import { userIsListingOnlyAccount, listingOnlyCustomerCount } from "@/lib/listing-account-restrictions";
+import { userIsTrialAccount, shopCustomerCount } from "@/lib/trial-account-restrictions";
+import { normalizeTaxExempt, normalizeTaxPercent } from "@/lib/quote-invoice-totals";
+import { enqueueQuickBooksSync } from "@/lib/quickbooks/triggers";
+import { formatCustomerNumber, nextCustomerNumberForShop } from "@/lib/next-customer-number";
+
+const MAX_ADDITIONAL_CONTACTS = 20;
+const MAX_DOCUMENTS = 50;
+function sanitizeAdditionalContacts(arr) {
+  if (!Array.isArray(arr)) return [];
+  return arr.slice(0, MAX_ADDITIONAL_CONTACTS).map((item) => ({
+    contactName: clampString(item?.contactName, LIMITS.name.max),
+    phone: clampString(item?.phone, 30),
+    email: item?.email?.trim() && isValidEmail(item.email) ? item.email.trim().toLowerCase().slice(0, LIMITS.email.max) : "",
+  }));
+}
+function sanitizeDocuments(arr) {
+  if (!Array.isArray(arr)) return [];
+  return arr
+    .slice(0, MAX_DOCUMENTS)
+    .map((item) => ({
+      name: clampString(item?.name ?? item?.documentName, LIMITS.name.max),
+      url: clampString(item?.url ?? item?.path ?? item?.documents, 500),
+    }))
+    .filter((d) => d.name || d.url);
+}
+
+export async function GET(request) {
+  try {
+    const user = await getPortalUserFromRequest(request);
+    if (!user?.email) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    await connectDB();
+    const email = user.email.trim().toLowerCase();
+    const { searchParams } = new URL(request.url);
+    if (String(searchParams.get("suggestNumber") || "") === "1") {
+      const nextCustomerNumber = await nextCustomerNumberForShop(email);
+      return NextResponse.json({ nextCustomerNumber });
+    }
+    const includePagination =
+      searchParams.has("page") ||
+      searchParams.has("pageSize") ||
+      searchParams.has("q") ||
+      searchParams.has("sortBy");
+    const page = Math.max(1, Number(searchParams.get("page")) || 1);
+    const pageSize = Math.min(100, Math.max(1, Number(searchParams.get("pageSize")) || 25));
+    const skip = (page - 1) * pageSize;
+    const qText = String(searchParams.get("q") || "").trim();
+    const sortBy = String(searchParams.get("sortBy") || "companyName").trim();
+    const sortDir = String(searchParams.get("sortDir") || "asc").toLowerCase() === "asc" ? "asc" : "desc";
+    const sortFieldMap = {
+      companyName: "companyName",
+      primaryContactName: "primaryContactName",
+      phone: "phone",
+      email: "email",
+      customerNumber: "customerNumber",
+      customerType: "customerType",
+      ein: "ein",
+      creditLimit: "creditLimit",
+      taxExempt: "taxExempt",
+      taxPercent: "taxPercent",
+      city: "city",
+      state: "state",
+      paymentTerms: "paymentTerms",
+      createdAt: "createdAt",
+    };
+    const sortField = sortFieldMap[sortBy] || "companyName";
+    const sort = { [sortField]: sortDir === "asc" ? 1 : -1, createdAt: -1 };
+    const q = { createdByEmail: email };
+    if (qText) {
+      const rx = new RegExp(qText.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i");
+      q.$or = [
+        { companyName: rx },
+        { primaryContactName: rx },
+        { email: rx },
+        { phone: rx },
+        { city: rx },
+        { customerNumber: rx },
+      ];
+    }
+    const findQuery = Customer.find(q);
+    if (sortField === "customerNumber") {
+      findQuery.collation({ locale: "en", numericOrdering: true });
+    }
+    const [totalCount, list] = await Promise.all([
+      Customer.countDocuments(q),
+      findQuery.sort(sort).skip(skip).limit(pageSize).lean(),
+    ]);
+    const listWithId = list.map((c) => {
+      const additionalContacts = Array.isArray(c.additionalContacts)
+        ? c.additionalContacts.map((ac) => ({
+            contactName: ac?.contactName ?? "",
+            phone: ac?.phone ?? "",
+            email: ac?.email ?? "",
+          }))
+        : [];
+      return {
+        ...c,
+        id: c._id.toString(),
+        _id: undefined,
+        customerNumber: formatCustomerNumber(c.customerNumber),
+        shippingAddress: c.shippingAddress ?? "",
+        shippingCity: c.shippingCity ?? "",
+        shippingState: c.shippingState ?? "",
+        shippingZipCode: c.shippingZipCode ?? "",
+        shippingCountry: c.shippingCountry ?? "United States",
+        additionalContacts,
+        ein: c.ein ?? "",
+        creditLimit: c.creditLimit ?? "",
+        taxExempt: normalizeTaxExempt(c.taxExempt),
+        taxPercent: String(normalizeTaxPercent(c.taxPercent)),
+      };
+    });
+    if (!includePagination) return NextResponse.json(listWithId);
+    return NextResponse.json({ items: listWithId, page, pageSize, totalCount });
+  } catch (err) {
+    console.error("Dashboard list customers error:", err);
+    return NextResponse.json({ error: "Failed to list customers" }, { status: 500 });
+  }
+}
+
+export async function POST(request) {
+  try {
+    const user = await getPortalUserFromRequest(request);
+    if (!user?.email) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    await connectDB();
+    const ownerEmail = user.email.trim().toLowerCase();
+    if (await userIsListingOnlyAccount(ownerEmail)) {
+      const n = await listingOnlyCustomerCount(ownerEmail);
+      if (n >= LISTING_ONLY_MAX_CUSTOMERS) {
+        return NextResponse.json(
+          { error: LISTING_ONLY_UPGRADE_MESSAGE, code: "LISTING_ONLY_CUSTOMER_CAP" },
+          { status: 403 }
+        );
+      }
+    } else if (await userIsTrialAccount(ownerEmail)) {
+      const n = await shopCustomerCount(ownerEmail);
+      if (n >= TRIAL_MAX_CUSTOMERS) {
+        return NextResponse.json(
+          { error: TRIAL_UPGRADE_BODY, code: TRIAL_CUSTOMER_CAP_CODE },
+          { status: 403 }
+        );
+      }
+    }
+    const body = await request.json();
+    const {
+      customerNumber,
+      companyName,
+      primaryContactName,
+      phone,
+      fax,
+      email,
+      alternatePhone,
+      alternateEmail,
+      billingContact,
+      customerType,
+      paymentTerms,
+      preferredPaymentMethod,
+      preferredContactMethod,
+      address,
+      city,
+      state,
+      zipCode,
+      country,
+      shippingAddress,
+      shippingCity,
+      shippingState,
+      shippingZipCode,
+      shippingCountry,
+      additionalContacts,
+      documents,
+      notes,
+      ein,
+      creditLimit,
+      taxExempt,
+      taxPercent,
+    } = body;
+    if (!companyName?.trim()) {
+      return NextResponse.json({ error: "Company name is required" }, { status: 400 });
+    }
+    if (email?.trim() && !isValidEmail(email)) {
+      return NextResponse.json({ error: "Please enter a valid email address." }, { status: 400 });
+    }
+    if (alternateEmail?.trim() && !isValidEmail(alternateEmail)) {
+      return NextResponse.json({ error: "Please enter a valid alternate email address." }, { status: 400 });
+    }
+    const requestedNumber = formatCustomerNumber(clampString(customerNumber, 50));
+    const assignedNumber = requestedNumber || (await nextCustomerNumberForShop(ownerEmail));
+    const doc = await Customer.create({
+      customerNumber: assignedNumber,
+      companyName: clampString(companyName, LIMITS.companyName.max),
+      primaryContactName: clampString(primaryContactName, LIMITS.name.max),
+      phone: clampString(phone, 30),
+      fax: clampString(fax, 30),
+      email: email?.trim() ? email.trim().toLowerCase().slice(0, LIMITS.email.max) : "",
+      alternatePhone: clampString(alternatePhone, 30),
+      alternateEmail: alternateEmail?.trim()
+        ? alternateEmail.trim().toLowerCase().slice(0, LIMITS.email.max)
+        : "",
+      billingContact: clampString(billingContact, LIMITS.name.max),
+      customerType: clampString(customerType, 80),
+      paymentTerms: clampString(paymentTerms, 80),
+      preferredPaymentMethod: clampString(preferredPaymentMethod, 80),
+      preferredContactMethod: clampString(preferredContactMethod, 80),
+      address: clampString(address, LIMITS.shortText.max),
+      city: clampString(city, LIMITS.city.max),
+      state: clampString(state, LIMITS.state.max),
+      zipCode: clampString(zipCode, LIMITS.zip.max),
+      country: clampString(country, 100),
+      shippingAddress: clampString(shippingAddress, LIMITS.shortText.max),
+      shippingCity: clampString(shippingCity, LIMITS.city.max),
+      shippingState: clampString(shippingState, LIMITS.state.max),
+      shippingZipCode: clampString(shippingZipCode, LIMITS.zip.max),
+      shippingCountry: clampString(shippingCountry, 100),
+      additionalContacts: sanitizeAdditionalContacts(additionalContacts),
+      documents: sanitizeDocuments(documents),
+      notes: clampString(notes, LIMITS.message.max),
+      ein: clampString(ein, 50),
+      creditLimit: clampString(creditLimit, 50),
+      taxExempt: normalizeTaxExempt(taxExempt),
+      taxPercent: String(normalizeTaxPercent(taxPercent)),
+      createdByEmail: user.email.trim().toLowerCase(),
+    });
+    enqueueQuickBooksSync({
+      ownerEmail: user.email.trim().toLowerCase(),
+      trigger: "customer",
+      customer: doc.toObject(),
+    });
+    return NextResponse.json({
+      ok: true,
+      customer: {
+        ...doc.toObject(),
+        id: doc._id.toString(),
+        _id: undefined,
+      },
+    });
+  } catch (err) {
+    console.error("Dashboard create customer error:", err);
+    return NextResponse.json({ error: err.message || "Failed to create customer" }, { status: 500 });
+  }
+}

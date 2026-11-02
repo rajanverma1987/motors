@@ -1,0 +1,506 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import Button from "@/components/ui/button";
+import Input from "@/components/ui/input";
+import Textarea from "@/components/ui/textarea";
+import Select from "@/components/ui/select";
+import { isValidEmail } from "@/lib/validation";
+import { REPAIR_FORM_SIDEBAR_MAX_H } from "@/lib/listings-directory-layout";
+import { saveLeadContact, withLeadContactPrefill } from "@/lib/lead-contact-storage";
+import {
+  LEAD_BUYER_TYPE_OPTIONS,
+  PLATFORM_MIN_ROUTE_HP,
+  parseMotorHp,
+} from "@/lib/lead-qualification";
+
+const MOTOR_TYPE_OPTIONS = [
+  { value: "", label: "Select motor type…" },
+  { value: "AC Motor (Three-phase)", label: "AC Motor (Three-phase)" },
+  { value: "AC Motor (Single-phase)", label: "AC Motor (Single-phase)" },
+  { value: "DC Motor", label: "DC Motor" },
+  { value: "Servo Motor", label: "Servo Motor" },
+  { value: "High Voltage Motor (above 4kV)", label: "High Voltage Motor (above 4kV)" },
+  { value: "Generator", label: "Generator" },
+  { value: "Pump Motor (industrial / commercial)", label: "Pump Motor (industrial / commercial)" },
+  { value: "Other / Not Sure", label: "Other / Not Sure" },
+];
+
+const CAN_SHIP_LABELS = {
+  yes: "Yes, can ship or drop off",
+  pickup: "Need pickup / field service",
+  either: "Either works",
+};
+
+const INITIAL_FORM = {
+  motorType: "",
+  horsepower: "",
+  voltage: "",
+  urgency: "standard",
+  failureDescription: "",
+  canShip: "",
+  name: "",
+  company: "",
+  buyerType: "",
+  phone: "",
+  email: "",
+  city: "",
+  state: "",
+};
+
+function buildProblemDescription(failureDescription, canShip) {
+  const desc = String(failureDescription || "").trim();
+  if (!canShip || !CAN_SHIP_LABELS[canShip]) return desc;
+  return `[Delivery: ${CAN_SHIP_LABELS[canShip]}]\n\n${desc}`;
+}
+
+/**
+ * Inline repair request form for directory / location / shop listing pages.
+ * @param {{ mode: 'city' | 'shop', city?: string, state?: string, zipCode?: string, listing?: { id: string, companyName?: string } | null, defaultUrgency?: 'standard' | 'emergency', defaultIndustry?: string, defaultMotorType?: string, formHeading?: string, layout?: 'default' | 'sidebar', className?: string }} props
+ */
+export default function RepairRequestForm({
+  mode = "city",
+  city = "",
+  state = "",
+  zipCode = "",
+  listing = null,
+  defaultUrgency = "standard",
+  defaultIndustry = "",
+  defaultMotorType = "",
+  formHeading = "",
+  layout = "default",
+  className = "",
+}) {
+  const isSidebar = layout === "sidebar";
+  const lockUrgency = defaultUrgency === "emergency";
+  const [form, setForm] = useState({
+    ...INITIAL_FORM,
+    motorType: defaultMotorType ? String(defaultMotorType).trim() : "",
+    city: city || "",
+    state: state || "",
+    urgency: defaultUrgency === "emergency" ? "emergency" : "standard",
+  });
+  const [step, setStep] = useState(1);
+  const [submitting, setSubmitting] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
+  const [routed, setRouted] = useState(true);
+  const [resultMessage, setResultMessage] = useState("");
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    setForm((prev) =>
+      withLeadContactPrefill(prev, {
+        skip: [
+          ...(city ? ["city"] : []),
+          ...(state ? ["state"] : []),
+          ...(zipCode ? ["zipCode"] : []),
+        ],
+      })
+    );
+  }, [city, state, zipCode]);
+
+  const shopName = listing?.companyName || "";
+  const listingId = listing?.id != null ? String(listing.id).trim() : "";
+  const isEmergency = form.urgency === "emergency";
+  const showLocationFields = mode !== "shop" && !city;
+  const locationLabel = [city || form.city, state || form.state].filter(Boolean).join(", ");
+
+  const setField = (field, value) => setForm((prev) => ({ ...prev, [field]: value }));
+
+  const step1Valid =
+    form.motorType !== "" &&
+    parseMotorHp(form.horsepower) != null &&
+    form.failureDescription.trim().length >= 20;
+  const step2Valid =
+    form.name.trim() !== "" &&
+    form.company.trim() !== "" &&
+    form.buyerType.trim() !== "" &&
+    form.email.trim() !== "" &&
+    isValidEmail(form.email);
+
+  const handleSubmit = async () => {
+    if (!step2Valid) return;
+    setSubmitting(true);
+    setError("");
+    try {
+      const contactCity = (form.city || city || "").trim();
+      const contactState = (form.state || state || "").trim();
+      const contactZip = String(zipCode || "").trim();
+      const res = await fetch("/api/leads", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: form.name.trim(),
+          email: form.email.trim(),
+          phone: form.phone.trim(),
+          company: form.company.trim(),
+          buyerType: form.buyerType.trim(),
+          city: contactCity,
+          state: contactState,
+          zipCode: contactZip,
+          motorType: form.motorType,
+          motorHp: form.horsepower,
+          voltage: form.voltage,
+          problemDescription: buildProblemDescription(form.failureDescription, form.canShip),
+          urgencyLevel: isEmergency ? "emergency" : "low",
+          industry: defaultIndustry ? String(defaultIndustry).trim() : "",
+          listingId: mode === "shop" ? listingId : "",
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || "Submission failed");
+      saveLeadContact({
+        name: form.name,
+        company: form.company,
+        phone: form.phone,
+        email: form.email,
+        city: contactCity,
+        state: contactState,
+        zipCode: contactZip,
+      });
+      setRouted(data.routed !== false);
+      setResultMessage(String(data.message || "").trim());
+      setSubmitted(true);
+    } catch (err) {
+      setError(err.message || "Something went wrong. Please try again.");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const titleText =
+    formHeading ||
+    (lockUrgency
+      ? "Submit emergency repair request"
+      : mode === "shop"
+        ? `Request a quote from ${shopName || "this shop"}`
+        : city
+          ? `Submit a repair requirement in ${city}${state ? `, ${state}` : ""}`
+          : "Submit a repair requirement");
+
+  const descriptionText = lockUrgency
+    ? `Industrial motor down? Describe the failure (${PLATFORM_MIN_ROUTE_HP}+ HP). We match industrial shops in your area.`
+    : mode === "shop"
+      ? `Industrial or commercial motors ${PLATFORM_MIN_ROUTE_HP}+ HP. Describe the motor and failure; the shop responds when the job fits their capacity.`
+      : `Industrial and commercial motors ${PLATFORM_MIN_ROUTE_HP}+ HP. Residential, pool, and spa pumps are not matched to shops.`;
+
+  if (submitted) {
+    return (
+      <div
+        className={`mx-auto max-w-[44rem] rounded-xl border p-6 text-center sm:p-8 ${
+          routed ? "border-success/40 bg-success/10" : "border-border bg-card"
+        } ${className}`}
+      >
+        <div
+          className={`mx-auto flex h-12 w-12 items-center justify-center rounded-full text-lg font-bold text-white ${
+            routed ? "bg-success" : "bg-secondary"
+          }`}
+        >
+          ✓
+        </div>
+        <h3 className="mt-4 text-lg font-bold text-title">
+          {routed ? "Request submitted" : "Request received"}
+        </h3>
+        <p className="mt-2 text-sm text-secondary">
+          {resultMessage ||
+            (routed
+              ? mode === "shop"
+                ? `${shopName || "The shop"} will receive your request and follow up directly.`
+                : locationLabel
+                  ? `We've matched your request to repair centers serving ${locationLabel}. You'll hear back within a few hours.`
+                  : "We've received your request and will match you with repair centers in your area."
+              : `We match industrial motors ${PLATFORM_MIN_ROUTE_HP} HP and above. This was not sent to shops.`)}
+        </p>
+        {routed ? (
+          <p className="mt-3 text-xs italic text-secondary">
+            For emergency repairs, call the shop directly using the phone number on their listing.
+          </p>
+        ) : null}
+      </div>
+    );
+  }
+
+  const wrapClass = [
+    "mx-auto max-w-[44rem] rounded-xl border bg-card shadow-sm",
+    isEmergency ? "border-danger/40 bg-danger/5" : "border-border",
+    isSidebar
+      ? `flex flex-col overflow-hidden p-0 ${REPAIR_FORM_SIDEBAR_MAX_H}`
+      : "p-5 sm:p-6",
+    className,
+  ].join(" ");
+
+  const headerBlock = (
+    <>
+      {isEmergency ? (
+        <span className="mb-2 inline-flex items-center rounded-full bg-danger px-2.5 py-0.5 text-xs font-semibold text-white">
+          Emergency
+        </span>
+      ) : null}
+      <h3 className="text-lg font-bold text-title">{titleText}</h3>
+      <p className="mt-1 text-sm text-secondary">{descriptionText}</p>
+    </>
+  );
+
+  const stepIndicator = (
+    <div className="flex flex-wrap items-center gap-2 text-sm">
+      <span className={step === 1 ? "font-bold text-primary" : step > 1 ? "font-medium text-success" : "text-secondary"}>
+        1 Motor details
+      </span>
+      <span className="text-secondary/50">›</span>
+      <span className={step === 2 ? "font-bold text-primary" : "text-secondary"}>2 Your contact</span>
+    </div>
+  );
+
+  const step1Fields = (
+    <>
+      {!lockUrgency ? (
+        <div className="flex flex-col gap-2 sm:flex-row">
+          <Button
+            type="button"
+            variant={form.urgency === "standard" ? "primary" : "outline"}
+            size="sm"
+            className="min-w-0 flex-1"
+            onClick={() => setField("urgency", "standard")}
+          >
+            Standard repair
+          </Button>
+          <Button
+            type="button"
+            variant={form.urgency === "emergency" ? "danger" : "outline"}
+            size="sm"
+            className="min-w-0 flex-1"
+            onClick={() => setField("urgency", "emergency")}
+          >
+            Emergency, motor is down
+          </Button>
+        </div>
+      ) : null}
+
+      <Select
+        label="Motor type *"
+        name="motorType"
+        options={MOTOR_TYPE_OPTIONS}
+        value={form.motorType}
+        onChange={(e) => setField("motorType", e.target.value)}
+        searchable={false}
+      />
+
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <Input
+          label={`Horsepower (HP) * · ${PLATFORM_MIN_ROUTE_HP}+ for matching`}
+          name="horsepower"
+          type="number"
+          min="0"
+          step="any"
+          placeholder="e.g. 50"
+          value={form.horsepower}
+          onChange={(e) => setField("horsepower", e.target.value)}
+          required
+        />
+        <Input
+          label="Voltage (V)"
+          name="voltage"
+          type="number"
+          min="0"
+          placeholder="e.g. 460"
+          value={form.voltage}
+          onChange={(e) => setField("voltage", e.target.value)}
+        />
+      </div>
+
+      <Textarea
+        label="Describe the failure or service needed *"
+        name="failureDescription"
+        rows={4}
+        placeholder="e.g. 75 HP, 460V process pump motor tripped overload. Water treatment plant. Need rewind quote."
+        value={form.failureDescription}
+        onChange={(e) => setField("failureDescription", e.target.value)}
+      />
+      <p className="-mt-2 text-xs text-secondary">
+        Include symptoms, industrial application, and urgency. Not for pool, spa, or homeowner motors. Minimum 20
+        characters.
+      </p>
+
+      <fieldset>
+        <legend className="mb-2 text-sm font-semibold text-title">Can the motor be shipped / dropped off?</legend>
+        <div className="flex flex-col gap-2">
+          {Object.entries(CAN_SHIP_LABELS).map(([val, label]) => (
+            <label key={val} className="flex cursor-pointer items-center gap-2 text-sm text-text">
+              <input
+                type="radio"
+                name="canShip"
+                value={val}
+                checked={form.canShip === val}
+                onChange={() => setField("canShip", val)}
+                className="text-primary"
+              />
+              {label}
+            </label>
+          ))}
+        </div>
+      </fieldset>
+
+      {showLocationFields ? (
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <Input
+            label="City"
+            name="city"
+            placeholder="e.g. Portland"
+            value={form.city}
+            onChange={(e) => setField("city", e.target.value)}
+          />
+          <Input
+            label="State"
+            name="state"
+            placeholder="e.g. Oregon"
+            value={form.state}
+            onChange={(e) => setField("state", e.target.value)}
+          />
+        </div>
+      ) : null}
+
+      {mode !== "shop" && city ? (
+        <p className="inline-flex w-fit items-center rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-sm font-medium text-primary">
+          Shops will be matched to {city}
+          {state ? `, ${state}` : ""}
+        </p>
+      ) : null}
+    </>
+  );
+
+  const step2Fields = (
+    <>
+      <div className="rounded-lg border border-border bg-muted/40 px-3 py-2 text-sm text-text">
+        <span>{form.motorType}</span>
+        {form.horsepower ? <span> · {form.horsepower} HP</span> : null}
+        {isEmergency ? <span className="font-semibold text-danger"> · Emergency</span> : null}
+        <button type="button" className="ml-2 text-primary underline" onClick={() => setStep(1)}>
+          Edit
+        </button>
+      </div>
+
+      <Input
+        label="Your name *"
+        name="name"
+        autoComplete="name"
+        placeholder="Full name"
+        value={form.name}
+        onChange={(e) => setField("name", e.target.value)}
+        required
+      />
+
+      <Input
+        label="Company / facility *"
+        name="company"
+        autoComplete="organization"
+        placeholder="Plant or company name"
+        value={form.company}
+        onChange={(e) => setField("company", e.target.value)}
+        required
+      />
+
+      <Select
+        label="Buyer type *"
+        name="buyerType"
+        options={LEAD_BUYER_TYPE_OPTIONS}
+        value={form.buyerType}
+        onChange={(e) => setField("buyerType", e.target.value)}
+        searchable={false}
+      />
+
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <Input
+          label="Email *"
+          name="email"
+          type="email"
+          autoComplete="email"
+          placeholder="you@company.com"
+          value={form.email}
+          onChange={(e) => setField("email", e.target.value)}
+          required
+        />
+        <Input
+          label="Phone"
+          name="phone"
+          type="tel"
+          autoComplete="tel"
+          placeholder="Best number to reach you"
+          value={form.phone}
+          onChange={(e) => setField("phone", e.target.value)}
+        />
+      </div>
+
+      {error ? (
+        <p className="rounded-lg border border-danger/40 bg-danger/10 px-3 py-2 text-sm text-danger" role="alert">
+          {error}
+        </p>
+      ) : null}
+    </>
+  );
+
+  const step1Actions = (
+    <Button type="button" variant="primary" size="lg" className="w-full" disabled={!step1Valid} onClick={() => setStep(2)}>
+      Continue to contact details
+    </Button>
+  );
+
+  const step2Actions = (
+    <>
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-[auto_1fr]">
+        <Button type="button" variant="outline" size="lg" onClick={() => setStep(1)}>
+          Back
+        </Button>
+        <Button
+          type="button"
+          variant={isEmergency ? "danger" : "primary"}
+          size="lg"
+          className="w-full"
+          disabled={!step2Valid || submitting}
+          onClick={handleSubmit}
+        >
+          {submitting ? "Submitting…" : isEmergency ? "Submit emergency request" : "Submit repair request"}
+        </Button>
+      </div>
+      <p className="text-center text-xs text-secondary">
+        Your contact details are shared only with the repair shop(s) matched to your request. We do not sell or share your
+        data with third parties. On this device we remember your contact so the next request form fills in faster.
+      </p>
+    </>
+  );
+
+  if (isSidebar) {
+    return (
+      <div className={wrapClass}>
+        <div className="shrink-0 space-y-4 border-b border-border px-5 pb-4 pt-5 sm:px-6 sm:pt-6">
+          {headerBlock}
+          {stepIndicator}
+        </div>
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain px-5 py-4 sm:px-6 [scrollbar-gutter:stable]">
+          <div className="flex flex-col gap-4">{step === 1 ? step1Fields : step2Fields}</div>
+        </div>
+        <div className="shrink-0 space-y-3 border-t border-border bg-card px-5 py-4 shadow-[0_-8px_20px_-10px_rgba(0,0,0,0.15)] sm:px-6">
+          {step === 1 ? step1Actions : step2Actions}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className={wrapClass}>
+      <div className="mb-5">{headerBlock}</div>
+      <div className="mb-5">{stepIndicator}</div>
+
+      {step === 1 ? (
+        <div className="flex flex-col gap-4">
+          {step1Fields}
+          {step1Actions}
+        </div>
+      ) : (
+        <div className="flex flex-col gap-4">
+          {step2Fields}
+          {step2Actions}
+        </div>
+      )}
+    </div>
+  );
+}

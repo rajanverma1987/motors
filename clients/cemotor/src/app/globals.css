@@ -1,0 +1,1357 @@
+@import "tailwindcss";
+
+/* Base font size; Settings → Display scales via --app-zoom-factor and --app-font-scale-factor */
+html {
+  font-size: calc(95% * var(--app-zoom-factor, 1) * var(--app-font-scale-factor, 1));
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  html {
+    scroll-behavior: smooth;
+  }
+}
+
+/* Clickable controls use the hand pointer. Utilities such as cursor-not-allowed still win. */
+@layer base {
+  button:not(:disabled),
+  [type="button"]:not(:disabled),
+  [type="submit"]:not(:disabled),
+  [type="reset"]:not(:disabled),
+  [type="checkbox"]:not(:disabled),
+  [type="radio"]:not(:disabled),
+  [type="file"]:not(:disabled),
+  select:not(:disabled),
+  summary,
+  a[href],
+  label[for],
+  label:has(input, select, button, a),
+  [role="button"]:not([aria-disabled="true"]),
+  [role="link"],
+  [role="tab"],
+  [role="menuitem"],
+  [role="option"],
+  [role="switch"],
+  [role="checkbox"],
+  [role="radio"] {
+    cursor: pointer;
+  }
+
+  button:disabled,
+  select:disabled,
+  [aria-disabled="true"] {
+    cursor: not-allowed;
+  }
+}
+
+/* Marketing pages: prevent horizontal rubber-band scroll from wide children / 100vw quirks */
+.marketing-shell {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: clip;
+  overscroll-behavior-x: none;
+}
+
+.marketing-shell main {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.marketing-skip-link {
+  position: absolute;
+  left: 1rem;
+  top: 0;
+  z-index: 100;
+  transform: translateY(-120%);
+  border-radius: 0.375rem;
+  background: hsl(var(--primary));
+  color: #fff;
+  padding: 0.625rem 1rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  transition: transform 0.15s ease;
+}
+
+.marketing-skip-link:focus {
+  transform: translateY(0.75rem);
+  outline: 2px solid hsl(var(--title));
+  outline-offset: 2px;
+}
+
+/* Dark mode: lift metallic logo artwork so charcoal segments don’t vanish */
+html.dark .brand-logo-img {
+  filter: brightness(1.08) contrast(1.06) saturate(1.08)
+    drop-shadow(0 0 10px hsl(var(--primary) / 0.35));
+}
+
+/* Marketing nav: always light theme, even when html.dark */
+html.dark .marketing-navbar {
+  --bg: 32 22% 99%;
+  --card: 30 18% 98%;
+  --form-bg: 28 12% 96%;
+  --text: 25 35% 12%;
+  --title: 22 40% 9%;
+  --primary: 26 52% 38%;
+  --secondary: 24 14% 40%;
+  --border: 28 14% 91%;
+  --accent: 24 95% 53%;
+  --success: 142 71% 45%;
+  --warning: 38 92% 50%;
+  --danger: 0 72% 51%;
+  color-scheme: light;
+  background-color: hsl(var(--card));
+  color: hsl(var(--text));
+}
+
+html.dark .marketing-navbar .brand-logo-img {
+  filter: none;
+}
+
+/* Design system theme tokens (HSL values without hsl()) */
+:root {
+  /* Warm paper / copper metal palette (replaces cool blue) */
+  --bg: 32 22% 99%;
+  --card: 30 18% 98%;
+  --form-bg: 28 12% 96%;
+  --text: 25 35% 12%;
+  --title: 22 40% 9%;
+  --primary: 26 52% 38%;
+  --secondary: 24 14% 40%;
+  --border: 28 14% 91%;
+  --accent: 24 95% 53%;
+  --success: 142 71% 45%;
+  --warning: 38 92% 50%;
+  --danger: 0 72% 51%;
+}
+
+/* Dark theme: next-themes adds class="dark" to <html> */
+html.dark {
+  /* Deeper base + clearer lift: cards read as surfaces, not mush with bg */
+  --bg: 22 14% 7%;
+  --card: 24 12% 12%;
+  --form-bg: 23 11% 10%;
+  /* Body / headings: warm gray (softer than near-white for long dark-mode reading) */
+  --text: 34 9% 78%;
+  --title: 36 11% 88%;
+  /* Copper: saturated enough to pop, light enough for AA on buttons */
+  --primary: 27 62% 52%;
+  /* Muted labels / hints — visible on 7% bg without competing with body */
+  --secondary: 28 6% 58%;
+  /* Separators: visible but not harsh */
+  --border: 25 10% 22%;
+  --accent: 26 88% 56%;
+  /* Semantics: slightly lifted L for dark surfaces */
+  --success: 145 50% 50%;
+  --warning: 40 90% 56%;
+  --danger: 0 70% 58%;
+}
+
+@theme inline {
+  --color-bg: hsl(var(--bg));
+  --color-card: hsl(var(--card));
+  --color-form-bg: hsl(var(--form-bg));
+  --color-text: hsl(var(--text));
+  --color-title: hsl(var(--title));
+  --color-primary: hsl(var(--primary));
+  --color-secondary: hsl(var(--secondary));
+  --color-border: hsl(var(--border));
+  --color-accent: hsl(var(--accent));
+  --color-success: hsl(var(--success));
+  --color-warning: hsl(var(--warning));
+  --color-danger: hsl(var(--danger));
+  --font-sans: var(--font-inter), sans-serif;
+  --font-mono: var(--font-geist-mono);
+}
+
+body {
+  background-color: var(--color-bg);
+  color: var(--color-text);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Soft gray nav — slightly darker than page/card, not near-black */
+.dashboard-nav {
+  position: relative;
+  z-index: 40;
+  background-color: hsl(28 10% 95.5%);
+}
+
+html.dark .dashboard-nav {
+  background-color: hsl(24 10% 11%);
+}
+
+html.dark body {
+  color-scheme: dark;
+  /* Slightly softer rendering on OLED / long reads */
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Status pills: default label color (Settings → Dropdowns custom bg/text use .tile-colors-custom instead). */
+html:not(.dark) .job-board-status-pill:not(.tile-colors-custom) {
+  color: #000000 !important;
+  -webkit-text-fill-color: #000000;
+}
+html.dark .job-board-status-pill:not(.tile-colors-custom) {
+  color: hsl(var(--title)) !important;
+  -webkit-text-fill-color: hsl(var(--title));
+}
+html:not(.dark) .job-board-status-pill.tile-colors-custom,
+html.dark .job-board-status-pill.tile-colors-custom {
+  -webkit-text-fill-color: currentColor;
+}
+
+/* Tabular numbers for tables (aligns numbers in columns) */
+.tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Table horizontal scrollbar: show only on hover, not permanently visible */
+.table-scroll-x::-webkit-scrollbar {
+  height: 8px;
+}
+.table-scroll-x::-webkit-scrollbar-track {
+  background: transparent;
+}
+.table-scroll-x::-webkit-scrollbar-thumb {
+  background: transparent;
+  border-radius: 4px;
+}
+.table-scroll-x:hover::-webkit-scrollbar-thumb {
+  background: hsl(var(--border));
+}
+.table-scroll-x::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--secondary));
+}
+/* Firefox: thin scrollbar, transparent until hover */
+.table-scroll-x {
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+}
+.table-scroll-x:hover {
+  scrollbar-color: hsl(var(--border)) transparent;
+}
+
+/* Frozen leading columns (hub tables on tablet / smaller) */
+.ui-table-shell td.ui-table-sticky-col {
+  background-color: hsl(var(--card));
+}
+.ui-table-shell thead th.ui-table-sticky-col {
+  background-color: hsl(var(--card));
+  z-index: 40;
+}
+.ui-table-shell tbody tr:hover > td.ui-table-sticky-col {
+  background-color: color-mix(in srgb, hsl(var(--primary)) 8%, hsl(var(--card)));
+}
+.ui-table-shell tbody tr.bg-card\/50 > td.ui-table-sticky-col {
+  background-color: color-mix(in srgb, hsl(var(--card)) 50%, transparent);
+}
+.ui-table-shell td.ui-table-sticky-col-last,
+.ui-table-shell th.ui-table-sticky-col-last {
+  box-shadow: 2px 0 4px -2px rgb(0 0 0 / 0.18);
+}
+.dark .ui-table-shell td.ui-table-sticky-col-last,
+.dark .ui-table-shell th.ui-table-sticky-col-last {
+  box-shadow: 2px 0 4px -2px rgb(0 0 0 / 0.45);
+}
+
+/* Table: hide focus ring on mouse click; Tab still shows browser outline for plain links/buttons in cells */
+.ui-table-shell button:focus:not(:focus-visible),
+.ui-table-shell a:focus:not(:focus-visible) {
+  outline: none;
+  box-shadow: none;
+}
+
+/* Settings → Display → Compact table rows (summary / modal tables; main lists use Table component) */
+html[data-compact-tables="true"] table.dashboard-data-table {
+  font-size: 0.75rem;
+  line-height: 1.25rem;
+}
+
+html[data-compact-tables="true"] table.dashboard-data-table :is(th, td) {
+  padding-top: 0.125rem;
+  padding-bottom: 0.125rem;
+}
+
+/* Tab panel enter transitions (Tabs component) */
+@keyframes ui-tab-panel-enter {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@keyframes ui-tab-panel-enter-right {
+  from {
+    opacity: 0;
+    transform: translateX(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+@keyframes ui-tab-panel-enter-left {
+  from {
+    opacity: 0;
+    transform: translateX(-14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+.ui-tab-panel-enter {
+  animation: ui-tab-panel-enter 220ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.ui-tab-panel-enter-right {
+  animation: ui-tab-panel-enter-right 240ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.ui-tab-panel-enter-left {
+  animation: ui-tab-panel-enter-left 240ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .ui-tab-panel-enter,
+  .ui-tab-panel-enter-right,
+  .ui-tab-panel-enter-left {
+    animation: none;
+  }
+}
+
+/* Simple `/dashboards` — square inputs + form buttons (page + portaled modals) */
+body.simple-dashboards-square-inputs input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+body.simple-dashboards-square-inputs textarea,
+body.simple-dashboards-square-inputs select,
+body.simple-dashboards-square-inputs button,
+body.simple-dashboards-square-inputs [role="button"] {
+  border-radius: 0 !important;
+}
+
+/* Diagram pen colors must stay circular despite square form chrome */
+body.simple-dashboards-square-inputs button.diagram-color-swatch,
+body.simple-dashboards-square-inputs .diagram-color-swatch {
+  border-radius: 9999px !important;
+}
+
+/*
+ * Simple portal screen chrome — calmer hierarchy, same layout.
+ * Scoped to .simple-portal so marketing / Classic leftovers are untouched.
+ */
+.simple-portal {
+  --simple-rail: hsl(var(--border));
+  --simple-surface: hsl(var(--card));
+  --simple-muted: hsl(var(--form-bg));
+}
+
+/*
+ * Phone: keep form controls at 16px so iOS does not auto-zoom on focus.
+ * Zoom restore on keyboard close is handled in attachMobileKeyboardZoomRestore.
+ */
+@media (max-width: 767px) {
+  .simple-portal input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]),
+  .simple-portal textarea,
+  .simple-portal select:not(.ui-table-pagination__size),
+  .simple-portal .simple-select-trigger {
+    font-size: 16px !important;
+  }
+}
+
+.simple-portal .simple-hub-date-bar,
+.simple-hub-date-bar {
+  min-width: 0;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.375rem;
+  border: 1px solid hsl(var(--border));
+  background: hsl(var(--form-bg));
+  padding: 0.375rem 0.5rem;
+}
+
+/* Compact strip when mounted in the top navbar */
+.simple-hub-date-bar--nav {
+  flex-wrap: nowrap;
+  justify-content: flex-start;
+  background: hsl(var(--bg));
+  padding: 0.2rem 0.35rem;
+}
+
+/* Full-width strip under the navbar on small screens */
+.simple-hub-date-bar--below {
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  width: 100%;
+}
+
+/* Reports tab header */
+.simple-hub-date-bar--reports {
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  width: auto;
+  max-width: 100%;
+}
+
+/* Continuous hub tab stripe — strong, one-bar navigation */
+.simple-portal .simple-hub-tablist {
+  position: relative;
+  z-index: 20;
+  display: flex !important;
+  width: 100%;
+  flex-wrap: nowrap !important;
+  gap: 2px !important;
+  overflow-x: auto;
+  margin-top: 0 !important;
+  border: 2px solid hsl(var(--primary) / 0.45);
+  background: hsl(var(--primary) / 0.08);
+  box-shadow:
+    0 1px 0 hsl(var(--primary) / 0.12),
+    0 6px 18px hsl(var(--primary) / 0.1);
+  padding: 0 !important;
+  /* Keep tab clicks above any keepMounted panel paint / overflow */
+  isolation: isolate;
+}
+
+.simple-portal .simple-hub-tablist [role="tab"] {
+  position: relative;
+  z-index: 1;
+  pointer-events: auto;
+  flex: 1 1 0;
+  min-width: 4.75rem;
+  border: 0 !important;
+  border-right: 1px solid hsl(var(--primary) / 0.22) !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  color: hsl(var(--title)) !important;
+  box-shadow: none !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.01em;
+  transition: background-color 160ms ease, color 160ms ease, box-shadow 160ms ease;
+}
+
+.simple-portal .simple-hub-tablist [role="tab"]:last-child {
+  border-right: 0 !important;
+}
+
+.simple-portal .simple-hub-tablist [role="tab"]:hover {
+  color: hsl(var(--primary)) !important;
+  background: hsl(var(--primary) / 0.14) !important;
+}
+
+.simple-portal .simple-hub-tablist [role="tab"][aria-selected="true"] {
+  background: hsl(var(--primary)) !important;
+  color: #fff !important;
+  box-shadow: none !important;
+  z-index: 1;
+}
+
+.simple-portal .simple-hub-tablist [role="tab"][aria-selected="true"]:hover {
+  background: hsl(var(--primary)) !important;
+  color: #fff !important;
+}
+
+html.dark .simple-portal .simple-hub-tablist {
+  border-color: hsl(var(--primary) / 0.55);
+  background: hsl(var(--primary) / 0.14);
+  box-shadow:
+    0 1px 0 hsl(var(--primary) / 0.2),
+    0 8px 22px hsl(0 0% 0% / 0.35);
+}
+
+html.dark .simple-portal .simple-hub-tablist [role="tab"] {
+  border-right-color: hsl(var(--primary) / 0.28) !important;
+  color: hsl(var(--title)) !important;
+}
+
+html.dark .simple-portal .simple-hub-tablist [role="tab"][aria-selected="true"] {
+  box-shadow: none !important;
+}
+
+/* Purchase Orders: compact Job / Shop type switch */
+.simple-portal .simple-po-type-switch {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  width: 100%;
+  max-width: 20rem;
+  height: 1.875rem;
+  margin: 0 auto;
+  border: 1px solid hsl(var(--border));
+  background: hsl(var(--form-bg));
+  overflow: hidden;
+}
+
+@media (min-width: 768px) {
+  .simple-portal .simple-po-type-switch {
+    max-width: 16rem;
+    height: 2rem;
+    margin: 0;
+  }
+}
+
+.simple-portal .simple-po-type-switch__btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  padding: 0 0.5rem;
+  border: 0;
+  background: transparent;
+  color: hsl(var(--secondary));
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  line-height: 1;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background-color 140ms ease, color 140ms ease;
+}
+
+.simple-portal .simple-po-type-switch__btn + .simple-po-type-switch__btn {
+  border-left: 1px solid hsl(var(--border));
+}
+
+.simple-portal .simple-po-type-switch__btn:hover {
+  color: hsl(var(--primary));
+  background: hsl(var(--primary) / 0.08);
+}
+
+.simple-portal .simple-po-type-switch__btn[aria-selected="true"] {
+  background: hsl(var(--primary));
+  color: #fff;
+}
+
+.simple-portal .simple-po-type-switch__btn[aria-selected="true"]:hover {
+  background: hsl(var(--primary));
+  color: #fff;
+}
+
+.simple-portal .simple-screen-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+  gap: 0.5rem;
+  /* Tight gap under hub tab strip (panel padding is 0). */
+  margin-top: 5px;
+  margin-bottom: 0.5rem;
+}
+
+/* Phone: keep status filter tiles in a single horizontal swipe row. */
+@media (max-width: 767px) {
+  .simple-portal .simple-screen-filters {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 0.15rem;
+  }
+
+  .simple-portal .simple-screen-filters > .status-filter-pill--soft {
+    flex: 0 0 auto;
+    min-width: 7.5rem;
+    max-width: 10rem;
+  }
+}
+
+/* Soft cards wrap to extra rows when needed; text is allowed to wrap (no truncate). */
+.simple-portal .simple-screen-filters > .status-filter-pill--soft {
+  flex: 1 1 8.5rem;
+  min-width: min(100%, 8.5rem);
+  max-width: 100%;
+  height: auto;
+  align-self: stretch;
+}
+
+.simple-portal .simple-screen-filters .status-filter-pill {
+  box-shadow: none !important;
+  border-radius: 0 !important;
+}
+
+/* Soft cards keep status fill; selection is handled in the component (inset frame + check). */
+.simple-portal .simple-screen-filters .status-filter-pill:not(.status-filter-pill--soft)[aria-pressed="true"] {
+  background: hsl(var(--primary) / 0.09) !important;
+}
+
+.simple-portal .simple-screen-filters .status-filter-pill--soft {
+  background: transparent !important;
+  height: auto !important;
+}
+
+/* Tablet / mid widths: keep filter summary text compact. */
+@media (min-width: 768px) and (max-width: 1280px) {
+  .simple-portal .simple-screen-filters > .status-filter-pill--soft {
+    flex-basis: 7.25rem;
+    min-width: min(100%, 7.25rem);
+  }
+
+  .simple-portal .simple-screen-filters .status-filter-pill--soft .status-filter-pill__label {
+    font-size: 0.625rem !important; /* 10px */
+    letter-spacing: 0.04em;
+    line-height: 1.25;
+  }
+
+  .simple-portal .simple-screen-filters .status-filter-pill--soft .status-filter-pill__value,
+  .simple-portal .simple-screen-filters .status-filter-pill--soft .status-filter-pill__count {
+    font-size: 0.75rem !important; /* 12px */
+    line-height: 1.25;
+  }
+
+  .simple-portal .simple-screen-filters .status-filter-pill--soft > span {
+    padding-left: 0.4rem;
+    padding-right: 0.4rem;
+    gap: 0.35rem;
+  }
+}
+
+.simple-portal .simple-screen-table-wrap {
+  min-height: 0;
+  min-width: 0;
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid hsl(var(--border));
+  background: var(--simple-surface);
+  padding: 0.5rem 0.625rem 0.625rem;
+}
+
+/* Phone hub tables: denser rows, less chrome, room for more records */
+@media (max-width: 767px) {
+  .simple-portal .simple-screen-table-wrap {
+    margin-left: -0.5rem;
+    margin-right: -0.5rem;
+    border-left: none;
+    border-right: none;
+    border-radius: 0;
+    padding: 0.35rem 0.4rem 0.5rem;
+  }
+
+  .simple-portal .simple-screen-table-wrap table {
+    border-collapse: separate;
+    border-spacing: 0;
+  }
+
+  .simple-portal .simple-screen-table-wrap thead th {
+    font-size: 0.65rem !important;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+    font-weight: 700;
+    padding-top: 0.4rem !important;
+    padding-bottom: 0.4rem !important;
+    padding-left: 0.4rem !important;
+    padding-right: 0.4rem !important;
+    white-space: nowrap;
+  }
+
+  .simple-portal .simple-screen-table-wrap thead tr.ui-table-subtotal-row th {
+    padding-top: 0.15rem !important;
+    padding-bottom: 0.15rem !important;
+    padding-left: 0.25rem !important;
+    padding-right: 0.25rem !important;
+    text-transform: none;
+    letter-spacing: 0;
+    line-height: 1.1;
+  }
+
+  .simple-portal .simple-screen-table-wrap .ui-table-header-subtotal {
+    min-height: 0 !important;
+    padding: 0.15rem 0.3rem !important;
+    font-size: 0.625rem !important; /* 10px */
+    line-height: 1.1 !important;
+  }
+
+  .simple-portal .simple-screen-table-wrap tbody td {
+    font-size: 0.75rem !important;
+    line-height: 1.25;
+    padding-top: 0.4rem !important;
+    padding-bottom: 0.4rem !important;
+    padding-left: 0.4rem !important;
+    padding-right: 0.4rem !important;
+    vertical-align: middle;
+  }
+
+  .simple-portal .simple-screen-table-wrap tbody tr {
+    height: auto;
+  }
+
+  .simple-portal .simple-screen-table-wrap .rounded-full {
+    padding-left: 0.45rem !important;
+    padding-right: 0.45rem !important;
+    padding-top: 0.1rem !important;
+    padding-bottom: 0.1rem !important;
+    font-size: 0.65rem !important;
+    max-width: 7.5rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .simple-portal .ui-table-pagination--phone {
+    margin-top: 0.35rem;
+    border-radius: 0;
+    height: 2.5rem;
+    gap: 0.5rem;
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
+  }
+
+  .simple-portal .ui-table-pagination--phone,
+  .simple-portal .ui-table-pagination--phone .ui-table-pagination__size,
+  .simple-portal .ui-table-pagination--phone .ui-table-pagination__page {
+    font-size: 0.75rem !important; /* 12px */
+    font-weight: 500 !important;
+    line-height: 1 !important;
+  }
+
+  .simple-portal .ui-table-pagination--phone .ui-table-pagination__size,
+  .simple-portal .ui-table-pagination--phone .ui-table-pagination__nav,
+  .simple-portal .ui-table-pagination--phone .ui-table-pagination__nav > * {
+    height: 1.75rem !important; /* 28px */
+  }
+
+  .simple-portal .ui-table-pagination--phone .ui-table-pagination__size {
+    min-width: 3.5rem;
+    padding: 0 1.5rem 0 0.5rem !important;
+  }
+
+  .simple-portal .ui-table-pagination--phone .ui-table-pagination__nav > button {
+    width: 1.75rem !important;
+  }
+}
+
+/*
+ * Service Proposal full-page editor (phone).
+ * One type scale + spacing rhythm; tablet/desktop modal keeps dense chrome.
+ */
+.simple-portal .simple-sp-form-page {
+  --sp-page-pad: 1rem;
+  --sp-page-gap: 0.875rem;
+  --sp-page-section-gap: 1.25rem;
+  --sp-page-label: 0.75rem; /* 12px */
+  --sp-page-body: 1rem; /* 16px — avoids iOS input zoom */
+  --sp-page-control-h: 2.75rem; /* 44px touch target */
+  font-size: var(--sp-page-body);
+  line-height: 1.4;
+  color: hsl(var(--title));
+}
+
+.simple-portal .simple-sp-form-page .simple-sp-field {
+  gap: 0.375rem !important;
+  margin-bottom: 0;
+}
+
+.simple-portal .simple-sp-form-page .simple-sp-field-label {
+  width: 100% !important;
+  max-width: none !important;
+  justify-content: flex-start !important;
+  text-align: left !important;
+  white-space: normal !important;
+  font-size: var(--sp-page-label) !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.02em;
+  line-height: 1.3;
+  color: hsl(var(--secondary));
+}
+
+.simple-portal .simple-sp-form-page .simple-sp-field input:not([type="checkbox"]):not([type="radio"]),
+.simple-portal .simple-sp-form-page .simple-sp-page-status input:not([type="checkbox"]):not([type="radio"]),
+.simple-portal .simple-sp-form-page .simple-sp-page-columns > div > input:not([type="checkbox"]):not([type="radio"]),
+.simple-portal .simple-sp-form-page textarea,
+.simple-portal .simple-sp-form-page select {
+  min-height: var(--sp-page-control-h);
+  height: auto !important;
+  padding-left: 0.75rem !important;
+  padding-right: 0.75rem !important;
+  padding-top: 0.625rem !important;
+  padding-bottom: 0.625rem !important;
+  font-size: var(--sp-page-body) !important;
+  font-weight: 500 !important;
+  line-height: 1.35 !important;
+}
+
+.simple-portal .simple-sp-form-page textarea {
+  min-height: 6.5rem;
+}
+
+/* SimpleSelect field triggers */
+.simple-portal .simple-sp-form-page .simple-select-trigger {
+  min-height: var(--sp-page-control-h) !important;
+  height: var(--sp-page-control-h) !important;
+  padding-left: 0.75rem !important;
+  padding-right: 0.75rem !important;
+  font-size: var(--sp-page-body) !important;
+  font-weight: 500 !important;
+}
+
+.simple-portal .simple-sp-form-page .simple-sp-page-toolbar {
+  gap: 0.5rem !important;
+  padding-top: 0.25rem;
+  padding-bottom: 0.875rem;
+  margin-bottom: var(--sp-page-section-gap) !important;
+}
+
+.simple-portal .simple-sp-form-page .simple-sp-page-toolbar > button {
+  min-height: var(--sp-page-control-h) !important;
+  height: var(--sp-page-control-h) !important;
+  padding-left: 0.75rem !important;
+  padding-right: 0.75rem !important;
+  font-size: 0.8125rem !important; /* 13px */
+  font-weight: 600 !important;
+}
+
+.simple-portal .simple-sp-form-page .simple-sp-page-status {
+  display: grid;
+  gap: var(--sp-page-gap);
+  margin-bottom: var(--sp-page-section-gap);
+  padding-bottom: var(--sp-page-section-gap);
+}
+
+.simple-portal .simple-sp-form-page .simple-sp-page-status label {
+  font-size: var(--sp-page-label) !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.02em;
+  color: hsl(var(--secondary));
+  margin-bottom: 0.375rem !important;
+}
+
+.simple-portal .simple-sp-form-page .simple-sp-page-columns {
+  gap: var(--sp-page-section-gap) !important;
+  padding-top: 0 !important;
+}
+
+.simple-portal .simple-sp-form-page .simple-sp-page-columns > div {
+  gap: var(--sp-page-gap) !important;
+}
+
+.simple-portal .simple-sp-form-page h4 {
+  margin-top: 0.25rem;
+  font-size: 0.75rem !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: hsl(var(--secondary));
+}
+
+/* Line-item grids: keep dense cells but readable */
+.simple-portal .simple-sp-form-page table {
+  font-size: 0.875rem !important;
+}
+
+.simple-portal .simple-sp-form-page table th {
+  font-size: 0.6875rem !important;
+  padding: 0.5rem 0.35rem !important;
+}
+
+.simple-portal .simple-sp-form-page table td input {
+  min-height: 2.5rem !important;
+  font-size: 0.875rem !important;
+  padding-top: 0.35rem !important;
+  padding-bottom: 0.35rem !important;
+}
+
+.simple-portal .simple-po-form-page {
+  font-size: 1rem;
+  line-height: 1.35;
+  color: hsl(var(--title));
+}
+
+.simple-portal .simple-po-form-page input:not([type="checkbox"]):not([type="radio"]),
+.simple-portal .simple-po-form-page textarea,
+.simple-portal .simple-po-form-page select,
+.simple-portal .simple-po-form-page .simple-select-trigger {
+  min-height: 2.5rem !important;
+  height: 2.5rem !important;
+  width: 100% !important;
+  max-width: 100%;
+  font-size: 16px !important;
+  line-height: 1.25 !important;
+}
+
+.simple-portal .simple-po-form-page textarea {
+  height: auto !important;
+  min-height: 4.5rem !important;
+}
+
+.simple-portal .simple-po-form-page .overflow-x-auto,
+.simple-portal .simple-po-form-page .overflow-auto {
+  max-width: 100%;
+}
+
+.simple-portal .simple-po-form-page table {
+  font-size: 0.7rem;
+}
+
+.simple-portal .simple-po-form-page table th,
+.simple-portal .simple-po-form-page table td {
+  padding: 0.3rem 0.35rem !important;
+}
+
+.simple-portal .simple-po-page-tabs {
+  border: 1px solid hsl(var(--border)) !important;
+  background: hsl(var(--form-bg)) !important;
+}
+
+.simple-portal .simple-po-page-tabs [role="tab"] {
+  border-right: 1px solid hsl(var(--border)) !important;
+  box-shadow: none !important;
+}
+
+.simple-portal .simple-po-page-tabs [role="tab"]:last-child {
+  border-right: 0 !important;
+}
+
+.simple-portal .simple-sp-form-page .simple-sp-page-header-title {
+  font-size: 1.0625rem; /* 17px */
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  line-height: 1.25;
+}
+
+.simple-portal .simple-sp-form-page [role="radiogroup"] {
+  gap: 0.75rem 1rem;
+}
+
+.simple-portal .simple-sp-form-page [role="radiogroup"] label,
+.simple-portal .simple-sp-form-page [role="radiogroup"] span {
+  font-size: 0.9375rem;
+  font-weight: 500;
+  line-height: 1.35;
+}
+
+.simple-portal .simple-sp-form-page .border.border-border.bg-card > button.text-xs {
+  min-height: 2.75rem;
+  padding-left: 0.75rem;
+  padding-right: 0.75rem;
+  font-size: 0.875rem !important;
+  font-weight: 600 !important;
+}
+
+/* Settings: fill shell main (h-screen chain); only right pane scrolls. */
+.simple-settings-page {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  height: 100%;
+  max-height: 100%;
+  min-height: 0;
+  overflow: hidden;
+  padding: 0.5rem 0.625rem 0.625rem;
+}
+
+.simple-portal .simple-settings-shell {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  height: 100%;
+  max-height: 100%;
+  min-height: 0;
+  min-width: 0;
+  width: 100%;
+  overflow: hidden;
+}
+
+.simple-portal .simple-settings-header {
+  flex-shrink: 0;
+  margin-bottom: 0.75rem;
+  border-bottom: 1px solid hsl(var(--border));
+  padding-bottom: 0.75rem;
+}
+
+.simple-portal .simple-settings-body {
+  display: grid;
+  flex: 1 1 auto;
+  min-height: 0;
+  min-width: 0;
+  height: 100%;
+  max-height: 100%;
+  grid-template-columns: 1fr;
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: 0.75rem;
+  overflow: hidden;
+}
+
+@media (min-width: 768px) {
+  .simple-portal .simple-settings-body {
+    grid-template-columns: 13rem minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr);
+    gap: 1rem;
+  }
+}
+
+/* Side menu stays put; only the content pane scrolls. */
+.simple-portal .simple-settings-nav {
+  align-self: stretch;
+  border-color: hsl(var(--border));
+  background: var(--simple-muted);
+  padding: 0.5rem;
+  overflow: hidden;
+}
+
+.simple-portal .simple-settings-nav ul {
+  display: flex;
+  flex-direction: row;
+  gap: 0.125rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: thin;
+}
+
+@media (min-width: 768px) {
+  .simple-portal .simple-settings-nav {
+    display: flex;
+    height: 100%;
+    max-height: 100%;
+    flex-direction: column;
+    border-right-width: 1px;
+    border-bottom-width: 0;
+    padding: 0.5rem 0.75rem 0.5rem 0.5rem;
+    overflow: hidden;
+  }
+
+  .simple-portal .simple-settings-nav ul {
+    flex: 1 1 auto;
+    min-height: 0;
+    flex-direction: column;
+    overflow-x: hidden;
+    overflow-y: auto;
+  }
+
+  .simple-portal .simple-settings-nav a[data-active="true"],
+  .simple-portal .simple-settings-nav button[data-active="true"] {
+    box-shadow: inset 2px 0 0 hsl(var(--primary));
+  }
+}
+
+@media (max-width: 767px) {
+  .simple-portal .simple-settings-nav a,
+  .simple-portal .simple-settings-nav button {
+    min-height: 2.25rem;
+    padding-left: 0.75rem;
+    padding-right: 0.75rem;
+  }
+
+  .simple-portal .simple-settings-nav a[data-active="true"],
+  .simple-portal .simple-settings-nav button[data-active="true"] {
+    box-shadow: inset 0 -2px 0 hsl(var(--primary));
+  }
+}
+
+.simple-portal .simple-settings-nav a,
+.simple-portal .simple-settings-nav button {
+  transition: background-color 160ms ease, color 160ms ease;
+}
+
+.simple-portal .simple-settings-nav a[data-active="true"],
+.simple-portal .simple-settings-nav button[data-active="true"] {
+  background: hsl(var(--primary) / 0.12);
+  color: hsl(var(--primary));
+  font-weight: 600;
+}
+
+.simple-portal .simple-settings-content {
+  position: relative;
+  min-height: 0;
+  min-width: 0;
+  height: 100%;
+  max-height: 100%;
+  overflow: hidden;
+  background: var(--simple-surface);
+  border: 1px solid hsl(var(--border));
+}
+
+/* Absolute fill so flex ancestors cannot grow past viewport. */
+.simple-portal .simple-settings-content-inner {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.simple-portal .simple-settings-content-scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
+  padding: 0.75rem 1rem 0.5rem;
+}
+
+.simple-portal .simple-settings-save-bar {
+  flex-shrink: 0;
+  z-index: 4;
+  border-top: 1px solid hsl(var(--border));
+  background: color-mix(in srgb, hsl(var(--card)) 95%, transparent);
+  padding: 0.75rem 1rem;
+  backdrop-filter: blur(8px);
+}
+
+.simple-portal .simple-report-card {
+  display: flex;
+  min-height: 0;
+  flex-direction: column;
+  gap: 0.75rem;
+  border: 1px solid hsl(var(--border));
+  background: var(--simple-surface);
+  padding: 1rem;
+  transition: border-color 160ms ease, background-color 160ms ease;
+}
+
+.simple-portal .simple-report-card:hover {
+  border-color: hsl(var(--primary) / 0.35);
+  background: hsl(var(--primary) / 0.03);
+}
+
+html.dark .simple-portal .simple-hub-date-bar,
+html.dark .simple-portal .simple-settings-nav {
+  background: hsl(var(--form-bg));
+}
+
+/* Dashboard display zoom — reset for print so layouts match paper.
+   Print is always light-theme (ignore UI dark mode). */
+@media print {
+  html {
+    zoom: 1 !important;
+    font-size: 95% !important;
+    color-scheme: light !important;
+  }
+  html[data-app-zoom] {
+    --app-zoom-factor: 1 !important;
+  }
+  html[data-app-font-size] {
+    --app-font-scale-factor: 1 !important;
+  }
+  /* Force light design tokens even when html still has .dark */
+  html.dark {
+    --bg: 32 22% 99%;
+    --card: 30 18% 98%;
+    --form-bg: 28 12% 96%;
+    --text: 25 35% 12%;
+    --title: 22 40% 9%;
+    --primary: 26 52% 38%;
+    --secondary: 24 14% 40%;
+    --border: 28 14% 91%;
+    --accent: 24 95% 53%;
+    --success: 142 71% 45%;
+    --warning: 38 92% 50%;
+    --danger: 0 72% 51%;
+  }
+  html,
+  body {
+    background: #ffffff !important;
+    color: #111111 !important;
+    color-scheme: light !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+  @page {
+    size: letter;
+    background: #ffffff;
+  }
+}
+
+/* Gated contact reveal — SEO-hidden NAP for crawlers */
+.contact-seo-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.contact-reveal-blur-line {
+  height: 0.875rem;
+  border-radius: 0.375rem;
+  background: hsl(var(--border));
+  filter: blur(4px);
+  opacity: 0.65;
+}
+
+.contact-reveal-blur-phone {
+  width: 8.75rem;
+}
+
+.contact-reveal-blur-email {
+  width: 11.25rem;
+}
+
+.contact-reveal-blur-website {
+  width: 10rem;
+}
+
+/* AI search optimization (AEO) */
+.ai-quick-answer {
+  background: #f0f7ff;
+  border-left: 4px solid #1d4ed8;
+  border-radius: 0 10px 10px 0;
+  padding: 16px 20px;
+  margin: 0 0 32px;
+  font-size: 15px;
+  color: #1e3a5f;
+  line-height: 1.7;
+  max-width: 760px;
+}
+
+html.dark .ai-quick-answer {
+  background: hsl(var(--primary) / 0.12);
+  border-left-color: hsl(var(--primary));
+  color: hsl(var(--text));
+}
+
+.ai-quick-answer strong {
+  color: #1d4ed8;
+}
+
+html.dark .ai-quick-answer strong {
+  color: hsl(var(--primary));
+}
+
+.ai-fact-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  max-width: 740px;
+  margin: 16px 0 32px;
+}
+
+.ai-fact-list > div {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 16px 18px;
+}
+
+html.dark .ai-fact-list > div {
+  background: hsl(var(--card));
+  border-color: hsl(var(--border));
+}
+
+.ai-fact-list dt {
+  font-size: 14px;
+  font-weight: 700;
+  color: #1a202c;
+  margin-bottom: 6px;
+}
+
+html.dark .ai-fact-list dt {
+  color: hsl(var(--title));
+}
+
+.ai-fact-list dd {
+  font-size: 14px;
+  color: #475569;
+  line-height: 1.7;
+  margin: 0;
+}
+
+html.dark .ai-fact-list dd {
+  color: hsl(var(--secondary));
+}
+
+.about-two-sides {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  max-width: 740px;
+  margin: 16px 0 32px;
+}
+
+.about-two-sides > div {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 18px 20px;
+}
+
+html.dark .about-two-sides > div {
+  background: hsl(var(--card));
+  border-color: hsl(var(--border));
+}
+
+.about-two-sides dt {
+  font-size: 15px;
+  font-weight: 700;
+  color: #1a202c;
+  margin-bottom: 8px;
+}
+
+html.dark .about-two-sides dt {
+  color: hsl(var(--title));
+}
+
+.about-two-sides dd {
+  font-size: 14px;
+  color: #475569;
+  line-height: 1.7;
+  margin: 0;
+}
+
+html.dark .about-two-sides dd {
+  color: hsl(var(--secondary));
+}
+
+.about-audiences,
+.about-standards,
+.about-related-links {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-left: 20px;
+  max-width: 700px;
+  margin: 12px 0 32px;
+}
+
+.about-audiences li,
+.about-standards li,
+.about-related-links li {
+  font-size: 14px;
+  color: #334155;
+  line-height: 1.7;
+}
+
+html.dark .about-audiences li,
+html.dark .about-standards li,
+html.dark .about-related-links li {
+  color: hsl(var(--secondary));
+}
+
+.cost-table {
+  width: 100%;
+  min-width: 36rem;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.cost-table th,
+.cost-table td {
+  border: 1px solid hsl(var(--border));
+  padding: 10px 12px;
+  text-align: left;
+}
+
+.cost-table thead th {
+  background: hsl(var(--muted) / 0.5);
+  font-weight: 600;
+  color: hsl(var(--title));
+}
+
+.cost-table tbody td {
+  color: hsl(var(--secondary));
+}
+
+.cost-table tbody td:first-child {
+  font-weight: 500;
+  color: hsl(var(--title));
+}

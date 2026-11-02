@@ -1,0 +1,336 @@
+"use client";
+
+import { useState, useRef, useEffect } from "react";
+import { createPortal } from "react-dom";
+import { mapRectForBodyFixedPosition } from "@/lib/apply-dashboard-zoom";
+import HelpIcon from "./help-icon";
+
+const DROPDOWN_Z = 9999;
+
+export default function Select({
+  label,
+  help,
+  id,
+  options = [],
+  value,
+  onChange,
+  name,
+  className = "",
+  multiple = false,
+  searchable = true,
+  placeholder = "Select...",
+  disabled = false,
+  /** Classes on the trigger control (e.g. match compact Input height in dense forms). */
+  triggerClassName = "",
+}) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [highlightedIndex, setHighlightedIndex] = useState(-1);
+  const [dropdownRect, setDropdownRect] = useState(null);
+  const containerRef = useRef(null);
+  const triggerRef = useRef(null);
+  const dropdownRef = useRef(null);
+  const optionRefs = useRef([]);
+
+  const selectedValues = multiple
+    ? Array.isArray(value) ? value : value ? [value] : []
+    : value ?? "";
+
+  const filteredOptions = searchable && searchQuery.trim()
+    ? options.filter(
+        (opt) =>
+          opt.label.toLowerCase().includes(searchQuery.toLowerCase())
+      )
+    : options;
+
+  const selectedLabels = multiple
+    ? options
+        .filter((opt) => selectedValues.includes(opt.value))
+        .map((opt) => opt.label)
+    : (selectedValues && options.find((opt) => opt.value === selectedValues)?.label) ?? "";
+
+  const displayText = multiple
+    ? selectedLabels.length > 0
+      ? selectedLabels.join(", ")
+      : placeholder
+    : selectedLabels || placeholder;
+
+  const updateDropdownRect = () => {
+    if (triggerRef.current) {
+      const rect = mapRectForBodyFixedPosition(triggerRef.current.getBoundingClientRect());
+      setDropdownRect({ top: rect.bottom, left: rect.left, width: rect.width });
+    }
+  };
+
+  useEffect(() => {
+    if (isOpen) {
+      updateDropdownRect();
+      const onScrollOrResize = () => updateDropdownRect();
+      window.addEventListener("scroll", onScrollOrResize, true);
+      window.addEventListener("resize", onScrollOrResize);
+      return () => {
+        window.removeEventListener("scroll", onScrollOrResize, true);
+        window.removeEventListener("resize", onScrollOrResize);
+      };
+    } else {
+      setDropdownRect(null);
+    }
+  }, [isOpen]);
+
+  useEffect(() => {
+    if (!isOpen) {
+      setHighlightedIndex(-1);
+      return;
+    }
+    if (filteredOptions.length === 0) {
+      setHighlightedIndex(-1);
+      return;
+    }
+    const selectedIdx = filteredOptions.findIndex((opt) => isSelected(opt));
+    setHighlightedIndex(selectedIdx >= 0 ? selectedIdx : 0);
+  }, [isOpen, searchQuery, value, options]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    if (highlightedIndex < 0) return;
+    optionRefs.current[highlightedIndex]?.scrollIntoView({ block: "nearest" });
+  }, [isOpen, highlightedIndex]);
+
+  useEffect(() => {
+    if (disabled) setIsOpen(false);
+  }, [disabled]);
+
+  useEffect(() => {
+    function handleClickOutside(event) {
+      const inContainer = containerRef.current?.contains(event.target);
+      const inDropdown = dropdownRef.current?.contains(event.target);
+      if (!inContainer && !inDropdown) setIsOpen(false);
+    }
+    document.addEventListener("mousedown", handleClickOutside, true);
+    return () => document.removeEventListener("mousedown", handleClickOutside, true);
+  }, []);
+
+  const handleSelect = (opt) => {
+    if (multiple) {
+      const next = selectedValues.includes(opt.value)
+        ? selectedValues.filter((v) => v !== opt.value)
+        : [...selectedValues, opt.value];
+      onChange({ target: { name, value: next } });
+    } else {
+      onChange({ target: { name, value: opt.value } });
+      setIsOpen(false);
+      setSearchQuery("");
+    }
+  };
+
+  const openDropdown = () => {
+    if (disabled) return;
+    setIsOpen(true);
+    setSearchQuery("");
+  };
+
+  const closeDropdown = () => {
+    setIsOpen(false);
+    setSearchQuery("");
+    setHighlightedIndex(-1);
+  };
+
+  const moveHighlight = (delta) => {
+    if (filteredOptions.length === 0) return;
+    setHighlightedIndex((prev) => {
+      const start = prev < 0 ? 0 : prev;
+      const next = (start + delta + filteredOptions.length) % filteredOptions.length;
+      return next;
+    });
+  };
+
+  const handleKeyboardNavigation = (e) => {
+    if (disabled) return;
+    if (!isOpen) {
+      if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+        e.preventDefault();
+        openDropdown();
+      } else if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        openDropdown();
+      }
+      return;
+    }
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      moveHighlight(1);
+      return;
+    }
+    if (e.key === "ArrowUp") {
+      e.preventDefault();
+      moveHighlight(-1);
+      return;
+    }
+    if (e.key === "Enter") {
+      e.preventDefault();
+      if (highlightedIndex >= 0 && filteredOptions[highlightedIndex]) {
+        handleSelect(filteredOptions[highlightedIndex]);
+      }
+      return;
+    }
+    if (e.key === "Escape") {
+      e.preventDefault();
+      closeDropdown();
+      triggerRef.current?.focus();
+    }
+  };
+
+  const isSelected = (opt) =>
+    multiple ? selectedValues.includes(opt.value) : selectedValues === opt.value;
+
+  const handleRemove = (val, e) => {
+    e.stopPropagation();
+    const next = selectedValues.filter((v) => v !== val);
+    onChange({ target: { name, value: next } });
+  };
+
+  const triggerContent = multiple && selectedValues.length > 0 ? (
+    <div className="flex flex-1 flex-wrap gap-2 min-w-0 py-0.5">
+      {selectedValues.map((val) => {
+        const opt = options.find((o) => o.value === val);
+        const label = opt?.label ?? String(val);
+        return (
+          <span
+            key={val}
+            className="inline-flex items-center gap-1 rounded-md border border-border bg-bg px-2 py-1 text-sm text-text"
+          >
+            {label}
+            <button
+              type="button"
+              onClick={(e) => handleRemove(val, e)}
+              className="flex shrink-0 rounded p-0.5 hover:bg-card focus:outline-none focus:ring-2 focus:ring-primary"
+              aria-label={`Remove ${label}`}
+            >
+              <svg className="h-3.5 w-3.5 text-secondary hover:text-text" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </span>
+        );
+      })}
+    </div>
+  ) : (
+    <span className={selectedLabels ? "text-text" : "text-secondary text-sm"}>
+      {displayText}
+    </span>
+  );
+
+  return (
+    <div ref={containerRef} className={`relative flex flex-col gap-1 ${className}`}>
+      {label && (
+        <span className={`inline-flex items-center gap-1.5 text-sm text-title ${disabled ? "opacity-70" : ""}`}>
+          {label}
+          <HelpIcon text={help} />
+        </span>
+      )}
+      <div
+        ref={triggerRef}
+        id={id}
+        role="button"
+        tabIndex={disabled ? -1 : 0}
+        aria-disabled={disabled}
+        onClick={() => {
+          if (disabled) return;
+          if (isOpen) {
+            closeDropdown();
+          } else {
+            openDropdown();
+          }
+        }}
+        onKeyDown={handleKeyboardNavigation}
+        className={`flex w-full min-h-[2.5rem] items-center justify-between gap-2 rounded-md border border-border bg-bg px-3 py-2 text-left text-text focus:outline-none focus:ring-2 focus:ring-primary ${disabled ? "cursor-not-allowed opacity-60 bg-card border-border/80" : "cursor-pointer"} ${triggerClassName}`.trim()}
+      >
+        {triggerContent}
+        <svg
+          className={`h-4 w-4 shrink-0 text-secondary transition-transform ${isOpen ? "rotate-180" : ""}`}
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+        </svg>
+      </div>
+
+      {isOpen && dropdownRect && typeof document !== "undefined" &&
+        createPortal(
+          <div
+            ref={dropdownRef}
+            className="rounded-md border border-border bg-bg shadow-lg"
+            style={{
+              position: "fixed",
+              top: dropdownRect.top + 4,
+              left: dropdownRect.left,
+              width: dropdownRect.width,
+              zIndex: DROPDOWN_Z,
+            }}
+          >
+            {searchable && (
+              <div className="border-b border-border p-2">
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Search..."
+                  className="w-full rounded border border-border bg-bg px-3 py-2 text-sm text-text placeholder:text-secondary focus:outline-none focus:ring-2 focus:ring-primary"
+                  autoFocus
+                  onKeyDown={(e) => {
+                    e.stopPropagation();
+                    handleKeyboardNavigation(e);
+                  }}
+                />
+              </div>
+            )}
+            <ul className="max-h-48 overflow-auto py-1" role="listbox">
+              {filteredOptions.length === 0 ? (
+                <li className="px-3 py-2 text-sm text-title">No options</li>
+              ) : (
+                filteredOptions.map((opt, i) => (
+                  <li key={i}>
+                    <button
+                      ref={(el) => {
+                        optionRefs.current[i] = el;
+                      }}
+                      type="button"
+                      onClick={() => handleSelect(opt)}
+                      role="option"
+                      aria-selected={isSelected(opt)}
+                      onMouseEnter={() => setHighlightedIndex(i)}
+                      className={`flex w-full items-center gap-2 px-3 py-2 text-left text-sm transition-colors ${
+                        highlightedIndex === i
+                          ? "bg-card text-title"
+                          : "hover:bg-bg"
+                      } ${
+                        isSelected(opt) ? "text-primary font-medium" : "text-text"
+                      }`}
+                    >
+                      {multiple && (
+                        <span
+                          className={`flex h-4 w-4 shrink-0 items-center justify-center rounded border border-border ${
+                            isSelected(opt) ? "bg-primary border-primary" : "bg-card"
+                          }`}
+                        >
+                          {isSelected(opt) && (
+                            <svg className="h-2.5 w-2.5 text-white" fill="currentColor" viewBox="0 0 20 20">
+                              <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                            </svg>
+                          )}
+                        </span>
+                      )}
+                      {opt.label}
+                    </button>
+                  </li>
+                ))
+              )}
+            </ul>
+          </div>,
+          document.body
+        )
+      }
+    </div>
+  );
+}

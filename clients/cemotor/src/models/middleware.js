@@ -1,0 +1,120 @@
+import { NextResponse } from "next/server";
+import { assertSameOriginApiMutation } from "@/lib/api-origin-guard";
+import {
+  CALCULATOR_ONLY_DASHBOARD_HREF,
+  isCalculatorOnlyAllowedDashboardApi,
+  isCalculatorOnlyDashboardPath,
+} from "@/lib/calculator-portal-routes";
+import {
+  classicPathToSimpleRedirect,
+  isClassicPortalPath,
+  isClassicPortalUiCookie,
+  isSimpleCalculatorsPath,
+  isSimplePortalPath,
+  simplePathToClassicRedirect,
+} from "@/lib/portal-view";
+
+/** Edge-safe: tier is set on login/register and refreshed by GET /api/auth/me */
+function hasCalculatorOnlyTierCookie(cookieHeader) {
+  return /(?:^|;\s*)motors_portal_tier=calculator_only(?:;|$)/.test(cookieHeader || "");
+}
+
+function hostAllowedEdge(hostHeader) {
+  const raw = process.env.ALLOWED_HOSTS || "";
+  if (!raw.trim()) return true;
+  const allowed = raw.split(",").map((s) => s.trim().toLowerCase()).filter(Boolean);
+  const host = String(hostHeader || "")
+    .split(":")[0]
+    .trim()
+    .toLowerCase();
+  return Boolean(host && allowed.includes(host));
+}
+
+export function middleware(request) {
+  const { pathname } = request.nextUrl;
+  const cookieHeader = request.headers.get("cookie") || "";
+  const hasAdminCookie = cookieHeader.includes("motors_admin=");
+  const hasPortalCookie = cookieHeader.includes("motors_portal=");
+  const calcOnlyPortal = hasPortalCookie && hasCalculatorOnlyTierCookie(cookieHeader);
+
+  if (!hostAllowedEdge(request.headers.get("host"))) {
+    return new NextResponse("Host not allowed for this app", { status: 421 });
+  }
+
+  if (pathname.startsWith("/admin") && !pathname.startsWith("/admin/login")) {
+    if (!hasAdminCookie) {
+      return NextResponse.redirect(new URL("/admin/login", request.url));
+    }
+  }
+
+  if (pathname.startsWith("/dashboard") || pathname.startsWith("/dashboards")) {
+    if (!hasPortalCookie) {
+      const loginUrl = new URL("/login", request.url);
+      const dest = `${pathname}${request.nextUrl.search || ""}`;
+      loginUrl.searchParams.set("next", dest);
+      return NextResponse.redirect(loginUrl);
+    }
+    if (calcOnlyPortal && !isCalculatorOnlyDashboardPath(pathname)) {
+      return NextResponse.redirect(new URL(CALCULATOR_ONLY_DASHBOARD_HREF, request.url));
+    }
+    const search = request.nextUrl.search || "";
+    const shopClassicUi = !calcOnlyPortal && isClassicPortalUiCookie(cookieHeader);
+    if (shopClassicUi) {
+      if (isSimplePortalPath(pathname) && !isSimpleCalculatorsPath(pathname, search)) {
+        const target = simplePathToClassicRedirect(pathname, search);
+        const current = `${pathname}${search}`;
+        if (target && target !== current) {
+          return NextResponse.redirect(new URL(target, request.url));
+        }
+      }
+    } else if (isClassicPortalPath(pathname)) {
+      const target = classicPathToSimpleRedirect(pathname, search);
+      return NextResponse.redirect(new URL(target, request.url));
+    }
+  }
+
+  if (pathname.startsWith("/api/dashboard/") && calcOnlyPortal) {
+    if (!isCalculatorOnlyAllowedDashboardApi(pathname)) {
+      return NextResponse.json(
+        { error: "Calculators-only accounts may only access calculator tools." },
+        { status: 403 }
+      );
+    }
+  }
+
+  if (pathname.startsWith("/api/dashboard/") || pathname.startsWith("/api/admin/")) {
+    const originCheck = assertSameOriginApiMutation(request);
+    if (!originCheck.ok) {
+      return NextResponse.json({ error: originCheck.error }, { status: originCheck.status });
+    }
+  }
+
+  return NextResponse.next();
+}
+
+export const config = {
+  matcher: [
+    "/admin",
+    "/admin/listings/:path*",
+    "/admin/leads/:path*",
+    "/admin/clients/:path*",
+    "/admin/active-clients/:path*",
+    "/admin/location-pages/:path*",
+    "/admin/marketing/:path*",
+    "/admin/marketplace/:path*",
+    "/admin/support",
+    "/admin/support/:path*",
+    "/admin/iqwirecalculator",
+    "/admin/iqwirecalculator/:path*",
+    "/admin/iqmotortrack",
+    "/admin/iqmotortrack/:path*",
+    "/admin/subscription-plans",
+    "/admin/subscription-plans/:path*",
+    "/dashboard",
+    "/dashboard/:path*",
+    "/dashboards",
+    "/dashboards/:path*",
+    "/api/dashboard/:path*",
+    "/api/admin/:path*",
+  ],
+};
