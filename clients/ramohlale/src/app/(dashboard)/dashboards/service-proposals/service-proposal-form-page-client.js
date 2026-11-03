@@ -18,7 +18,7 @@ import { saveSimpleServiceProposal } from "@/lib/simple-portal-api";
 import { SIMPLE_PORTAL_ROOT_CLASS } from "@/lib/simple-screen-ui";
 
 /**
- * Full-page Service Proposal / Invoice editor for phones.
+ * Full-page Quotation / Invoice editor for phones.
  * Tablets/desktop that hit this URL are sent to the hub modal instead.
  * @param {{ recordId?: string }} props
  */

@@ -261,7 +261,7 @@ export default function SettingsControlledDropdownsPanel({ draft, setDraft }) {
               selectedKey === "other_status" ? (
                 <>
                   {" "}
-                  These are <span className="font-medium text-title">system filter cards</span> on Service Proposals /
+                  These are <span className="font-medium text-title">system filter cards</span> on Quotations /
                   Invoices (All, Amount Receivable, Tax Collected, Tax To Be Collected) and Customers (All, Customers,
                   Leads). Change display labels and tile colors only — they cannot be added or removed.
                 </>
@@ -287,7 +287,7 @@ export default function SettingsControlledDropdownsPanel({ draft, setDraft }) {
               <>
                 {" "}
                 Statuses that share the same <span className="font-medium text-title">Filter Group</span> appear as one
-                summary filter card on Service Proposals.{" "}
+                summary filter card on Quotations.{" "}
                 <span className="font-medium text-title">Filter Group colors</span> style those cards (shared across
                 statuses in the group; if unset, the lowest-Sort member&apos;s tile colors are used).{" "}
                 <span className="font-medium text-title">Sort</span> controls status column order in the table.

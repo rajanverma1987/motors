@@ -70,7 +70,7 @@ function boolChecked(v) {
 
 /**
  * AC Disassembly tab — layout aligned to documents/Disassembly.png.
- * Status checkboxes mirror Service Proposal job Status dropdown (two-way via props).
+ * Status checkboxes mirror Quotation job Status dropdown (two-way via props).
  */
 export default function SimpleAcDisassemblyFields({
   values = {},

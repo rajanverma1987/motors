@@ -14,7 +14,7 @@ import {
 
 /** Bottom bar primary destinations. Drawer opens from the top hamburger. */
 export const SIMPLE_PHONE_BOTTOM_TABS = [
-  { id: SIMPLE_TAB_SERVICE_PROPOSALS, label: "Proposals" },
+  { id: SIMPLE_TAB_SERVICE_PROPOSALS, label: "Quotations" },
   { id: SIMPLE_TAB_INVOICES, label: "Invoices" },
   { id: SIMPLE_TAB_EXPENSES, label: "Expenses" },
   { id: SIMPLE_TAB_PURCHASE_ORDERS, label: "Purchases" },
@@ -37,7 +37,7 @@ export const SIMPLE_PHONE_TAB_TITLES = {
   [SIMPLE_TAB_DASHBOARD]: "Dashboard",
   [SIMPLE_TAB_JOB_BOARD]: "Job board",
   [SIMPLE_TAB_CUSTOMERS]: "Customers",
-  [SIMPLE_TAB_SERVICE_PROPOSALS]: "Service Proposals",
+  [SIMPLE_TAB_SERVICE_PROPOSALS]: "Quotations",
   [SIMPLE_TAB_INVOICES]: "Invoices / Receivables",
   [SIMPLE_TAB_EXPENSES]: "Expenses",
   [SIMPLE_TAB_PURCHASE_ORDERS]: "Purchase / Payable",

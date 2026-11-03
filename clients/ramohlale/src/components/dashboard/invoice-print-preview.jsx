@@ -129,14 +129,14 @@ export default function InvoicePrintPreview({
       </div>
 
       <section className="mb-2">
-        <h2 className={sectionLabel}>Proposal Info</h2>
+        <h2 className={sectionLabel}>Quotation Info</h2>
         <dl className="grid gap-x-3 gap-y-1 text-xs sm:grid-cols-2 lg:grid-cols-4">
           <div>
             <dt className={infoFieldLabel}>{SERVICE_PROPOSAL_DOCUMENT_TITLE}#</dt>
             <dd className="text-neutral-900">{q.rfqNumber || "—"}</dd>
           </div>
           <div>
-            <dt className={infoFieldLabel}>Proposal Sent Date</dt>
+            <dt className={infoFieldLabel}>Quotation Sent Date</dt>
             <dd className="text-neutral-900">{formatDate(q.proposalSubmitDate || q.date)}</dd>
           </div>
           <div>
@@ -144,7 +144,7 @@ export default function InvoicePrintPreview({
             <dd className="text-neutral-900">{q.preparedByDisplay || q.preparedBy || "—"}</dd>
           </div>
           <div>
-            <dt className={infoFieldLabel}>Proposal Approved By</dt>
+            <dt className={infoFieldLabel}>Quotation Approved By</dt>
             <dd className="text-neutral-900">
               {q.proposalApprovedByDisplay || q.proposalApprovedBy || "—"}
             </dd>

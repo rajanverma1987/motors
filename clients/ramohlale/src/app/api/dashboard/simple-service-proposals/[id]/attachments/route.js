@@ -46,7 +46,7 @@ function resolveOwnedFilePath(url, ownerKey, recordId) {
   return absFile;
 }
 
-/** Upload an attachment for a saved Simple service proposal record. */
+/** Upload an attachment for a saved Simple quotation record. */
 export async function POST(request, context) {
   const { allowed } = await checkRateLimit(request, "simple-sp-upload", 30);
   if (!allowed) {
@@ -95,7 +95,7 @@ export async function POST(request, context) {
       const email = user.email.trim().toLowerCase();
       const doc = await SimpleServiceProposal.findOne({ _id: recordId, createdByEmail: email });
       if (!doc) {
-        return NextResponse.json({ error: "Service proposal not found" }, { status: 404 });
+        return NextResponse.json({ error: "Quotation not found" }, { status: 404 });
       }
       const existing = Array.isArray(doc.attachments) ? doc.attachments : [];
       doc.set("attachments", [...existing, attachment]);
@@ -110,12 +110,12 @@ export async function POST(request, context) {
       maxAttachments: MAX_ATTACHMENTS_HINT,
     });
   } catch (err) {
-    console.error("Simple service proposal upload error:", err);
+    console.error("Simple quotation upload error:", err);
     return NextResponse.json({ error: err.message || "Upload failed" }, { status: 500 });
   }
 }
 
-/** Delete an attachment file for a saved Simple service proposal record. */
+/** Delete an attachment file for a saved Simple quotation record. */
 export async function DELETE(request, context) {
   const { allowed } = await checkRateLimit(request, "simple-sp-delete-attachment", 60);
   if (!allowed) {
@@ -166,7 +166,7 @@ export async function DELETE(request, context) {
 
     return NextResponse.json({ ok: true, item });
   } catch (err) {
-    console.error("Simple service proposal attachment delete error:", err);
+    console.error("Simple quotation attachment delete error:", err);
     return NextResponse.json({ error: err.message || "Delete failed" }, { status: 500 });
   }
 }

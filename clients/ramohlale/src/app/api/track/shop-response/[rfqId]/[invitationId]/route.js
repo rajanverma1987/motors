@@ -155,7 +155,7 @@ export async function GET(request, context) {
   }
 }
 
-/** Submit or revise a proposal, or decline to quote. */
+/** Submit or revise a quotation, or decline to quote. */
 export async function POST(request, context) {
   const { allowed } = await checkRateLimit(request, "track-shop-response-post", 20);
   if (!allowed) return NextResponse.json({ error: "Too many requests." }, { status: 429 });
@@ -166,7 +166,7 @@ export async function POST(request, context) {
 
     if (String(rfq.status) !== "open") {
       return NextResponse.json(
-        { error: "This request is no longer open for proposals." },
+        { error: "This request is no longer open for quotations." },
         { status: 409 }
       );
     }

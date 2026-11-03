@@ -193,7 +193,7 @@ function activityRowAmount(row) {
 
 /**
  * Full customer details modal — profile + invoices/quotes activity.
- * @param {"classic"|"simple"} [portal] — Simple opens full Service Proposal form for RFQ# / invoices.
+ * @param {"classic"|"simple"} [portal] — Simple opens full Quotation form for RFQ# / invoices.
  */
 export default function CustomerViewModal({
   open,
@@ -505,7 +505,7 @@ export default function CustomerViewModal({
 
   /**
    * Navigate within the right-side table as currently filtered/sorted.
-   * Status chips (Draft, Proposal Submitted, …) scope Service Proposal prev/next.
+   * Status chips (Draft, Proposal Submitted, …) scope Quotation prev/next.
    */
   const clientRecordNavigation = useMemo(() => {
     const navRows = displayedActivityRows;
@@ -781,7 +781,7 @@ export default function CustomerViewModal({
                                           isInvoice
                                             ? canViewFinancials ? "Open invoice" : "Restricted"
                                             : isSimple
-                                              ? "Open service proposal"
+                                              ? "Open quotation"
                                               : "Open RFQ"
                                         }
                                       >

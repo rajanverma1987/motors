@@ -108,11 +108,11 @@ export default function TrackShopResponseClient({ rfqId, invitationId }) {
       });
       setDone(
         data.version > 1
-          ? "Your revised proposal was sent to the plant."
-          : "Your proposal was sent to the plant."
+          ? "Your revised quotation was sent to the plant."
+          : "Your quotation was sent to the plant."
       );
     } catch (err) {
-      toast.error(err.message || "Could not send your proposal.");
+      toast.error(err.message || "Could not send your quotation.");
     } finally {
       setBusy(false);
     }
@@ -219,7 +219,7 @@ export default function TrackShopResponseClient({ rfqId, invitationId }) {
         <div className="rounded-xl border border-warning/40 bg-warning/10 p-3 text-sm text-title">
           {rfq.awardedElsewhere
             ? "This request has been awarded to another shop. Thank you for your time."
-            : "This request is closed, so no further proposals can be sent."}
+            : "This request is closed, so no further quotations can be sent."}
         </div>
       ) : null}
 
@@ -361,7 +361,7 @@ export default function TrackShopResponseClient({ rfqId, invitationId }) {
                 mode === "propose" ? "bg-primary text-white" : "text-secondary"
               }`}
             >
-              Send a proposal
+              Send a quotation
             </button>
             <button
               type="button"
@@ -375,7 +375,7 @@ export default function TrackShopResponseClient({ rfqId, invitationId }) {
           </div>
 
           {mode === "propose" ? (
-            <TrackCard title={rfq.response ? "Revise your proposal" : "Your proposal"}>
+            <TrackCard title={rfq.response ? "Revise your quotation" : "Your quotation"}>
               {rfq.response ? (
                 <p className="mb-3 text-xs text-secondary">
                   You already sent version {rfq.response.version} at{" "}
@@ -482,7 +482,7 @@ export default function TrackShopResponseClient({ rfqId, invitationId }) {
                 </p>
                 <div className="sm:col-span-2">
                   <Button type="submit" form="track-shop-proposal" disabled={busy} className="w-full">
-                    {busy ? "Sending…" : "Send proposal to the customer"}
+                    {busy ? "Sending…" : "Send quotation to the customer"}
                   </Button>
                 </div>
               </Form>

@@ -197,7 +197,7 @@ export async function DELETE(request, context) {
       return NextResponse.json({ error: owned.error }, { status: owned.status });
     }
     owned.doc.voidedAt = new Date();
-    owned.doc.voidReason = "Deleted from proposal";
+    owned.doc.voidReason = "Deleted from quotation";
     await owned.doc.save();
     return NextResponse.json({ ok: true });
   } catch (err) {

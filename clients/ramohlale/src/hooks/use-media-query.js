@@ -37,7 +37,7 @@ export function useIsPhone() {
 }
 
 /**
- * Full-page form routes (Service Proposal, PO, etc.): handsets only.
+ * Full-page form routes (Quotation, PO, etc.): handsets only.
  * Below Tailwind `sm` (640px) so tablets keep desktop modal / web form UI in PWA.
  */
 export const PHONE_FORM_MAX_MQ = "(max-width: 639px)";

@@ -19,12 +19,12 @@ export const HOME_FAQS = [
   {
     question: "Can office staff run the shop from a phone or tablet?",
     answer:
-      "Yes. The Simple dashboard is built for phone and tablet and can be installed as a Progressive Web App from the browser. On phones you get bottom navigation for proposals, invoices, purchases, and Master Data Search, with full-page forms for touch. Tablets keep the full web form layout. Proposals, job POs, inventory, reports, and calculators stay in the same system as the desktop.",
+      "Yes. The Simple dashboard is built for phone and tablet and can be installed as a Progressive Web App from the browser. On phones you get bottom navigation for quotations, invoices, purchases, and Master Data Search, with full-page forms for touch. Tablets keep the full web form layout. Proposals, job POs, inventory, reports, and calculators stay in the same system as the desktop.",
   },
   {
     question: "What is Master Data Search?",
     answer:
-      "Master Data Search finds past jobs by customer fields or datasheet criteria (manufacturer, HP, volts, frame, and more) using wildcards. Results open the matching service proposal so you can reuse motor history instead of starting from a blank form.",
+      "Master Data Search finds past jobs by customer fields or datasheet criteria (manufacturer, HP, volts, frame, and more) using wildcards. Results open the matching quotation so you can reuse motor history instead of starting from a blank form.",
   },
   {
     question: "Can I track employee punches and payroll?",

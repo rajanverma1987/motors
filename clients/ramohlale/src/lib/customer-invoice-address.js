@@ -14,7 +14,7 @@ function formatPostalAddress(source, keys) {
 }
 
 /**
- * "To" block on invoices / service proposals: client name line(s) + address from Customer record.
+ * "To" block on invoices / quotations: client name line(s) + address from Customer record.
  * Uses billing address, then shipping if billing is empty.
  */
 export function customerInvoiceToBlock(customer) {

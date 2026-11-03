@@ -39,6 +39,8 @@ export const PREFERRED_CONTACT_METHOD_OPTIONS = [
   { value: "Text", label: "Text" },
 ];
 
+const DEFAULT_CUSTOMER_COUNTRY = "South Africa";
+
 export const INITIAL_CUSTOMER_FORM = {
   customerNumber: "",
   companyName: "",
@@ -57,12 +59,12 @@ export const INITIAL_CUSTOMER_FORM = {
   city: "",
   state: "",
   zipCode: "",
-  country: "United States",
+  country: DEFAULT_CUSTOMER_COUNTRY,
   shippingAddress: "",
   shippingCity: "",
   shippingState: "",
   shippingZipCode: "",
-  shippingCountry: "United States",
+  shippingCountry: DEFAULT_CUSTOMER_COUNTRY,
   additionalContacts: [],
   documents: [],
   notes: "",
@@ -147,12 +149,12 @@ export function customerApiToForm(data) {
     city: d.city ?? "",
     state: d.state ?? "",
     zipCode: d.zipCode ?? "",
-    country: d.country ?? "United States",
+    country: d.country ?? DEFAULT_CUSTOMER_COUNTRY,
     shippingAddress: d.shippingAddress ?? "",
     shippingCity: d.shippingCity ?? "",
     shippingState: d.shippingState ?? "",
     shippingZipCode: d.shippingZipCode ?? "",
-    shippingCountry: d.shippingCountry ?? "United States",
+    shippingCountry: d.shippingCountry ?? DEFAULT_CUSTOMER_COUNTRY,
     additionalContacts: Array.isArray(d.additionalContacts)
       ? d.additionalContacts.map((ac) => ({
           contactName: ac.contactName ?? "",
@@ -189,12 +191,12 @@ export function buildCustomerPayload(form) {
     city: f.city ?? "",
     state: f.state ?? "",
     zipCode: f.zipCode ?? "",
-    country: f.country ?? "United States",
+    country: f.country ?? DEFAULT_CUSTOMER_COUNTRY,
     shippingAddress: f.shippingAddress ?? "",
     shippingCity: f.shippingCity ?? "",
     shippingState: f.shippingState ?? "",
     shippingZipCode: f.shippingZipCode ?? "",
-    shippingCountry: f.shippingCountry ?? "United States",
+    shippingCountry: f.shippingCountry ?? DEFAULT_CUSTOMER_COUNTRY,
     additionalContacts: Array.isArray(f.additionalContacts) ? f.additionalContacts : [],
     documents: documentsForPayload(f.documents),
     notes: f.notes ?? "",

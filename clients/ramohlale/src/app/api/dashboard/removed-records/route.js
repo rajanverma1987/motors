@@ -16,7 +16,7 @@ import {
 function kindLabel(kind) {
   if (kind === "invoice") return "Invoice";
   if (kind === "purchaseOrder") return "Purchase order";
-  return "Proposal";
+  return "Quotation";
 }
 
 function proposalListKind(doc, merged) {
@@ -152,7 +152,7 @@ export async function POST(request) {
       ? String(doc.vendorName || "").trim()
       : String(doc.companyName || "").trim();
     const recordKind = isPo ? "purchaseOrder" : "proposal";
-    const label = isPo ? "Purchase order" : kind === "invoice" ? "Invoice" : "Proposal";
+    const label = isPo ? "Purchase order" : kind === "invoice" ? "Invoice" : "Quotation";
     await recordActivity({
       ownerEmail: email,
       ...actor,

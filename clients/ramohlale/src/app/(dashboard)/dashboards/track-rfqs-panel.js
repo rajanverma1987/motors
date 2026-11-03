@@ -98,7 +98,7 @@ function Row({ label, value }) {
 
 /**
  * §9.4 / §14 - the shop's view of 3PhaseTrack Motor Down RFQs, with Convert to
- * Service Proposal, Decline to Quote and Send Proposal to 3PhaseTrack.
+ * Quotation, Decline to Quote and Send Quotation to 3PhaseTrack.
  * When `embedded`, renders without the outer Simple screen shell (for Customers → Leads).
  */
 export default function TrackRfqsPanel({ embedded = false }) {
@@ -176,8 +176,8 @@ export default function TrackRfqsPanel({ embedded = false }) {
       setCustomerChoices(null);
       toast.success(
         data.existing
-          ? "Opening the proposal that already exists for this request."
-          : `Service proposal ${data.item?.documentNumber || ""} created.`
+          ? "Opening the quotation that already exists for this request."
+          : `Quotation ${data.item?.documentNumber || ""} created.`
       );
       await openDetail(detail.lead.id);
       await load();
@@ -246,8 +246,8 @@ export default function TrackRfqsPanel({ embedded = false }) {
       if (!res.ok) throw new Error(data?.error || "Could not send");
       toast.success(
         data.version > 1
-          ? `Revised proposal sent to the customer, version ${data.version}.`
-          : "Proposal sent to the customer."
+          ? `Revised quotation sent to the customer, version ${data.version}.`
+          : "Quotation sent to the customer."
       );
       setSendOpen(false);
       setSendForm(emptySendForm());
@@ -384,7 +384,7 @@ export default function TrackRfqsPanel({ embedded = false }) {
                   </Button>
                   <Button type="button" size="sm" disabled={busy} onClick={() => convert()}>
                     <FiFileText className="h-4 w-4 shrink-0" aria-hidden />
-                    {busy ? "Working…" : "Convert to Service Proposal"}
+                    {busy ? "Working…" : "Convert to Quotation"}
                   </Button>
                 </>
               ) : null}
@@ -401,12 +401,12 @@ export default function TrackRfqsPanel({ embedded = false }) {
                       )
                     }
                   >
-                    Open Service Proposal
+                    Open Quotation
                   </Button>
                   {canAct ? (
                     <Button type="button" size="sm" onClick={() => setSendOpen(true)}>
                       <FiSend className="h-4 w-4 shrink-0" aria-hidden />
-                      {rfqState?.responseVersion ? "Send revised proposal" : "Send Proposal to 3PhaseTrack"}
+                      {rfqState?.responseVersion ? "Send revised quotation" : "Send Quotation to 3PhaseTrack"}
                     </Button>
                   ) : null}
                 </>
@@ -455,7 +455,7 @@ export default function TrackRfqsPanel({ embedded = false }) {
               ) : null}
               {rfqState?.responseVersion ? (
                 <Badge variant="primary" className="rounded-full px-2.5 py-0.5 text-xs">
-                  Proposal sent, version {rfqState.responseVersion}
+                  Quotation sent, version {rfqState.responseVersion}
                 </Badge>
               ) : null}
             </div>
@@ -611,13 +611,13 @@ export default function TrackRfqsPanel({ embedded = false }) {
 
             {lead.proposal ? (
               <section className="rounded-xl border border-border bg-card p-4">
-                <h3 className="mb-2 font-bold text-title">Linked Service Proposal</h3>
+                <h3 className="mb-2 font-bold text-title">Linked Quotation</h3>
                 <Row label="Document number" value={lead.proposal.documentNumber} />
                 <Row label="Record type" value={lead.proposal.recordType} />
                 <Row label="Status" value={lead.proposal.status} />
                 <Row label="Job status" value={lead.proposal.jobStatus} />
                 <p className="mt-2 text-xs text-secondary">
-                  Saving the proposal does not send anything to the customer. Use Send Proposal to
+                  Saving the quotation does not send anything to the customer. Use Send Quotation to
                   3PhaseTrack when you are ready.
                 </p>
               </section>
@@ -664,7 +664,7 @@ export default function TrackRfqsPanel({ embedded = false }) {
       <Modal
         open={sendOpen}
         onClose={() => setSendOpen(false)}
-        title="Send proposal to 3PhaseTrack"
+        title="Send quotation to 3PhaseTrack"
         size="lg"
         actions={
           <Button type="submit" form="track-send-form" size="sm" disabled={busy}>
@@ -776,7 +776,7 @@ export default function TrackRfqsPanel({ embedded = false }) {
               onChange={(e) => setSendForm((prev) => ({ ...prev, shareLineItems: e.target.checked }))}
             />
             <Checkbox
-              label="Share the attachments on this proposal"
+              label="Share the attachments on this quotation"
               checked={sendForm.shareAttachments}
               onChange={(e) => setSendForm((prev) => ({ ...prev, shareAttachments: e.target.checked }))}
             />

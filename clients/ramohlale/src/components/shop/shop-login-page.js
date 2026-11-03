@@ -183,7 +183,7 @@ export default function ShopLoginPage() {
           <ul className="mt-8 space-y-3.5 text-[0.95rem] text-[#d9d3cd]">
             <li className="flex gap-3">
               <span className="mt-2.5 h-1.5 w-1.5 shrink-0 rounded-full bg-[#c47a36]" aria-hidden />
-              Jobs, proposals, and purchase orders
+              Jobs, quotations, and purchase orders
             </li>
             <li className="flex gap-3">
               <span className="mt-2.5 h-1.5 w-1.5 shrink-0 rounded-full bg-[#c47a36]" aria-hidden />

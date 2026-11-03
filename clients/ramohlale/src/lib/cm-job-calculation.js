@@ -92,7 +92,7 @@ function normalizeResultContext(raw) {
 }
 
 /**
- * Snapshot stored on a service proposal so a CM Best Match can be reopened later.
+ * Snapshot stored on a quotation so a CM Best Match can be reopened later.
  * @param {unknown} raw
  */
 export function normalizeCmJobCalculation(raw) {

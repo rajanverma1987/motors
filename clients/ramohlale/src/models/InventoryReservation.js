@@ -5,7 +5,7 @@ const inventoryReservationSchema = new mongoose.Schema(
     createdByEmail: { type: String, required: true, trim: true },
     /** Classic Quote id (empty when reservation is for Simple portal). */
     quoteId: { type: String, required: false, default: "", trim: true },
-    /** Simple Service Proposal id (empty when reservation is for classic Quote). */
+    /** Simple Quotation id (empty when reservation is for classic Quote). */
     simpleServiceProposalId: { type: String, required: false, default: "", trim: true },
     workOrderId: { type: String, default: "", trim: true },
     /** Work order that triggered consumption (when status → consumed); may differ from workOrderId (first WO on quote). */

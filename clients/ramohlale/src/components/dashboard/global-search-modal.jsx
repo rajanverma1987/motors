@@ -88,7 +88,7 @@ export default function GlobalSearchModal({ open, onClose }) {
       <div className="flex flex-col gap-3">
         <p className="text-xs text-secondary">
           {isSimple
-            ? "Customers, leads, service proposals, invoices, purchase orders, inventory, vendors"
+            ? "Customers, leads, quotations, invoices, purchase orders, inventory, vendors"
             : "Leads, customers, motors, quotes, work orders, invoices, vendors, purchase orders"}
         </p>
         <div className="relative">

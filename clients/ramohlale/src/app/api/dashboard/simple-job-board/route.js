@@ -7,7 +7,7 @@ import { mergeUserSettings } from "@/lib/user-settings";
 import { simpleSpToBoardJob } from "@/lib/simple-job-board";
 import { notRemovedClause } from "@/lib/removed-records";
 
-/** Authenticated Simple shop-floor board payload (JOB service proposals). */
+/** Authenticated Simple shop-floor board payload (JOB quotations). */
 export async function GET(request) {
   try {
     const user = await getPortalUserFromRequest(request);

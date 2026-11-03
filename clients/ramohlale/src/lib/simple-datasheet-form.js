@@ -1,4 +1,4 @@
-/** Simple portal AC / DC datasheet shapes (linked to a service proposal job). */
+/** Simple portal AC / DC datasheet shapes (linked to a quotation job). */
 
 import { todayISODate } from "@/lib/simple-service-proposal-form";
 import {
@@ -683,8 +683,8 @@ function proposalMotorIdentityPrefill(proposalForm) {
 }
 
 /**
- * Prefill datasheet from service proposal motor / header fields.
- * Always fills blank datasheet fields from the proposal (does not overwrite values already on the sheet).
+ * Prefill datasheet from quotation motor / header fields.
+ * Always fills blank datasheet fields from the quotation (does not overwrite values already on the sheet).
  * @param {Record<string, unknown>} proposalForm
  * @param {{ companyName?: string, technicianValue?: string, technicianLabel?: string }} [meta]
  */
@@ -781,7 +781,7 @@ export function cloneDatasheetForNewJob(sheet) {
 }
 
 /**
- * Force datasheet jobNumber to match the proposal document number.
+ * Force datasheet jobNumber to match the quotation document number.
  * @param {Record<string, unknown>|null|undefined} sheet
  * @param {string} documentNumber
  */

@@ -67,7 +67,7 @@ export default function QuotePrintSheetBody({ quote: q, fmt }) {
               {q.customerPo || "—"}
             </p>
             <p className="text-xs text-neutral-800">
-              <span className="font-semibold">Proposal Sent Date: </span>
+              <span className="font-semibold">Quotation Sent Date: </span>
               {formatDate(q.proposalSubmitDate || q.date)}
             </p>
           </div>
@@ -114,7 +114,7 @@ export default function QuotePrintSheetBody({ quote: q, fmt }) {
       </div>
 
       <section className="mb-2">
-        <h2 className={sectionLabel}>Proposal Info</h2>
+        <h2 className={sectionLabel}>Quotation Info</h2>
         <dl className="grid gap-x-4 gap-y-1 text-xs sm:grid-cols-2 lg:grid-cols-3">
           <div>
             <dt className={infoFieldLabel}>Prepared by</dt>
@@ -123,7 +123,7 @@ export default function QuotePrintSheetBody({ quote: q, fmt }) {
           <div>
             <dt className={infoFieldLabel}>Date Approved</dt>
             <dd className="text-neutral-900">{formatDate(q.proposalAcceptedDate)}</dd>
-            <dt className={`${infoFieldLabel} mt-1.5`}>Proposal Approved By</dt>
+            <dt className={`${infoFieldLabel} mt-1.5`}>Quotation Approved By</dt>
             <dd className="text-neutral-900">
               {q.proposalApprovedByDisplay || q.proposalApprovedBy || "—"}
             </dd>
@@ -217,7 +217,7 @@ export default function QuotePrintSheetBody({ quote: q, fmt }) {
               <td className="px-2 py-1.5 text-right text-neutral-900">{q.partsTotal ? format(q.partsTotal) : "—"}</td>
             </tr>
             <tr className="border-b border-neutral-200">
-              <td className="px-2 py-1.5 text-neutral-800">Service proposal subtotal</td>
+              <td className="px-2 py-1.5 text-neutral-800">Quotation subtotal</td>
               <td className="px-2 py-1.5 text-right text-neutral-900">{format(totals.subtotal)}</td>
             </tr>
             <tr className="border-b border-neutral-200">

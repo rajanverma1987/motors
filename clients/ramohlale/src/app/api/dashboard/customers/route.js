@@ -114,7 +114,7 @@ export async function GET(request) {
         shippingCity: c.shippingCity ?? "",
         shippingState: c.shippingState ?? "",
         shippingZipCode: c.shippingZipCode ?? "",
-        shippingCountry: c.shippingCountry ?? "United States",
+        shippingCountry: c.shippingCountry ?? "South Africa",
         additionalContacts,
         ein: c.ein ?? "",
         creditLimit: c.creditLimit ?? "",

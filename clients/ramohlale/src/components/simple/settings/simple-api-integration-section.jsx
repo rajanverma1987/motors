@@ -324,7 +324,7 @@ export default function SimpleApiIntegrationSection() {
       <div className="border-b border-border pb-4">
         <h2 className="text-lg font-semibold text-title">API Integration</h2>
         <p className="mt-1 text-sm text-secondary">
-          Secret keys and webhooks for Simple portal data (service proposals, purchase orders, customers, and more).
+          Secret keys and webhooks for Simple portal data (quotations, purchase orders, customers, and more).
         </p>
         <p className="mt-2 text-xs text-secondary">
           Collections: <code className="text-title">{INTEGRATION_COLLECTION_NAMES.join(", ")}</code>

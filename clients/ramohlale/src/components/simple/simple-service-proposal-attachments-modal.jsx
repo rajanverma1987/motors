@@ -29,7 +29,7 @@ function FieldRow({ label, labelWidth = "7.5rem", children }) {
 }
 
 /**
- * Compact attach-document dialog for a saved Simple service proposal / invoice.
+ * Compact attach-document dialog for a saved Simple quotation / invoice.
  * @param {{
  *   open: boolean,
  *   onClose: () => void,
@@ -226,7 +226,7 @@ export default function SimpleServiceProposalAttachmentsModal({
           />
         </FieldRow>
         {!recordId ? (
-          <p className="text-xs text-secondary">Save the service proposal first, then attach documents.</p>
+          <p className="text-xs text-secondary">Save the quotation first, then attach documents.</p>
         ) : null}
         {list.length > 0 ? (
           <div className="border-t border-border pt-2">

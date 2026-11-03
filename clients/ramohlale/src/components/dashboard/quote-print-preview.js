@@ -43,7 +43,7 @@ export default function QuotePrintPreview({ quoteId, open, onClose, standalone =
     if (!active) return;
     if (!canViewFinancials) {
       setLoading(false);
-      setError("Printing proposals is restricted for your employee role.");
+      setError("Printing quotations is restricted for your employee role.");
       setQuote(null);
       return;
     }

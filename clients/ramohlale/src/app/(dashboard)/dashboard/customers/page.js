@@ -92,12 +92,12 @@ const INITIAL_FORM = {
   city: "",
   state: "",
   zipCode: "",
-  country: "United States",
+  country: "South Africa",
   shippingAddress: "",
   shippingCity: "",
   shippingState: "",
   shippingZipCode: "",
-  shippingCountry: "United States",
+  shippingCountry: "South Africa",
   additionalContacts: [],
   notes: "",
   ein: "",
@@ -118,12 +118,12 @@ function buildCustomerPayload(form) {
     city: f.city ?? "",
     state: f.state ?? "",
     zipCode: f.zipCode ?? "",
-    country: f.country ?? "United States",
+    country: f.country ?? "South Africa",
     shippingAddress: f.shippingAddress ?? "",
     shippingCity: f.shippingCity ?? "",
     shippingState: f.shippingState ?? "",
     shippingZipCode: f.shippingZipCode ?? "",
-    shippingCountry: f.shippingCountry ?? "United States",
+    shippingCountry: f.shippingCountry ?? "South Africa",
     additionalContacts: Array.isArray(f.additionalContacts) ? f.additionalContacts : [],
     notes: f.notes ?? "",
     ein: f.ein ?? "",
@@ -849,11 +849,11 @@ export default function DashboardCustomersPage() {
                 placeholder="email@example.com"
               />
               <Input
-                label="EIN"
+                label="VAT Number"
                 name="ein"
                 value={form.ein}
                 onChange={(e) => setForm((f) => ({ ...f, ein: e.target.value }))}
-                placeholder="Employer Identification Number"
+                placeholder="VAT number"
               />
               <Input
                 label="Credit limit"
@@ -864,7 +864,7 @@ export default function DashboardCustomersPage() {
                 placeholder={canViewFinancials ? "e.g. 10000" : "Restricted"}
               />
               <Select
-                label="Tax exempted"
+                label="VAT exempt"
                 value={form.taxExempt ? "yes" : "no"}
                 onChange={(e) =>
                   setForm((f) => ({
@@ -880,7 +880,7 @@ export default function DashboardCustomersPage() {
                 searchable={false}
               />
               <Input
-                label="Tax %"
+                label="VAT %"
                 name="taxPercent"
                 type="number"
                 min="0"
@@ -955,11 +955,11 @@ export default function DashboardCustomersPage() {
                 placeholder="City"
               />
               <Input
-                label="State"
+                label="Province"
                 name="state"
                 value={form.state}
                 onChange={(e) => setForm((f) => ({ ...f, state: e.target.value }))}
-                placeholder="State or province"
+                placeholder="Province"
               />
               <Input
                 label="Zip code"
@@ -973,7 +973,7 @@ export default function DashboardCustomersPage() {
                 name="country"
                 value={form.country}
                 onChange={(e) => setForm((f) => ({ ...f, country: e.target.value }))}
-                placeholder="United States"
+                placeholder="South Africa"
               />
             </div>
           </FormSection>
@@ -1003,11 +1003,11 @@ export default function DashboardCustomersPage() {
                 placeholder="City"
               />
               <Input
-                label="State"
+                label="Province"
                 name="shippingState"
                 value={form.shippingState}
                 onChange={(e) => setForm((f) => ({ ...f, shippingState: e.target.value }))}
-                placeholder="State or province"
+                placeholder="Province"
               />
               <Input
                 label="Zip code"
@@ -1021,7 +1021,7 @@ export default function DashboardCustomersPage() {
                 name="shippingCountry"
                 value={form.shippingCountry}
                 onChange={(e) => setForm((f) => ({ ...f, shippingCountry: e.target.value }))}
-                placeholder="United States"
+                placeholder="South Africa"
               />
             </div>
           </FormSection>

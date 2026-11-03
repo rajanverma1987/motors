@@ -357,7 +357,7 @@ export default function PortalCustomerContent({ data }) {
         children: (
           <div>
             <p className="mb-3 text-sm text-secondary">
-              Open service proposals and jobs for this account.
+              Open quotations and jobs for this account.
             </p>
             {repairsInProgress.length === 0 ? (
               <EmptySection message="No active repairs." />
@@ -385,7 +385,7 @@ export default function PortalCustomerContent({ data }) {
         ),
         children: (
           <div>
-            <p className="mb-3 text-sm text-secondary">Closed proposals and past work.</p>
+            <p className="mb-3 text-sm text-secondary">Closed quotations and past work.</p>
             {repairHistory.length === 0 ? (
               <EmptySection message="No closed repairs on file." />
             ) : (
@@ -440,7 +440,7 @@ export default function PortalCustomerContent({ data }) {
         ),
         children: (
           <div>
-            <p className="mb-3 text-sm text-secondary">Motors from your service proposals.</p>
+            <p className="mb-3 text-sm text-secondary">Motors from your quotations.</p>
             <MotorsPanel motors={motors} />
           </div>
         ),

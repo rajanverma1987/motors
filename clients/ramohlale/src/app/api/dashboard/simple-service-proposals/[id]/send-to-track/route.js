@@ -25,7 +25,7 @@ function num(value) {
 }
 
 /**
- * §9.6 - explicit Send Proposal to 3PhaseTrack. Saving a proposal never sends
+ * §9.6 - explicit Send Quotation to 3PhaseTrack. Saving a quotation never sends
  * anything; this endpoint is the only path, and it takes the share choices the
  * shop confirmed in the share-selection step.
  */
@@ -36,17 +36,17 @@ export async function POST(request, context) {
     const email = user.email.trim().toLowerCase();
     const id = await resolveId(context);
     if (!mongoose.Types.ObjectId.isValid(id)) {
-      return NextResponse.json({ error: "Proposal not found" }, { status: 404 });
+      return NextResponse.json({ error: "Quotation not found" }, { status: 404 });
     }
 
     await connectDB();
     const proposal = await SimpleServiceProposal.findOne({ _id: id, createdByEmail: email }).lean();
-    if (!proposal) return NextResponse.json({ error: "Proposal not found" }, { status: 404 });
+    if (!proposal) return NextResponse.json({ error: "Quotation not found" }, { status: 404 });
 
     const linked = trackLinkedProposalContext(proposal);
     if (!linked) {
       return NextResponse.json(
-        { error: "This proposal is not linked to an 3PhaseTrack request." },
+        { error: "This quotation is not linked to an 3PhaseTrack request." },
         { status: 400 }
       );
     }
@@ -135,7 +135,7 @@ export async function POST(request, context) {
 
     return NextResponse.json({ ok: true, version: Number(result?.version) || 1 });
   } catch (err) {
-    console.error("Send proposal to 3PhaseTrack error:", err);
+    console.error("Send quotation to 3PhaseTrack error:", err);
     return NextResponse.json({ error: err.message || "Failed to send" }, { status: 500 });
   }
 }

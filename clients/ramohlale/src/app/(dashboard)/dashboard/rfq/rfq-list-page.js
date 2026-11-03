@@ -885,7 +885,7 @@ export default function DashboardRfqListPage({ embedded = false, actionsRef = nu
 
   const handlePrintQuote = useCallback((quoteFromTable) => {
     if (!canViewFinancials) {
-      toast.error("Printing proposals is restricted for your employee role.");
+      toast.error("Printing quotations is restricted for your employee role.");
       return;
     }
     const q = quoteFromTable ?? viewingQuote;
@@ -1761,7 +1761,7 @@ export default function DashboardRfqListPage({ embedded = false, actionsRef = nu
         ) : viewingQuote ? (
           <div className="space-y-6">
             <div>
-              <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-secondary">Service proposal info</h3>
+              <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-secondary">Quotation info</h3>
               <dl className="grid gap-2 text-sm sm:grid-cols-2 lg:grid-cols-4">
                 <div><dt className="text-secondary">{viewJobIdLabel}</dt><dd className="text-title font-medium">{viewingQuote.rfqNumber || "—"}</dd></div>
                 <div><dt className="text-secondary">Customer PO#</dt><dd className="text-title">{viewingQuote.customerPo || "—"}</dd></div>
@@ -1819,7 +1819,7 @@ export default function DashboardRfqListPage({ embedded = false, actionsRef = nu
                 <div><dt className="text-secondary">Other Cost total</dt><dd className="text-title">{viewingQuote.partsTotal ? fmt(viewingQuote.partsTotal) : "—"}</dd></div>
                 <div><dt className="text-secondary">Tax %</dt><dd className="text-title">{normalizeTaxExempt(viewingQuote.customerTaxExempt) ? "0" : normalizeTaxPercent(viewingQuote.customerTaxPercent)}</dd></div>
                 <div><dt className="text-secondary">Tax amount</dt><dd className="text-title">{fmt(computeTotalsFromLaborAndParts({ laborTotal: viewingQuote.laborTotal, partsTotal: viewingQuote.partsTotal, taxExempt: viewingQuote.customerTaxExempt, taxPercent: viewingQuote.customerTaxPercent }).taxAmount)}</dd></div>
-                <div><dt className="text-secondary">Service proposal total</dt><dd className="font-semibold text-title">{fmt(computeTotalsFromLaborAndParts({ laborTotal: viewingQuote.laborTotal, partsTotal: viewingQuote.partsTotal, taxExempt: viewingQuote.customerTaxExempt, taxPercent: viewingQuote.customerTaxPercent }).grandTotal)}</dd></div>
+                <div><dt className="text-secondary">Quotation total</dt><dd className="font-semibold text-title">{fmt(computeTotalsFromLaborAndParts({ laborTotal: viewingQuote.laborTotal, partsTotal: viewingQuote.partsTotal, taxExempt: viewingQuote.customerTaxExempt, taxPercent: viewingQuote.customerTaxPercent }).grandTotal)}</dd></div>
                 <div><dt className="text-secondary">Est. completion</dt><dd className="text-title">{viewingQuote.estimatedCompletion || "—"}</dd></div>
               </dl>
             </div>
@@ -1874,7 +1874,7 @@ export default function DashboardRfqListPage({ embedded = false, actionsRef = nu
               </div>
             ) : null}
             <div>
-              <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-secondary">Service proposal notes</h3>
+              <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-secondary">Quotation notes</h3>
               <dl className="space-y-3 text-sm">
                 <div>
                   <dt className="text-xs font-medium uppercase tracking-wide text-secondary">Notes / terms</dt>
@@ -1949,7 +1949,7 @@ export default function DashboardRfqListPage({ embedded = false, actionsRef = nu
             readOnly
             aria-hidden
           />
-          <FormSection title="Service proposal info">
+          <FormSection title="Quotation info">
             <div className="grid grid-cols-1 gap-x-4 gap-y-2 sm:grid-cols-2 lg:grid-cols-4">
               <Input
                 label={editFormJobIdLabel}
@@ -2158,7 +2158,7 @@ export default function DashboardRfqListPage({ embedded = false, actionsRef = nu
                     <td className="px-3 py-2 text-right text-title">{fmt(partsTotalSum)}</td>
                   </tr>
                   <tr className="border-b border-border">
-                    <td className="px-3 py-2 text-secondary">Service proposal total</td>
+                    <td className="px-3 py-2 text-secondary">Quotation total</td>
                     <td className="px-3 py-2 text-right text-title">{fmt(serviceProposalTotal)}</td>
                   </tr>
                   <tr className="border-b border-border">
@@ -2192,7 +2192,7 @@ export default function DashboardRfqListPage({ embedded = false, actionsRef = nu
                 value={form.customerNotes}
                 onChange={(e) => setForm((f) => ({ ...f, customerNotes: e.target.value }))}
                 rows={4}
-                placeholder="Shown on the proposal and documents sent to the customer…"
+                placeholder="Shown on the quotation and documents sent to the customer…"
                 textareaClassName="min-h-[7.5rem] w-full min-w-0"
               />
             </div>

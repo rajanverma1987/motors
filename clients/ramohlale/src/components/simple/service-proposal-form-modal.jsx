@@ -352,7 +352,7 @@ function LineItemsTable({
               {isOther ? <th className={`w-16 ${LINE_HEAD}`}>Qty</th> : null}
               {isOther ? <th className={`w-16 ${LINE_HEAD}`}>UOM</th> : null}
               {showLineTax ? (
-                <th className={`w-16 text-center ${LINE_HEAD}`} title="Apply the proposal tax percent">
+                <th className={`w-16 text-center ${LINE_HEAD}`} title="Apply the quotation tax percent">
                   Taxable?
                 </th>
               ) : null}
@@ -424,7 +424,7 @@ function LineItemsTable({
                         onChange={(e) => updateLine(line.id, { taxable: e.target.checked })}
                         className="h-4 w-4 accent-primary disabled:cursor-not-allowed"
                         aria-label="Taxable"
-                        title="Tax this item at the same tax percent as the proposal breakdown"
+                        title="Tax this item at the same tax percent as the quotation breakdown"
                       />
                     </td>
                   ) : null}
@@ -467,7 +467,7 @@ function LineItemsTable({
                                 className={`${CELL_INPUT} min-w-0 flex-1 text-right tabular-nums`}
                                 placeholder="0"
                                 aria-label="Markup percent"
-                                title="Markup for this proposal only. Not shown on customer print."
+                                title="Markup for this quotation only. Not shown on customer print."
                               />
                             )}
                           </td>
@@ -582,7 +582,7 @@ function LineItemsTable({
 }
 
 /**
- * Create/edit Service Proposal modal — dense layout matching legacy screenshot.
+ * Create/edit Quotation modal — dense layout matching legacy screenshot.
  */
 export default function ServiceProposalFormModal({
   open,
@@ -884,7 +884,7 @@ export default function ServiceProposalFormModal({
   /**
    * Prepared By is free text. If empty, default to the logged-in user once.
    * If a saved employee id is present, show the name. Never overwrite a typed value with another viewer id.
-   * If Proposal Approved By was stored as an id, show the name.
+   * If Quotation Approved By was stored as an id, show the name.
    */
   useEffect(() => {
     if (!open || !employeesWithAdmin.length) return;
@@ -915,7 +915,7 @@ export default function ServiceProposalFormModal({
     });
   }, [open, employeesWithAdmin, user]);
 
-  /** §14.5 - linked-record context for proposals converted from an 3PhaseTrack RFQ. */
+  /** §14.5 - linked-record context for quotations converted from an 3PhaseTrack RFQ. */
   const trackLink = useMemo(() => {
     if (String(form.sourceSystem || "") !== "3PhaseTrack") return null;
     const version = Number(form.trackProposalVersion) || 0;
@@ -928,7 +928,7 @@ export default function ServiceProposalFormModal({
       sharedPowerType: String(form.trackDatasheetSharedPowerType || "").trim(),
       machineType: String(form.motorPower || "").trim(),
       sentLabel: version
-        ? `Proposal sent to the plant (version ${version})`
+        ? `Quotation sent to the plant (version ${version})`
         : "Not sent to the plant yet",
     };
   }, [
@@ -1325,13 +1325,13 @@ export default function ServiceProposalFormModal({
       }));
       const message =
         successMessage ||
-        (recordType === RECORD_TYPE_INVOICE ? "Invoice saved." : "Service proposal saved.");
+        (recordType === RECORD_TYPE_INVOICE ? "Invoice saved." : "Quotation saved.");
       if (!silent) {
         await alert({ title: "Saved", message });
       }
       return merged;
     } catch (err) {
-      await alert({ title: "Error", message: err?.message || "Failed to save service proposal", variant: "danger" });
+      await alert({ title: "Error", message: err?.message || "Failed to save quotation", variant: "danger" });
       return null;
     } finally {
       setSaving(false);
@@ -1535,7 +1535,7 @@ export default function ServiceProposalFormModal({
       setPrintStartSend(false);
       await alert({
         title: "Access Restricted",
-        message: "Printing proposals and invoices is restricted for your employee role.",
+        message: "Printing quotations and invoices is restricted for your employee role.",
         variant: "danger",
       });
       return;
@@ -1638,7 +1638,7 @@ export default function ServiceProposalFormModal({
       successMessage: isReceiving ? "Motor receiving saved." : "Motor shipping saved.",
     });
     if (!saved) {
-      throw new Error("Failed to save service proposal");
+      throw new Error("Failed to save quotation");
     }
   };
 
@@ -1674,7 +1674,7 @@ export default function ServiceProposalFormModal({
     >
       <div className="min-w-0">
         <label className={`${FIELD_LABEL} mb-0.5 block w-full !text-left`} htmlFor="sp-proposal-type">
-          Proposal Type
+          Quotation Type
         </label>
         <SimpleSelect
           id="sp-proposal-type"
@@ -1686,12 +1686,12 @@ export default function ServiceProposalFormModal({
             if (nextType === PROPOSAL_TYPE_SALES) setSalesMotorOpen(false);
           }}
           placeholder="Select…"
-          aria-label="Proposal Type"
+          aria-label="Quotation Type"
         />
       </div>
       <div className="min-w-0">
         <label className={`${FIELD_LABEL} mb-0.5 block w-full !text-left`} htmlFor="sp-proposal-status">
-          {form.recordType === RECORD_TYPE_INVOICE ? "Invoice Status" : "Proposal Status"}
+          {form.recordType === RECORD_TYPE_INVOICE ? "Invoice Status" : "Quotation Status"}
         </label>
         <div
           className={`min-w-0 rounded-none border border-border ${
@@ -1719,7 +1719,7 @@ export default function ServiceProposalFormModal({
             searchable
             triggerClassName="w-full border-0 bg-transparent shadow-none ring-0 dark:bg-transparent !text-[inherit] [&>span]:!text-[inherit] [&>svg]:!text-[inherit]"
             aria-label={
-              form.recordType === RECORD_TYPE_INVOICE ? "Invoice Status" : "Proposal Status"
+              form.recordType === RECORD_TYPE_INVOICE ? "Invoice Status" : "Quotation Status"
             }
           />
         </div>
@@ -1976,7 +1976,7 @@ export default function ServiceProposalFormModal({
                 ) : null}
               </div>
               <p className="mt-1.5 text-xs text-secondary">
-                Saving keeps this proposal private. Use Customers → Leads to send it to{" "}
+                Saving keeps this quotation private. Use Customers → Leads to send it to{" "}
                 {trackLink.facilityName || "the plant"}. The serial number belongs to the plant record and
                 cannot be edited here.
               </p>
@@ -2294,14 +2294,14 @@ export default function ServiceProposalFormModal({
                   aria-label="Prepared By"
                 />
               </FieldRow>
-              <FieldRow label="Proposal Approved By" labelWidth="9.5rem" controlClassName="min-w-0 flex-1">
+              <FieldRow label="Quotation Approved By" labelWidth="9.5rem" controlClassName="min-w-0 flex-1">
                 <input
                   type="text"
                   value={form.proposalApprovedBy}
                   onChange={(e) => patch("proposalApprovedBy", e.target.value)}
                   className={FIELD_INPUT}
                   placeholder="Name…"
-                  aria-label="Proposal Approved By"
+                  aria-label="Quotation Approved By"
                 />
               </FieldRow>
               <FieldRow label="Lead source" labelWidth="9.5rem" controlClassName="min-w-0 flex-1">
@@ -2313,7 +2313,7 @@ export default function ServiceProposalFormModal({
                   aria-label="Lead source"
                 />
               </FieldRow>
-              <FieldRow label="Proposal Submit Date" labelWidth="9.5rem" controlClassName="min-w-0 flex-1">
+              <FieldRow label="Quotation Submit Date" labelWidth="9.5rem" controlClassName="min-w-0 flex-1">
                 <input
                   type="date"
                   value={form.proposalSubmitDate}
@@ -2321,7 +2321,7 @@ export default function ServiceProposalFormModal({
                   className={FIELD_INPUT}
                 />
               </FieldRow>
-              <FieldRow label="Proposal Accepted Date" labelWidth="9.5rem" controlClassName="min-w-0 flex-1">
+              <FieldRow label="Quotation Accepted Date" labelWidth="9.5rem" controlClassName="min-w-0 flex-1">
                 <input
                   type="date"
                   value={form.proposalAcceptedDate}
@@ -2615,7 +2615,7 @@ export default function ServiceProposalFormModal({
               title="PROPOSAL BREAKDOWN (Taxed, if applicable)"
               lines={form.scopeDetails}
               onChange={(scopeDetails) => patch("scopeDetails", scopeDetails)}
-              totalLabel="Total For Proposal:"
+              totalLabel="Total For Quotation:"
               formatMoney={formatMoney}
               hidePrices={!canViewFinancials}
               headerAction={

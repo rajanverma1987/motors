@@ -127,7 +127,7 @@ export async function POST(request, context) {
 
     await connectDB();
     const doc = await SimpleServiceProposal.findOne({ _id: recordId, createdByEmail: email });
-    if (!doc) return NextResponse.json({ error: "Service proposal not found" }, { status: 404 });
+    if (!doc) return NextResponse.json({ error: "Quotation not found" }, { status: 404 });
 
     const current = readJobDiagrams(doc);
     const now = new Date().toISOString();
@@ -206,7 +206,7 @@ export async function DELETE(request, context) {
 
     await connectDB();
     const doc = await SimpleServiceProposal.findOne({ _id: recordId, createdByEmail: email });
-    if (!doc) return NextResponse.json({ error: "Service proposal not found" }, { status: 404 });
+    if (!doc) return NextResponse.json({ error: "Quotation not found" }, { status: 404 });
 
     const current = readJobDiagrams(doc);
     let next;

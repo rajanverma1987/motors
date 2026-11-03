@@ -1,4 +1,4 @@
-/** Client helpers for Simple portal Mongo-backed service proposals & purchase orders. */
+/** Client helpers for Simple portal Mongo-backed quotations & purchase orders. */
 
 import { fetchAllPaginatedDashboardItems } from "@/lib/fetch-all-paginated-dashboard-items";
 
@@ -33,14 +33,14 @@ async function api(path, init = {}) {
 }
 
 /**
- * Fetch all Simple service proposals (pages through API). Prefer fetchSimpleServiceProposalsPage for tables.
+ * Fetch all Simple quotations (pages through API). Prefer fetchSimpleServiceProposalsPage for tables.
  */
 export async function fetchSimpleServiceProposals() {
   return fetchAllPaginatedDashboardItems(SP_API);
 }
 
 /**
- * Server-paginated list for Simple Service Proposals / Invoices tables.
+ * Server-paginated list for Simple Quotations / Invoices tables.
  * @param {{
  *   page?: number,
  *   pageSize?: number,

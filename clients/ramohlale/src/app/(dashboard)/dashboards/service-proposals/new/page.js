@@ -2,7 +2,7 @@ import { Suspense } from "react";
 import ServiceProposalFormPageClient from "../service-proposal-form-page-client";
 
 export const metadata = {
-  title: "New service proposal",
+  title: "New quotation",
 };
 
 export default function NewServiceProposalPage() {

@@ -234,7 +234,7 @@ export const SIMPLE_REPORT_CATALOG = [
     id: "jobs-pipeline",
     category: "Operations",
     title: "Jobs pipeline",
-    description: "RFQ and JOB service proposals with status, customer, and totals.",
+    description: "RFQ and JOB quotations with status, customer, and totals.",
     usesDateRange: true,
     filters: SIMPLE_REPORT_FILTERS["jobs-pipeline"],
   },

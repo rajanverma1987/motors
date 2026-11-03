@@ -633,7 +633,7 @@ export async function applyTrackLeadViewed(lead) {
   await markEventDelivered(event);
 }
 
-/** E5 - the shop converted the Lead into a Service Proposal. */
+/** E5 - the shop converted the Lead into a Quotation. */
 export async function applyTrackConvertedToProposal(lead, proposalId) {
   const found = await loadInvitationByLead(lead);
   if (!found) return;
@@ -699,13 +699,13 @@ export async function applyTrackProposalSent(lead, response) {
   await notifyFacility(rfq, {
     headline: isRevision
       ? `${invitation.shopName || "A shop"} revised its proposal`
-      : `${invitation.shopName || "A shop"} sent a proposal`,
+      : `${invitation.shopName || "A shop"} sent a quotation`,
     rows: [
       ["Total", trackFormatMoney(response.totalPrice, response.currency)],
       ["Price basis", TRACK_PRICE_BASIS_LABEL[response.priceBasis] || ""],
       ["Turnaround", response.turnaroundDays ? `${response.turnaroundDays} working days` : ""],
       ["Valid until", dateLabel(response.validUntil)],
-      ["Proposals received", `${rfq.invitations.filter((i) => i.response).length} of ${rfq.invitations.length}`],
+      ["Quotations received", `${rfq.invitations.filter((i) => i.response).length} of ${rfq.invitations.length}`],
     ],
     bodyNote: allResponded
       ? "Every invited shop has now responded. Open the comparison view to award the job."

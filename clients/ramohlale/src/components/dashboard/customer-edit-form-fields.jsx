@@ -149,7 +149,7 @@ export default function CustomerEditFormFields({ form, setForm }) {
             options={PREFERRED_CONTACT_METHOD_OPTIONS}
             searchable={false}
           />
-          <Input label="EIN" value={form.ein} onChange={(e) => setForm((f) => ({ ...f, ein: e.target.value }))} />
+          <Input label="VAT Number" value={form.ein} onChange={(e) => setForm((f) => ({ ...f, ein: e.target.value }))} />
           <Input
             label="Credit limit"
             value={canViewFinancials ? form.creditLimit : "Restricted"}
@@ -157,7 +157,7 @@ export default function CustomerEditFormFields({ form, setForm }) {
             onChange={(e) => setForm((f) => ({ ...f, creditLimit: e.target.value }))}
           />
           <Select
-            label="Tax exempted"
+            label="VAT exempt"
             value={form.taxExempt ? "yes" : "no"}
             onChange={(e) =>
               setForm((f) => ({
@@ -173,7 +173,7 @@ export default function CustomerEditFormFields({ form, setForm }) {
             searchable={false}
           />
           <Input
-            label="Tax %"
+            label="VAT %"
             type="number"
             value={form.taxPercent}
             onChange={(e) => setForm((f) => ({ ...f, taxPercent: e.target.value }))}
@@ -230,7 +230,7 @@ export default function CustomerEditFormFields({ form, setForm }) {
             className="lg:col-span-2"
           />
           <Input label="City" value={form.city} onChange={(e) => setForm((f) => ({ ...f, city: e.target.value }))} />
-          <Input label="State" value={form.state} onChange={(e) => setForm((f) => ({ ...f, state: e.target.value }))} />
+          <Input label="Province" value={form.state} onChange={(e) => setForm((f) => ({ ...f, state: e.target.value }))} />
           <Input label="Zip code" value={form.zipCode} onChange={(e) => setForm((f) => ({ ...f, zipCode: e.target.value }))} />
           <Input label="Country" value={form.country} onChange={(e) => setForm((f) => ({ ...f, country: e.target.value }))} />
         </div>
@@ -256,7 +256,7 @@ export default function CustomerEditFormFields({ form, setForm }) {
             onChange={(e) => setForm((f) => ({ ...f, shippingCity: e.target.value }))}
           />
           <Input
-            label="State"
+            label="Province"
             value={form.shippingState}
             onChange={(e) => setForm((f) => ({ ...f, shippingState: e.target.value }))}
           />

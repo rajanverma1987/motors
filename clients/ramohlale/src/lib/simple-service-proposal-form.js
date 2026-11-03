@@ -1,4 +1,4 @@
-/** Empty / initial shape for Simple portal service proposal form. */
+/** Empty / initial shape for Simple portal quotation form. */
 
 import { toInputDateValue } from "@/lib/format-date";
 import {
@@ -78,9 +78,9 @@ export function emptyOtherLine() {
     /** Optional — set when added from Inventory lookup */
     qty: "",
     inventoryItemId: "",
-    /** Cost basis for this proposal line (inventory unit cost). Not printed. */
+    /** Cost basis for this quotation line (inventory unit cost). Not printed. */
     unitCost: "",
-    /** Markup % for this proposal only. Not printed. */
+    /** Markup % for this quotation only. Not printed. */
     markupPercent: "",
     /** When true, this line uses the same tax percent as proposal breakdown lines. */
     taxable: false,
@@ -428,7 +428,7 @@ export function lineExtendedPrice(line) {
   return roundSpMoney(price * qty);
 }
 
-/** Apply markup % on this proposal line. Recalculates sell `price` from unit cost. */
+/** Apply markup % on this quotation line. Recalculates sell `price` from unit cost. */
 export function applyOtherLineMarkup(line, markupRaw) {
   const next = line && typeof line === "object" ? { ...line } : emptyOtherLine();
   const markup = parseMarkupPercent(markupRaw);
@@ -479,7 +479,7 @@ export function sumOtherLinePrices(lines) {
   return roundSpMoney(lines.reduce((sum, line) => sum + lineExtendedPrice(line), 0));
 }
 
-/** Other Items marked taxable. Uses the proposal tax percent. */
+/** Other Items marked taxable. Uses the quotation tax percent. */
 export function sumTaxableOtherLinePrices(lines) {
   if (!Array.isArray(lines)) return 0;
   return roundSpMoney(
@@ -609,7 +609,7 @@ function lineListHasMoney(lines) {
 }
 
 /**
- * Normalize a Mongo/API service-proposal doc (incl. CSV imports) into Service Proposals table shape.
+ * Normalize a Mongo/API service-proposal doc (incl. CSV imports) into Quotations table shape.
  * Maps stored form fields onto list aliases (quote, date, phone, quotedBy, notes, totals, …).
  *
  * @param {Record<string, unknown>} doc
@@ -679,7 +679,7 @@ export function toSimpleServiceProposalListRow(doc, meta = null) {
 }
 
 /**
- * Map form + display helpers into a list-row for the Service Proposals table.
+ * Map form + display helpers into a list-row for the Quotations table.
  * Caller must set `documentNumber` (Classic job/RFQ series) before calling when creating.
  * @param {Record<string, unknown>} form
  * @param {{ companyName?: string, preparedByLabel?: string, approvedByLabel?: string, id?: string }} [meta]
@@ -693,7 +693,7 @@ export function formToServiceProposalListRow(form, meta = {}) {
 }
 
 /**
- * Hydrate the Service Proposal form from a list row or full API document.
+ * Hydrate the Quotation form from a list row or full API document.
  * Maps table aliases (date, notes, phone, …) back onto form fields and normalizes dates for date inputs.
  *
  * @param {Record<string, unknown>|null|undefined} doc

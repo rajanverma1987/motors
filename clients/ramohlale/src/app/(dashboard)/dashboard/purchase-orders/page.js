@@ -1899,11 +1899,11 @@ export default function DashboardPurchaseOrdersPage() {
                 placeholder="City"
               />
               <Input
-                label="State"
+                label="Province"
                 name="state"
                 value={vendorForm.state}
                 onChange={(e) => setVendorForm((f) => ({ ...f, state: e.target.value }))}
-                placeholder="State"
+                placeholder="Province"
               />
               <Input
                 label="ZIP"

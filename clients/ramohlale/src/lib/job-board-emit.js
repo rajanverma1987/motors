@@ -44,7 +44,7 @@ export async function notifyWorkOrderBoardDeleted(email, workOrderId) {
 }
 
 /**
- * Notify shop-floor board when a Simple JOB service proposal changes.
+ * Notify shop-floor board when a Simple JOB quotation changes.
  * Uses the same SSE event shape as Classic work orders for shared clients.
  */
 export async function notifySimpleJobBoardFromSp(email, previousDoc, nextDoc) {

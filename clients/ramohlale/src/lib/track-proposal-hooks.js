@@ -1,5 +1,5 @@
 /**
- * Emits E11 to E14 from the shop side when a linked Service Proposal is saved,
+ * Emits E11 to E14 from the shop side when a linked Quotation is saved,
  * changes record type, completes, or is invoiced (§9.8, §9.10, §14.6, §14.7).
  *
  * Everything here is best effort and idempotent: a failure must never block the
@@ -58,7 +58,7 @@ function sheetFor(context, doc) {
   return raw && typeof raw === "object" ? raw : null;
 }
 
-/** Datasheet plus the four core measurements the shop keeps on the proposal itself. */
+/** Datasheet plus the four core measurements the shop keeps on the quotation itself. */
 function writeBackPayload(context, doc) {
   const base = normalizeTrackDatasheet(sheetFor(context, doc), context.powerType);
   const core = trackDatasheetFromCoreMeasurements(doc, context.powerType);
@@ -133,7 +133,7 @@ export async function emitTrackProposalSideEffects({
   const prevRecordType = String(previous?.recordType || "").toUpperCase();
   const prevJobStatus = String(previous?.jobStatus || "");
 
-  // E12 - the proposal became a JOB, or the job status moved on.
+  // E12 - the quotation became a JOB, or the job status moved on.
   try {
     if (
       (context.recordType === "JOB" && prevRecordType !== "JOB") ||

@@ -1,8 +1,8 @@
 /**
  * Shop-side handling of 3PhaseTrack Leads inside the Simple portal (§9.4 to §9.6, §14).
  *
- * Simple has no Motor collection: motor data lives on the Service Proposal, so
- * conversion produces a Customer plus one RFQ-type Service Proposal. Both are
+ * Simple has no Motor collection: motor data lives on the Quotation, so
+ * conversion produces a Customer plus one RFQ-type Quotation. Both are
  * idempotent through `sourceSystem` + `externalRef`, so clicking Convert twice
  * opens the same records instead of duplicating them.
  */
@@ -171,7 +171,7 @@ function proposalNotesFromLead(lead) {
 }
 
 /**
- * §9.5 - convert one 3PhaseTrack Lead into an RFQ-type Service Proposal.
+ * §9.5 - convert one 3PhaseTrack Lead into an RFQ-type Quotation.
  *
  * @param {{ email: string, lead: any, customerId?: string, createCustomer?: boolean }} args
  * @returns {Promise<{ ok: boolean, needsCustomerChoice?: boolean, candidates?: unknown[], item?: unknown, existing?: boolean, error?: string }>}
@@ -292,7 +292,7 @@ export async function convertTrackLeadToProposal({ email, lead, customerId = "",
 
 /**
  * Read the datasheet the shop currently holds on a linked proposal, ready for
- * write-back. Returns null when the proposal is not linked to 3PhaseTrack.
+ * write-back. Returns null when the quotation is not linked to 3PhaseTrack.
  * @param {Record<string, unknown>} proposal
  */
 export function trackLinkedProposalContext(proposal) {

@@ -1113,8 +1113,8 @@ export async function sendTrackRfqToShop({
   ]);
   const closing =
     respondsBy === "in_app"
-      ? `<p style="font-size:13px;color:#555;">Open the RFQ in your Simple portal to see the full motor detail, the shared datasheet, and to convert it into a Service Proposal.</p>`
-      : `<p style="font-size:13px;color:#555;">This secure link is for your shop only and expires. You can submit a proposal or decline without logging in. Claim your listing on the same page to receive datasheet write-back and convert RFQs in the app.</p>`;
+      ? `<p style="font-size:13px;color:#555;">Open the RFQ in your Simple portal to see the full motor detail, the shared datasheet, and to convert it into a Quotation.</p>`
+      : `<p style="font-size:13px;color:#555;">This secure link is for your shop only and expires. You can submit a quotation or decline without logging in. Claim your listing on the same page to receive datasheet write-back and convert RFQs in the app.</p>`;
   const html = `
     ${emergencyBanner}
     <p>Hello,</p>
@@ -1163,17 +1163,17 @@ export async function sendTrackAwardedToShop({
   turnaroundLabel,
   actionUrl,
 }) {
-  const subject = `You won the job: ${facilityName || "plant"} awarded your proposal to 3PhaseFlow.com`;
+  const subject = `You won the job: ${facilityName || "plant"} awarded your quotation to 3PhaseFlow.com`;
   const html = `
     <p>Congratulations,</p>
-    <p><strong>${escHtmlEmail(facilityName || "The plant")}</strong> awarded your proposal for the motor below.</p>
+    <p><strong>${escHtmlEmail(facilityName || "The plant")}</strong> awarded your quotation for the motor below.</p>
     ${trackDetailRows([
       ["Motor", motorSummary],
       ["Awarded price", totalPriceLabel],
       ["Turnaround", turnaroundLabel],
     ])}
-    ${trackShopActionButton("Open the Service Proposal", actionUrl)}
-    <p style="font-size:13px;color:#555;">Convert the proposal to a JOB when you start work. Datasheet values you save on this job flow back to the plant's motor record with your shop credited.</p>
+    ${trackShopActionButton("Open the Quotation", actionUrl)}
+    <p style="font-size:13px;color:#555;">Convert the quotation to a JOB when you start work. Datasheet values you save on this job flow back to the plant's motor record with your shop credited.</p>
     <p>,  3PhaseFlow.com</p>
   `;
   return sendEmail(to, subject, wrapPlatformBrandedHtml(html));

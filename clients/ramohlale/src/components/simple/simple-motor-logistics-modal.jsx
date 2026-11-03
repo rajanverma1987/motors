@@ -540,7 +540,7 @@ export default function SimpleMotorLogisticsModal({
     if (!onSave) {
       await alert({
         title: "Error",
-        message: "Unable to save — service proposal is not ready.",
+        message: "Unable to save — quotation is not ready.",
         variant: "danger",
       });
       return;
@@ -565,7 +565,7 @@ export default function SimpleMotorLogisticsModal({
     if (!recordId) {
       await alert({
         title: "Error",
-        message: "Save the service proposal before adding attachments.",
+        message: "Save the quotation before adding attachments.",
         variant: "danger",
       });
       return;

@@ -31,7 +31,7 @@ export const SIMPLE_LINE_CELL =
 export const SIMPLE_LINE_HEAD =
   "border border-solid border-[hsl(var(--title)/0.35)] bg-primary/[0.04] px-1 py-1.5 text-xs font-bold text-title dark:border-[hsl(var(--title)/0.4)]";
 
-/** Embedded summary tables (e.g. purchase orders on service proposal). */
+/** Embedded summary tables (e.g. purchase orders on quotation). */
 export const SIMPLE_TABLE_TEXT = "text-sm text-title";
 export const SIMPLE_TABLE_HEAD = "text-xs font-bold text-title";
 

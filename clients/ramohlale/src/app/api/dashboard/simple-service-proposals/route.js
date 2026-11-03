@@ -358,8 +358,8 @@ export async function GET(request) {
       invoiceFinance,
     });
   } catch (err) {
-    console.error("Dashboard list simple service proposals error:", err);
-    return NextResponse.json({ error: "Failed to list service proposals" }, { status: 500 });
+    console.error("Dashboard list simple quotations error:", err);
+    return NextResponse.json({ error: "Failed to list quotations" }, { status: 500 });
   }
 }
 
@@ -440,11 +440,11 @@ export async function POST(request) {
       recordId: item.id,
       recordNumber: String(item.documentNumber || item.quote || "").trim(),
       partyName: String(item.companyName || "").trim(),
-      summary: `Saved ${String(item.documentNumber || item.quote || "proposal").trim()}.`,
+      summary: `Saved ${String(item.documentNumber || item.quote || "quotation").trim()}.`,
     });
     return NextResponse.json({ ok: true, item }, { status: 201 });
   } catch (err) {
-    console.error("Dashboard create simple service proposal error:", err);
-    return NextResponse.json({ error: err.message || "Failed to create service proposal" }, { status: 500 });
+    console.error("Dashboard create simple quotation error:", err);
+    return NextResponse.json({ error: err.message || "Failed to create quotation" }, { status: 500 });
   }
 }

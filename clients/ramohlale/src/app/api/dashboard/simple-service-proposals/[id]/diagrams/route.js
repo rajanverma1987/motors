@@ -48,7 +48,7 @@ function writeJobDiagrams(doc, diagrams) {
   return list;
 }
 
-/** List all job diagrams for a service proposal. */
+/** List all job diagrams for a quotation. */
 export async function GET(request, context) {
   try {
     const user = await getPortalUserFromRequest(request);
@@ -63,7 +63,7 @@ export async function GET(request, context) {
     const email = user.email.trim().toLowerCase();
     await connectDB();
     const doc = await SimpleServiceProposal.findOne({ _id: recordId, createdByEmail: email }).lean();
-    if (!doc) return NextResponse.json({ error: "Service proposal not found" }, { status: 404 });
+    if (!doc) return NextResponse.json({ error: "Quotation not found" }, { status: 404 });
 
     const jobDiagrams = readJobDiagrams(doc);
     return NextResponse.json({
@@ -125,7 +125,7 @@ export async function POST(request, context) {
 
     await connectDB();
     const doc = await SimpleServiceProposal.findOne({ _id: recordId, createdByEmail: email });
-    if (!doc) return NextResponse.json({ error: "Service proposal not found" }, { status: 404 });
+    if (!doc) return NextResponse.json({ error: "Quotation not found" }, { status: 404 });
 
     const now = new Date().toISOString();
     const entry = normalizeJobDiagram({

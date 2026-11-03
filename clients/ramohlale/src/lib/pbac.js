@@ -13,7 +13,7 @@ export const ACTIONS = ["view", "create", "edit", "delete"];
 export const PAGES = [
   { id: "dashboard", label: "Dashboard" },
   { id: "customers", label: "Customers (incl. leads)" },
-  { id: "service-proposals", label: "Service Proposals" },
+  { id: "service-proposals", label: "Quotations" },
   { id: "invoices", label: "Invoice / Receivables" },
   { id: "purchase-orders", label: "Purchase / Payable" },
   { id: "inventory", label: "Inventory" },

@@ -1,5 +1,5 @@
 /**
- * Server-side list query helpers for Simple service proposals / invoices.
+ * Server-side list query helpers for Simple quotations / invoices.
  */
 
 import UserSettings from "@/models/UserSettings";
@@ -78,14 +78,14 @@ export function mongoInvoiceKindClause(mergedSettings) {
   return { $or: ors };
 }
 
-/** Mongo clause: row belongs on Service Proposals tab (not invoice). */
+/** Mongo clause: row belongs on Quotations tab (not invoice). */
 export function mongoProposalKindClause(mergedSettings) {
   return { $nor: [mongoInvoiceKindClause(mergedSettings)] };
 }
 
 /**
  * Date window for a list. Pass the field for that tab.
- * Service proposals: proposalSubmitDate. Invoices: invoiceSubmitDate.
+ * Quotations: proposalSubmitDate. Invoices: invoiceSubmitDate.
  * With no field, matches date or dateCreated (tax remittance and older callers).
  */
 export function mongoSpDateRangeClause(fromYmd, toYmd, field = "") {

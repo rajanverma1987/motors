@@ -84,7 +84,7 @@ const FORM_ID = "simple-purchase-order-form";
 const ADD_VENDOR_FORM_ID = "simple-po-add-vendor-form";
 const EDIT_PAYMENT_FORM_ID = "simple-po-edit-payment-form";
 
-/** ~90% of Service Proposal modal height (`min(94vh, 920px)`). */
+/** ~90% of Quotation modal height (`min(94vh, 920px)`). */
 const PO_MODAL_HEIGHT = "min(84.6vh, 828px)";
 /** Header row + ~10 body rows (h-7 cells). */
 const TABLE_SCROLL_MAX_CLASS = "max-h-[calc(2.25rem+10*2rem)]";
@@ -1455,7 +1455,7 @@ export default function SimplePurchaseOrderFormModal({
             <div className="flex flex-1 flex-col items-center justify-center gap-3 px-4 py-16 text-center">
               <p className="text-base font-semibold text-title">No purchase order found</p>
               <p className="max-w-sm text-sm text-secondary">
-                This job has no purchase orders yet. Use Create New PO on the proposal form to add one.
+                This job has no purchase orders yet. Use Create New PO on the quotation form to add one.
               </p>
             </div>
           ) : (
@@ -1492,7 +1492,7 @@ export default function SimplePurchaseOrderFormModal({
               </FieldRow>
               {canViewFinancials ? (
                 <FieldRow
-                  label="Proposal Amount"
+                  label="Quotation Amount"
                   labelWidth="100%"
                   labelClassName={`!text-left ${isPage ? "!text-[11px] !font-semibold uppercase tracking-wide !text-secondary" : "!text-sm"}`}
                   className={
@@ -1512,7 +1512,7 @@ export default function SimplePurchaseOrderFormModal({
                         : "-"
                     }
                     className={`${FIELD_INPUT} !bg-muted text-right font-semibold tabular-nums`}
-                    aria-label="Proposal Amount"
+                    aria-label="Quotation Amount"
                   />
                 </FieldRow>
               ) : null}

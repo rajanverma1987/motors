@@ -61,8 +61,8 @@ export async function GET(request, context) {
     }
     return NextResponse.json({ ok: true, item: serializeSimplePortalDoc(doc) });
   } catch (err) {
-    console.error("Dashboard get simple service proposal error:", err);
-    return NextResponse.json({ error: "Failed to load service proposal" }, { status: 500 });
+    console.error("Dashboard get simple quotation error:", err);
+    return NextResponse.json({ error: "Failed to load quotation" }, { status: 500 });
   }
 }
 
@@ -181,8 +181,8 @@ export async function PUT(request, context) {
     }
     return NextResponse.json({ ok: true, item });
   } catch (err) {
-    console.error("Dashboard update simple service proposal error:", err);
-    return NextResponse.json({ error: err.message || "Failed to update service proposal" }, { status: 500 });
+    console.error("Dashboard update simple quotation error:", err);
+    return NextResponse.json({ error: err.message || "Failed to update quotation" }, { status: 500 });
   }
 }
 
@@ -244,12 +244,12 @@ export async function DELETE(request, context) {
       recordId: id,
       recordNumber: String(deleted.documentNumber || "").trim(),
       partyName: String(deleted.companyName || "").trim(),
-      summary: `Proposal ${String(deleted.documentNumber || id).trim()} deleted permanently.`,
+      summary: `Quotation ${String(deleted.documentNumber || id).trim()} deleted permanently.`,
       snapshot: deleted,
     });
     return NextResponse.json({ ok: true, id });
   } catch (err) {
-    console.error("Dashboard delete simple service proposal error:", err);
-    return NextResponse.json({ error: "Failed to delete service proposal" }, { status: 500 });
+    console.error("Dashboard delete simple quotation error:", err);
+    return NextResponse.json({ error: "Failed to delete quotation" }, { status: 500 });
   }
 }

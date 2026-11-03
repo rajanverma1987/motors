@@ -102,7 +102,7 @@ export async function POST(request, context) {
     const email = user.email.trim().toLowerCase();
     const doc = await SimpleServiceProposal.findOne({ _id: recordId, createdByEmail: email });
     if (!doc) {
-      return NextResponse.json({ error: "Service proposal not found" }, { status: 404 });
+      return NextResponse.json({ error: "Quotation not found" }, { status: 404 });
     }
 
     const motorKey = motorKeyForKind(kind);
@@ -188,7 +188,7 @@ export async function DELETE(request, context) {
     const email = user.email.trim().toLowerCase();
     const doc = await SimpleServiceProposal.findOne({ _id: recordId, createdByEmail: email });
     if (!doc) {
-      return NextResponse.json({ error: "Service proposal not found" }, { status: 404 });
+      return NextResponse.json({ error: "Quotation not found" }, { status: 404 });
     }
 
     const motorKey = motorKeyForKind(kind);

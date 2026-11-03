@@ -167,7 +167,7 @@ export async function POST(request, context) {
 
     const doc = await SimpleServiceProposal.findOne({ _id: recordId, createdByEmail: email }).lean();
     if (!doc) {
-      return NextResponse.json({ error: "Service proposal not found" }, { status: 404 });
+      return NextResponse.json({ error: "Quotation not found" }, { status: 404 });
     }
 
     const diagrams = normalizeJobDiagrams(doc.jobDiagrams, doc.jobDiagram);

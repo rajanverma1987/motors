@@ -20,12 +20,12 @@ const customerSchema = new mongoose.Schema(
     city: { type: String, default: "", trim: true },
     state: { type: String, default: "", trim: true },
     zipCode: { type: String, default: "", trim: true },
-    country: { type: String, default: "United States", trim: true },
+    country: { type: String, default: "South Africa", trim: true },
     shippingAddress: { type: String, default: "", trim: true },
     shippingCity: { type: String, default: "", trim: true },
     shippingState: { type: String, default: "", trim: true },
     shippingZipCode: { type: String, default: "", trim: true },
-    shippingCountry: { type: String, default: "United States", trim: true },
+    shippingCountry: { type: String, default: "South Africa", trim: true },
     /** Additional contact persons: { contactName, phone, email } */
     additionalContacts: [
       {

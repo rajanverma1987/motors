@@ -27,7 +27,7 @@ const FILTER_OPTIONS = [
   { value: "", label: "All statuses" },
   { value: "in_service", label: "Running" },
   { value: "down", label: "Down" },
-  { value: "awaiting_proposals", label: "Awaiting proposals" },
+  { value: "awaiting_proposals", label: "Awaiting quotations" },
   { value: "under_repair", label: "Under repair" },
   { value: "repaired", label: "Repaired, awaiting return" },
   { value: "spare", label: "Standby" },

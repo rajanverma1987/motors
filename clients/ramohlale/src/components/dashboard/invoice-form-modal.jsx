@@ -266,7 +266,7 @@ export default function InvoiceFormModal({
     if (!persistedId || !String(form.quoteId || "").trim()) return;
     const ok = await confirm({
       title: "Convert to RFQ",
-      message: `Move invoice #${form.invoiceNumber || ""} back to the RFQ list? The invoice will be deleted and the linked RFQ status will be set to proposal approved (regular). This cannot be undone.`,
+      message: `Move invoice #${form.invoiceNumber || ""} back to the RFQ list? The invoice will be deleted and the linked RFQ status will be set to quotation approved (regular). This cannot be undone.`,
       confirmLabel: "Convert to RFQ",
       variant: "danger",
     });

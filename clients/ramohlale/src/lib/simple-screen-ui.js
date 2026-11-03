@@ -6,7 +6,7 @@ export const SIMPLE_SCREEN_FILTERS_CLASS = "simple-screen-filters";
 
 export const SIMPLE_SCREEN_TABLE_WRAP_CLASS = "simple-screen-table-wrap";
 
-/** Same table chrome as Service Proposals: compact type, dense rows, sticky columns. */
+/** Same table chrome as Quotations: compact type, dense rows, sticky columns. */
 export const SIMPLE_LIST_TABLE_PROPS = {
   dense: true,
   textSize: "xs",

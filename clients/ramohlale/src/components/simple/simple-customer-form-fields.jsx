@@ -58,7 +58,7 @@ function PairRow({ leftLabel, rightLabel, left, right, labelWidth = "6.5rem" }) 
 }
 
 /**
- * Dense Access-like customer fields for Simple portal (matches Service Proposal form UI).
+ * Dense Access-like customer fields for Simple portal (matches Quotation form UI).
  * @param {"grid"|"stacked"} [layout="grid"] — grid = 3 columns on large screens; stacked = single column (e.g. side panel).
  * @param {string} [customerId] — when set, files upload immediately; otherwise queued until customer is created.
  */
@@ -436,7 +436,7 @@ export default function SimpleCustomerFormFields({ form, setForm, layout = "grid
           {isStacked ? (
             <PairRow
               labelWidth={pairLabelW}
-              leftLabel="EIN"
+              leftLabel="VAT Number"
               rightLabel="Credit limit"
               left={
                 <input
@@ -444,7 +444,7 @@ export default function SimpleCustomerFormFields({ form, setForm, layout = "grid
                   value={form.ein}
                   onChange={(e) => patch("ein", e.target.value)}
                   className={FIELD_INPUT}
-                  aria-label="EIN"
+                  aria-label="VAT Number"
                 />
               }
               right={
@@ -460,7 +460,7 @@ export default function SimpleCustomerFormFields({ form, setForm, layout = "grid
             />
           ) : (
             <>
-              <FieldRow label="EIN" labelWidth={labelW}>
+              <FieldRow label="VAT Number" labelWidth={labelW}>
                 <input
                   type="text"
                   value={form.ein}
@@ -482,8 +482,8 @@ export default function SimpleCustomerFormFields({ form, setForm, layout = "grid
           {isStacked ? (
             <PairRow
               labelWidth={pairLabelW}
-              leftLabel="Tax exempt"
-              rightLabel="Tax %"
+              leftLabel="VAT exempt"
+              rightLabel="VAT %"
               left={
                 <SimpleSelect
                   options={TAX_EXEMPT_OPTIONS}
@@ -496,7 +496,7 @@ export default function SimpleCustomerFormFields({ form, setForm, layout = "grid
                     }))
                   }
                   searchable={false}
-                  aria-label="Tax exempted"
+                  aria-label="VAT exempt"
                 />
               }
               right={
@@ -506,13 +506,13 @@ export default function SimpleCustomerFormFields({ form, setForm, layout = "grid
                   onChange={(e) => patch("taxPercent", e.target.value)}
                   disabled={!!form.taxExempt}
                   className={`${FIELD_INPUT} ${form.taxExempt ? "!bg-muted" : ""}`}
-                  aria-label="Tax percent"
+                  aria-label="VAT percent"
                 />
               }
             />
           ) : (
             <>
-              <FieldRow label="Tax exempt" labelWidth={labelW}>
+              <FieldRow label="VAT exempt" labelWidth={labelW}>
                 <SimpleSelect
                   options={TAX_EXEMPT_OPTIONS}
                   value={form.taxExempt ? "yes" : "no"}
@@ -524,10 +524,10 @@ export default function SimpleCustomerFormFields({ form, setForm, layout = "grid
                     }))
                   }
                   searchable={false}
-                  aria-label="Tax exempted"
+                  aria-label="VAT exempt"
                 />
               </FieldRow>
-              <FieldRow label="Tax %" labelWidth={labelW}>
+              <FieldRow label="VAT %" labelWidth={labelW}>
                 <input
                   type="number"
                   value={form.taxPercent}
@@ -562,13 +562,13 @@ export default function SimpleCustomerFormFields({ form, setForm, layout = "grid
                 className={`${FIELD_INPUT} !w-full`}
                 aria-label="City"
               />
-              <label className="shrink-0 text-xs font-bold text-title">State</label>
+              <label className="shrink-0 text-xs font-bold text-title">Province</label>
               <input
                 type="text"
                 value={form.state}
                 onChange={(e) => patch("state", e.target.value)}
                 className={`${FIELD_INPUT} !w-full`}
-                aria-label="State"
+                aria-label="Province"
               />
               <label className="shrink-0 text-xs font-bold text-title">Zip</label>
               <input
@@ -621,13 +621,13 @@ export default function SimpleCustomerFormFields({ form, setForm, layout = "grid
                 className={`${FIELD_INPUT} !w-full`}
                 aria-label="Shipping city"
               />
-              <label className="shrink-0 text-xs font-bold text-title">State</label>
+              <label className="shrink-0 text-xs font-bold text-title">Province</label>
               <input
                 type="text"
                 value={form.shippingState}
                 onChange={(e) => patch("shippingState", e.target.value)}
                 className={`${FIELD_INPUT} !w-full`}
-                aria-label="Shipping state"
+                aria-label="Shipping province"
               />
               <label className="shrink-0 text-xs font-bold text-title">Zip</label>
               <input

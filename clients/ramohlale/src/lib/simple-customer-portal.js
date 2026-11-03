@@ -107,7 +107,7 @@ export function mapSimpleSpForPortal(doc) {
         ? "Invoice"
         : recordType === RECORD_TYPE_JOB
           ? "Job"
-          : "Service proposal",
+          : "Quotation",
     customerPo: String(doc?.customerPo || "").trim(),
     dateCreated: toInputDateValue(doc?.dateCreated),
     dueDate: toInputDateValue(doc?.dueDate),

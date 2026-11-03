@@ -211,7 +211,7 @@ export default function DashboardsPageClient() {
       },
       {
         id: SIMPLE_TAB_SERVICE_PROPOSALS,
-        label: <TabLabel icon={FiFileText}>Service Proposals</TabLabel>,
+        label: <TabLabel icon={FiFileText}>Quotations</TabLabel>,
         children: <ServiceProposalsPanel variant={SIMPLE_LIST_VARIANT_PROPOSALS} />,
       },
       {

@@ -46,7 +46,7 @@ export function simplePortalTabHref(tab) {
   return `${SIMPLE_PORTAL_PATH}?tab=${encodeURIComponent(tab)}`;
 }
 
-/** Full-page Service Proposal form (phone). */
+/** Full-page Quotation form (phone). */
 export const SIMPLE_SERVICE_PROPOSAL_FORM_BASE = `${SIMPLE_PORTAL_PATH}/service-proposals`;
 
 /**

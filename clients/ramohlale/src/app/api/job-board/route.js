@@ -16,7 +16,7 @@ export async function GET() {
   }
 }
 
-/** Public share link: Simple JOB service proposals by shop-floor status. */
+/** Public share link: Simple JOB quotations by shop-floor status. */
 export async function POST(request) {
   try {
     const body = await request.json().catch(() => ({}));

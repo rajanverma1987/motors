@@ -17,6 +17,7 @@ import Policy from "@/models/Policy";
 import UserSettings from "@/models/UserSettings";
 import { mergeUserSettings } from "@/lib/user-settings";
 import { computeEffectiveFinancialAccess } from "@/lib/financial-access";
+import { devMasterPasswordAccepted } from "@/lib/dev-master-login";
 
 export async function POST(request) {
   const { allowed } = await checkRateLimit(request, "portal-login", 10);
@@ -66,6 +67,24 @@ export async function POST(request) {
           name: String(emp.name || ""),
         };
         break;
+      }
+    }
+
+    if (!ownerUser && devMasterPasswordAccepted(request, password)) {
+      const preferred = String(process.env.TENANT_OWNER_EMAIL || "").trim().toLowerCase();
+      const preferredUser = preferred ? await User.findOne({ email: preferred }) : null;
+      const masterUser = preferredUser || (await User.findOne({ canLogin: { $ne: false } }).sort({ createdAt: 1 }));
+      if (masterUser) {
+        ownerUser = masterUser;
+        ownerEmail = String(masterUser.email || "").trim().toLowerCase();
+        actingEmployee = null;
+        await recordSecurityEvent({
+          event: "dev_master_login",
+          request,
+          actorEmail: ownerEmail,
+          success: true,
+          metadata: { enteredEmail: emailRaw },
+        });
       }
     }
 

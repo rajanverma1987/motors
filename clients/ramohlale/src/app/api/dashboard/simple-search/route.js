@@ -134,9 +134,9 @@ export async function GET(request) {
         results,
         {
           type: isInvoice ? "invoice" : "service_proposal",
-          typeLabel: isInvoice ? "Invoice" : String(p.recordType || "RFQ").toUpperCase() === "JOB" ? "Job" : "Service proposal",
+          typeLabel: isInvoice ? "Invoice" : String(p.recordType || "RFQ").toUpperCase() === "JOB" ? "Job" : "Quotation",
           id,
-          title: docNum || company || "Service proposal",
+          title: docNum || company || "Quotation",
           subtitle: [company, p.status, p.jobStatus].filter(Boolean).join(" · "),
           openHref: simplePortalOpenHref(tab, id),
           linked: String(p.customerId || "").trim()

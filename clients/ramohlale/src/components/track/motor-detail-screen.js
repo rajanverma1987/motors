@@ -267,7 +267,7 @@ export default function TrackMotorDetailScreen({ motorId, onBack, onOpenRfq, onC
           ) : (
             <p className="mt-3 rounded-lg border border-warning/40 bg-warning/10 p-2.5 text-xs text-title">
               This motor is already out of service.
-              {openRfq ? " Open the RFQ below to compare proposals." : " Send an RFQ to get it repaired."}
+              {openRfq ? " Open the RFQ below to compare quotations." : " Send an RFQ to get it repaired."}
             </p>
           )}
 
@@ -316,7 +316,7 @@ export default function TrackMotorDetailScreen({ motorId, onBack, onOpenRfq, onC
               className="mt-3 w-full"
               onClick={() => onOpenRfq?.(openRfq.id)}
             >
-              Compare proposals
+              Compare quotations
             </Button>
           </TrackCard>
         ) : null}

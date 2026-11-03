@@ -143,7 +143,7 @@ function SectionChoices({ label, options, value, onChange }) {
 }
 
 /**
- * AC / DC datasheet modal for Simple service proposals (layout from documents/AC.png, DC.png, Armature.png).
+ * AC / DC datasheet modal for Simple quotations (layout from documents/AC.png, DC.png, Armature.png).
  */
 export default function SimpleDatasheetModal({
   open,
@@ -160,7 +160,7 @@ export default function SimpleDatasheetModal({
   onAttached,
   jobDiagrams = [],
   onDiagramsChange,
-  /** Service Proposal job Status options + value (Disassembly Status section). */
+  /** Quotation job Status options + value (Disassembly Status section). */
   jobStatusOptions = [],
   jobStatus = "",
   onJobStatusChange,

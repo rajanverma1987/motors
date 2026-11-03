@@ -417,7 +417,7 @@ export default function ServiceProposalsPanel({
       setPage(nextPage);
     };
     return {
-      label: isInvoices ? "Invoices" : "Proposals",
+      label: isInvoices ? "Invoices" : "Quotations",
       currentIndex: globalIndex,
       total: totalCount,
       canPrevious: globalIndex > 0,
@@ -533,7 +533,7 @@ export default function ServiceProposalsPanel({
   const handleDelete = useCallback(
     async (row) => {
       const ok = await confirm({
-        title: isInvoices ? "Remove invoice" : "Remove service proposal",
+        title: isInvoices ? "Remove invoice" : "Remove quotation",
         message: `Remove ${row.quote || "this record"} from the list? You can open it again in Settings: Deleted.`,
         confirmLabel: "Remove",
         variant: "danger",
@@ -1023,7 +1023,7 @@ export default function ServiceProposalsPanel({
         : []),
       {
         key: "submitDate",
-        label: isInvoices ? "Proposal Submit Date" : "Submit date",
+        label: isInvoices ? "Quotation Submit Date" : "Submit date",
         sortable: true,
         align: "right",
         phoneHidden: true,
@@ -1048,7 +1048,7 @@ export default function ServiceProposalsPanel({
       },
       {
         key: "acceptDate",
-        label: isInvoices ? "Proposal Accept Date" : "Accept Date",
+        label: isInvoices ? "Quotation Accept Date" : "Accept Date",
         sortable: true,
         align: "right",
         phoneHidden: true,
@@ -1194,7 +1194,7 @@ export default function ServiceProposalsPanel({
         : []),
       {
         key: "status",
-        label: isInvoices ? "Invoice Status" : "Proposal Status",
+        label: isInvoices ? "Invoice Status" : "Quotation Status",
         sortable: true,
         className: "min-w-[7.5rem] md:min-w-[10rem]",
         getCellStyle: (_, row) =>
@@ -1335,11 +1335,11 @@ export default function ServiceProposalsPanel({
               : statusFilter
                 ? "No records with this status."
                 : isInvoices
-                  ? "No invoices yet. Convert a proposal to an invoice status to see it here."
-                  : "No service proposals yet. Click Add New to create one."
+                  ? "No invoices yet. Convert a quotation to an invoice status to see it here."
+                  : "No quotations yet. Click Add New to create one."
       : isInvoices
         ? "No invoices yet."
-        : "No service proposals yet. Click Add New to create one.";
+        : "No quotations yet. Click Add New to create one.";
 
   return (
     <div className={SIMPLE_SCREEN_PANEL_CLASS}>
@@ -1359,7 +1359,7 @@ export default function ServiceProposalsPanel({
               setPage(1);
               setSearchQuery(q);
             }}
-            searchPlaceholder={isInvoices ? "Search invoices…" : "Search proposals…"}
+            searchPlaceholder={isInvoices ? "Search invoices…" : "Search quotations…"}
             sortState={tableSort}
             onSort={(key, direction) => {
               setPage(1);

@@ -105,7 +105,7 @@ export function simpleSpToBoardJob(doc) {
   return {
     id,
     status: String(o.jobStatus || "").trim(),
-    /** Service proposal / quote status (not shop-floor job status). */
+    /** Quotation / quote status (not shop-floor job status). */
     proposalStatus: String(o.status || "").trim(),
     workOrderNumber: documentNumber || "—",
     customerCompany: companyName,

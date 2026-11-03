@@ -7,7 +7,7 @@ export const HERO_DASHBOARD_TABLET_PATH = "/images/hero-dashboard-tablet.jpg";
 
 /** Descriptive alt for accessibility + image SEO (natural keywords, not stuffed). */
 export const HERO_DASHBOARD_TABLET_ALT =
-  "3PhaseFlow motor repair shop management software on a tablet showing service proposals, status summary cards, and a searchable job list";
+  "3PhaseFlow motor repair shop management software on a tablet showing quotations, status summary cards, and a searchable job list";
 
 export const HERO_DASHBOARD_TABLET_WIDTH = 1024;
 export const HERO_DASHBOARD_TABLET_HEIGHT = 768;

@@ -14,11 +14,11 @@ const timeClockManualHoursSchema = new mongoose.Schema(
     workDate: { type: String, required: true, trim: true },
     hours: { type: Number, required: true, min: 0, max: 24 },
     note: { type: String, default: "", trim: true },
-    /** Optional Simple Service Proposal (JOB) this time was logged against */
+    /** Optional Simple Quotation (JOB) this time was logged against */
     proposalId: { type: String, default: "", trim: true },
     /** Denormalized JOB# / document number for display */
     documentNumber: { type: String, default: "", trim: true },
-    /** Job status on the proposal when these hours were recorded */
+    /** Job status on the quotation when these hours were recorded */
     jobStatus: { type: String, default: "", trim: true },
     voidedAt: { type: Date, default: null },
     voidReason: { type: String, default: "", trim: true },

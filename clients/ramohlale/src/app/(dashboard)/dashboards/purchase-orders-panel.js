@@ -476,7 +476,7 @@ export default function PurchaseOrdersPanel({ createNonce = 0 }) {
                       e.stopPropagation();
                       jobView?.openJob?.(proposalId);
                     }}
-                    title="Open service proposal"
+                    title="Open quotation"
                   >
                     {jobLabel}
                   </button>
@@ -644,7 +644,7 @@ export default function PurchaseOrdersPanel({ createNonce = 0 }) {
           : isPhone
             ? "No purchase orders yet. Click Add New to create one."
             : isJobTab
-              ? "No job purchase orders yet. Create one from a service proposal, or click Add New."
+              ? "No job purchase orders yet. Create one from a quotation, or click Add New."
               : "No shop purchase orders yet. Click Add New to create one."
       : isPhone
         ? "No purchase orders yet."

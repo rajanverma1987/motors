@@ -16,7 +16,7 @@ function getParams(context) {
 
 /**
  * GET /api/portal/[token]
- * Public. Returns customer name + Simple service proposals / invoices for the customer portal.
+ * Public. Returns customer name + Simple quotations / invoices for the customer portal.
  */
 export async function GET(request, context) {
   try {

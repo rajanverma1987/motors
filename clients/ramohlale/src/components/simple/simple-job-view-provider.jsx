@@ -7,7 +7,7 @@ import { formToServiceProposalListRow } from "@/lib/simple-service-proposal-form
 import { saveSimpleServiceProposal } from "@/lib/simple-portal-api";
 
 /**
- * Opens the Job / Service Proposal modal on top of whatever is already on screen.
+ * Opens the Job / Quotation modal on top of whatever is already on screen.
  * Lives outside the PO form so Job ↔ PO modules are not circular.
  *
  * openJob(id) — open one job

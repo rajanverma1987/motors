@@ -500,11 +500,11 @@ export default function DashboardVendorsPage() {
                 placeholder="City"
               />
               <Input
-                label="State"
+                label="Province"
                 name="state"
                 value={form.state}
                 onChange={(e) => setForm((f) => ({ ...f, state: e.target.value }))}
-                placeholder="State"
+                placeholder="Province"
               />
               <Input
                 label="ZIP"
@@ -630,11 +630,11 @@ export default function DashboardVendorsPage() {
                 placeholder="City"
               />
               <Input
-                label="State"
+                label="Province"
                 name="state"
                 value={form.state}
                 onChange={(e) => setForm((f) => ({ ...f, state: e.target.value }))}
-                placeholder="State"
+                placeholder="Province"
               />
               <Input
                 label="ZIP"

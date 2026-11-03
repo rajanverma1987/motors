@@ -209,14 +209,14 @@ function ProposalCard({ rfq, invitation, onAward, awarding }) {
         </div>
       ) : (
         <p className="mt-2 text-[11px] text-secondary">
-          {invitation.status === "declined" ? "No proposal." : "No proposal yet."}
+          {invitation.status === "declined" ? "No quotation." : "No quotation yet."}
         </p>
       )}
 
       <Modal
         open={historyOpen}
         onClose={() => setHistoryOpen(false)}
-        title={`${invitation.shopName || "Shop"} proposal history`}
+        title={`${invitation.shopName || "Shop"} quotation history`}
         size="md"
       >
         <ul className="space-y-2">
@@ -328,7 +328,7 @@ export default function TrackRfqComparison({ rfqId, onBack, onChanged }) {
   const cancel = async () => {
     const first = await confirm({
       title: "Cancel this RFQ",
-      message: "Every invited shop is told it was cancelled. Linked proposals are marked cancelled, not deleted.",
+      message: "Every invited shop is told it was cancelled. Linked quotations are marked cancelled, not deleted.",
       confirmLabel: "Continue",
       variant: "danger",
     });
@@ -446,7 +446,7 @@ export default function TrackRfqComparison({ rfqId, onBack, onChanged }) {
   if (loading) {
     return (
       <TrackScreen title="RFQ" onBack={onBack}>
-        <p className="p-4 text-sm text-secondary">Loading proposals…</p>
+        <p className="p-4 text-sm text-secondary">Loading quotations…</p>
       </TrackScreen>
     );
   }
@@ -555,7 +555,7 @@ export default function TrackRfqComparison({ rfqId, onBack, onChanged }) {
         ) : null}
 
         <div>
-          <h3 className="mb-2 text-sm font-bold text-title">Proposals</h3>
+          <h3 className="mb-2 text-sm font-bold text-title">Quotations</h3>
           <ul className="space-y-2">
             {rfq.invitations.map((invitation) => (
               <ProposalCard

@@ -117,7 +117,7 @@ export default function SimpleServiceProposalPrintPreviewModal({
           <div className="flex flex-col items-center justify-center gap-2 py-12 text-center">
             <p className="text-sm font-semibold text-danger">Access Restricted</p>
             <p className="text-xs text-secondary">
-              Printing proposals and invoices is restricted for your employee role.
+              Printing quotations and invoices is restricted for your employee role.
             </p>
           </div>
         ) : documentReady ? (

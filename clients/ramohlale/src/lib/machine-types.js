@@ -1,5 +1,5 @@
 /**
- * Simple portal machine types. Stored on the proposal as `motorPower` (D1).
+ * Simple portal machine types. Stored on the quotation as `motorPower` (D1).
  * Canonical values: AC, DC, Pump, Generator.
  */
 

@@ -424,7 +424,7 @@ export async function consumeInventoryForSimpleOnShipped(email, proposalId) {
 }
 
 /**
- * Apply reserve / sync / consume / release for a Simple Service Proposal after save.
+ * Apply reserve / sync / consume / release for a Simple Quotation after save.
  *
  * @param {string} email
  * @param {string} proposalId

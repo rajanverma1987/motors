@@ -24,7 +24,7 @@ export const TRACK_INVITATION_STATUS_LABEL = {
   invited: "Invited",
   viewed: "Viewed",
   preparing: "Preparing",
-  proposal_received: "Proposal received",
+  proposal_received: "Quotation received",
   declined: "Declined to quote",
   no_response: "No response",
   awarded: "Awarded",

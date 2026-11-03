@@ -471,7 +471,7 @@ export default function MasterDataSearchPanel() {
       <div className="hidden shrink-0 border-b border-border pb-3 sm:block">
         <h2 className="text-lg font-semibold text-title">Master Data Search</h2>
         <p className="mt-1 text-sm text-secondary">
-          Search jobs by datasheet fields (same fields as the Service Proposal DataSheet). Use{" "}
+          Search jobs by datasheet fields (same fields as the Quotation DataSheet). Use{" "}
           <span className="font-medium text-title">*</span> wildcards, e.g.{" "}
           <span className="font-mono text-xs text-title">*abb*</span>,{" "}
           <span className="font-mono text-xs text-title">10*</span>, or exact{" "}

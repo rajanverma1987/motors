@@ -290,12 +290,12 @@ const IMPORT_COLLECTIONS = {
         city: s(r.city),
         state: s(r.state),
         zipCode: s(r.zip_code),
-        country: s(r.country || "United States"),
+        country: s(r.country || "South Africa"),
         shippingAddress: s(r.shipping_address),
         shippingCity: s(r.shipping_city),
         shippingState: s(r.shipping_state),
         shippingZipCode: s(r.shipping_zip_code),
-        shippingCountry: s(r.shipping_country || "United States"),
+        shippingCountry: s(r.shipping_country || "South Africa"),
         ein: s(r.ein),
         creditLimit: s(r.credit_limit),
         taxExempt: boolish(r.tax_exempt, true),
@@ -530,7 +530,7 @@ const IMPORT_COLLECTIONS = {
     }),
   },
   simpleServiceProposals: {
-    label: "Service Proposals",
+    label: "Quotations",
     model: SimpleServiceProposal,
     /** Older CSVs may omit newer optional columns; these must always be present. */
     requiredHeaders: [...BASE_HEADERS, "customer_external_ref"],
@@ -725,9 +725,9 @@ const IMPORT_COLLECTIONS = {
       };
     },
   },
-  /** Child of Service Proposals — one CSV row per scope line (no JSON). */
+  /** Child of Quotations — one CSV row per scope line (no JSON). */
   simpleServiceProposalScopeDetails: {
-    label: "Service Proposal — Scope Details",
+    label: "Quotation: Scope Details",
     model: SimpleServiceProposal,
     skipModelValidation: true,
     parentCollection: "simpleServiceProposals",
@@ -763,7 +763,7 @@ const IMPORT_COLLECTIONS = {
         s(r.service_proposal_external_ref),
       );
       if (!serviceProposalId) {
-        throw new Error("service_proposal_external_ref not found — import Service Proposals first");
+        throw new Error("service_proposal_external_ref not found — import Quotations first");
       }
       const lineRef = s(r.external_ref);
       return {
@@ -782,7 +782,7 @@ const IMPORT_COLLECTIONS = {
         _id: payload.serviceProposalId,
         createdByEmail: ownerEmail,
       });
-      if (!doc) throw new Error("Service proposal not found");
+      if (!doc) throw new Error("Quotation not found");
       const list = Array.isArray(doc.scopeDetails) ? doc.scopeDetails.map((x) => ({ ...(x.toObject?.() || x) })) : [];
       const lineId = s(payload.line.id);
       const idx = list.findIndex((x) => s(x?.id) === lineId || s(x?.externalRef) === lineId);
@@ -793,9 +793,9 @@ const IMPORT_COLLECTIONS = {
       await refreshServiceProposalListTotals(doc);
     },
   },
-  /** Child of Service Proposals — one CSV row per other/parts line (no JSON). */
+  /** Child of Quotations — one CSV row per other/parts line (no JSON). */
   simpleServiceProposalOtherItems: {
-    label: "Service Proposal — Other Items",
+    label: "Quotation: Other Items",
     model: SimpleServiceProposal,
     skipModelValidation: true,
     parentCollection: "simpleServiceProposals",
@@ -839,7 +839,7 @@ const IMPORT_COLLECTIONS = {
         s(r.service_proposal_external_ref),
       );
       if (!serviceProposalId) {
-        throw new Error("service_proposal_external_ref not found — import Service Proposals first");
+        throw new Error("service_proposal_external_ref not found — import Quotations first");
       }
       let inventoryItemId = "";
       if (s(r.inventory_item_external_ref)) {
@@ -872,7 +872,7 @@ const IMPORT_COLLECTIONS = {
         _id: payload.serviceProposalId,
         createdByEmail: ownerEmail,
       });
-      if (!doc) throw new Error("Service proposal not found");
+      if (!doc) throw new Error("Quotation not found");
       const list = Array.isArray(doc.otherItems) ? doc.otherItems.map((x) => ({ ...(x.toObject?.() || x) })) : [];
       const lineId = s(payload.line.id);
       const idx = list.findIndex((x) => s(x?.id) === lineId || s(x?.externalRef) === lineId);
@@ -883,9 +883,9 @@ const IMPORT_COLLECTIONS = {
       await refreshServiceProposalListTotals(doc);
     },
   },
-  /** Child of Service Proposals — one CSV row sets/merges AC datasheet on the parent. */
+  /** Child of Quotations — one CSV row sets/merges AC datasheet on the parent. */
   simpleServiceProposalAcDatasheets: {
-    label: "Service Proposal — AC Datasheet",
+    label: "Quotation: AC Datasheet",
     model: SimpleServiceProposal,
     skipModelValidation: true,
     parentCollection: "simpleServiceProposals",
@@ -950,7 +950,7 @@ const IMPORT_COLLECTIONS = {
         s(r.service_proposal_external_ref),
       );
       if (!serviceProposalId) {
-        throw new Error("service_proposal_external_ref not found — import Service Proposals first");
+        throw new Error("service_proposal_external_ref not found — import Quotations first");
       }
       const disassembly = parseJsonObjectField(r.disassembly_json, "disassembly_json");
       const assembly = parseJsonObjectField(r.assembly_json, "assembly_json");
@@ -975,7 +975,7 @@ const IMPORT_COLLECTIONS = {
         _id: payload.serviceProposalId,
         createdByEmail: ownerEmail,
       });
-      if (!doc) throw new Error("Service proposal not found");
+      if (!doc) throw new Error("Quotation not found");
       const existingRaw =
         doc.acDatasheet && typeof doc.acDatasheet === "object"
           ? typeof doc.acDatasheet.toObject === "function"
@@ -1007,9 +1007,9 @@ const IMPORT_COLLECTIONS = {
       await doc.save();
     },
   },
-  /** Child of Service Proposals — one CSV row sets/merges DC datasheet on the parent. */
+  /** Child of Quotations — one CSV row sets/merges DC datasheet on the parent. */
   simpleServiceProposalDcDatasheets: {
-    label: "Service Proposal — DC Datasheet",
+    label: "Quotation: DC Datasheet",
     model: SimpleServiceProposal,
     skipModelValidation: true,
     parentCollection: "simpleServiceProposals",
@@ -1071,7 +1071,7 @@ const IMPORT_COLLECTIONS = {
         s(r.service_proposal_external_ref),
       );
       if (!serviceProposalId) {
-        throw new Error("service_proposal_external_ref not found — import Service Proposals first");
+        throw new Error("service_proposal_external_ref not found — import Quotations first");
       }
       return {
         serviceProposalId,
@@ -1096,7 +1096,7 @@ const IMPORT_COLLECTIONS = {
         _id: payload.serviceProposalId,
         createdByEmail: ownerEmail,
       });
-      if (!doc) throw new Error("Service proposal not found");
+      if (!doc) throw new Error("Quotation not found");
       const existingRaw =
         doc.dcDatasheet && typeof doc.dcDatasheet === "object"
           ? typeof doc.dcDatasheet.toObject === "function"
@@ -1129,7 +1129,7 @@ const IMPORT_COLLECTIONS = {
     },
   },
   simpleServiceProposalPumpDatasheets: {
-    label: "Service Proposal — Pump Datasheet",
+    label: "Quotation: Pump Datasheet",
     model: SimpleServiceProposal,
     skipModelValidation: true,
     parentCollection: "simpleServiceProposals",
@@ -1184,7 +1184,7 @@ const IMPORT_COLLECTIONS = {
         s(r.service_proposal_external_ref),
       );
       if (!serviceProposalId) {
-        throw new Error("service_proposal_external_ref not found — import Service Proposals first");
+        throw new Error("service_proposal_external_ref not found — import Quotations first");
       }
       return {
         serviceProposalId,
@@ -1207,7 +1207,7 @@ const IMPORT_COLLECTIONS = {
         _id: payload.serviceProposalId,
         createdByEmail: ownerEmail,
       });
-      if (!doc) throw new Error("Service proposal not found");
+      if (!doc) throw new Error("Quotation not found");
       const existingRaw =
         doc.pumpDatasheet && typeof doc.pumpDatasheet === "object"
           ? typeof doc.pumpDatasheet.toObject === "function"
@@ -1235,7 +1235,7 @@ const IMPORT_COLLECTIONS = {
     },
   },
   simpleServiceProposalGeneratorDatasheets: {
-    label: "Service Proposal — Generator Datasheet",
+    label: "Quotation: Generator Datasheet",
     model: SimpleServiceProposal,
     skipModelValidation: true,
     parentCollection: "simpleServiceProposals",
@@ -1294,7 +1294,7 @@ const IMPORT_COLLECTIONS = {
         s(r.service_proposal_external_ref),
       );
       if (!serviceProposalId) {
-        throw new Error("service_proposal_external_ref not found — import Service Proposals first");
+        throw new Error("service_proposal_external_ref not found — import Quotations first");
       }
       const rotorFromJson = parseJsonObjectField(r.rotor_exciter_json, "rotor_exciter_json");
       return {
@@ -1323,7 +1323,7 @@ const IMPORT_COLLECTIONS = {
         _id: payload.serviceProposalId,
         createdByEmail: ownerEmail,
       });
-      if (!doc) throw new Error("Service proposal not found");
+      if (!doc) throw new Error("Quotation not found");
       const existingRaw =
         doc.generatorDatasheet && typeof doc.generatorDatasheet === "object"
           ? typeof doc.generatorDatasheet.toObject === "function"

@@ -41,7 +41,7 @@ export async function GET(request) {
     const { searchParams } = new URL(request.url);
     const toEmail = String(searchParams.get("toEmail") || "").trim();
     const toName = String(searchParams.get("toName") || "").trim();
-    const documentLabel = String(searchParams.get("documentLabel") || "").trim() || "Service proposal";
+    const documentLabel = String(searchParams.get("documentLabel") || "").trim() || "Quotation";
     if (!toEmail) {
       return NextResponse.json(
         { error: "Customer has no email address. Add an email to the customer record." },
@@ -71,7 +71,7 @@ export async function GET(request) {
   }
 }
 
-/** Email customer for a Simple portal service proposal / invoice. */
+/** Email customer for a Simple portal quotation / invoice. */
 export async function POST(request) {
   const { allowed } = await checkRateLimit(request, "simple-sp-send", 20);
   if (!allowed) {
@@ -90,7 +90,7 @@ export async function POST(request) {
       return NextResponse.json({ error: ccError }, { status: 400 });
     }
     const toEmail = String(body?.toEmail || "").trim();
-    const documentLabel = String(body?.documentLabel || "").trim() || "Service proposal";
+    const documentLabel = String(body?.documentLabel || "").trim() || "Quotation";
     const documentType = String(body?.documentType || "quote").trim().toLowerCase();
     if (!toEmail) {
       return NextResponse.json({ error: "Customer email is required." }, { status: 400 });
@@ -113,7 +113,7 @@ export async function POST(request) {
     const kindLabelRaw =
       kind === "invoice"
         ? "invoice"
-        : String(body?.kindLabel || "").trim() || "service proposal";
+        : String(body?.kindLabel || "").trim() || "quotation";
     const kindLabel = kindLabelRaw;
     const html = withDashboardOutboundEmailFooter(`
       <p>Please review your ${esc(kindLabel)} <strong>${esc(documentLabel)}</strong>. The document is attached as a PDF.</p>
@@ -151,7 +151,7 @@ export async function POST(request) {
             ? sourceDoc.invoiceNumber || sourceDoc.rfqNumber || documentLabel
             : sourceDoc.rfqNumber || sourceDoc.invoiceNumber || documentLabel;
         pdfAttachment = pdfFileAttachment(
-          safePdfFilename(kind === "invoice" ? "Invoice" : "Service-Proposal", numberLabel),
+          safePdfFilename(kind === "invoice" ? "Invoice" : "Quotation", numberLabel),
           pdfBuffer
         );
     } catch (pdfErr) {

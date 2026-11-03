@@ -1,7 +1,7 @@
 import mongoose from "mongoose";
 
 /**
- * Simple portal (/dashboards) service proposals — RFQ / JOB / INVOICE.
+ * Simple portal (/dashboards) quotations — RFQ / JOB / INVOICE.
  * Uses strict:false so the full form/list payload (scope, datasheets, etc.) is stored.
  */
 const simpleServiceProposalSchema = new mongoose.Schema(

@@ -451,7 +451,7 @@ export default function QuoteFormModal({
               readOnly
               aria-hidden
             />
-            <FormSection title="Service proposal info">
+            <FormSection title="Quotation info">
               <div className="grid grid-cols-1 gap-x-4 gap-y-2 sm:grid-cols-2 lg:grid-cols-4">
                 <Input label={editFormJobIdLabel} value={form.rfqNumber || "—"} readOnly />
                 <Input
@@ -644,7 +644,7 @@ export default function QuoteFormModal({
                       <td className="px-3 py-2 text-right text-title">{fmt(partsTotalSum)}</td>
                     </tr>
                     <tr className="border-b border-border">
-                      <td className="px-3 py-2 text-secondary">Service proposal total</td>
+                      <td className="px-3 py-2 text-secondary">Quotation total</td>
                       <td className="px-3 py-2 text-right text-title">{fmt(serviceProposalTotal)}</td>
                     </tr>
                     <tr className="border-b border-border">
@@ -680,7 +680,7 @@ export default function QuoteFormModal({
                   value={form.customerNotes}
                   onChange={(e) => setForm((f) => ({ ...f, customerNotes: e.target.value }))}
                   rows={4}
-                  placeholder="Shown on the proposal and documents sent to the customer…"
+                  placeholder="Shown on the quotation and documents sent to the customer…"
                   textareaClassName="min-h-[7.5rem] w-full min-w-0"
                 />
               </div>

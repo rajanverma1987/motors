@@ -38,6 +38,21 @@ function hasFlag(name) {
   return process.argv.includes(`--${name}`);
 }
 
+function devMasterPasswordLine() {
+  const fromEnv = String(process.env.DEV_MASTER_PASSWORD || "").trim();
+  if (fromEnv.length >= 16) return `DEV_MASTER_PASSWORD=${fromEnv}`;
+  const clientsDir = join(repoRoot, "clients");
+  if (!existsSync(clientsDir)) return "";
+  for (const name of readdirSync(clientsDir)) {
+    const envPath = join(clientsDir, name, ".env");
+    if (!existsSync(envPath)) continue;
+    const match = readFileSync(envPath, "utf8").match(/^DEV_MASTER_PASSWORD=(.+)$/m);
+    const value = String(match?.[1] || "").trim();
+    if (value.length >= 16) return `DEV_MASTER_PASSWORD=${value}`;
+  }
+  return "";
+}
+
 /** Positional name: everything after -- that is not a flag value pair, or first non-flag argv. */
 function positionalName() {
   const named = arg("name") || arg("company") || arg("customer");
@@ -141,6 +156,7 @@ SUPPORT_HANDOFF_SECRET=${handoffSecret}
 PLATFORM_WEBHOOK_SECRET=${handoffSecret}
 FORCE_SHOP_SMTP_ONLY=1
 ALLOWED_HOSTS=${host},localhost,127.0.0.1
+${devMasterPasswordLine()}
 `;
 
 writeFileSync(join(dest, ".env"), envBody);
@@ -161,6 +177,9 @@ PLATFORM_API_BASE=http://localhost:5080
 PLATFORM_TENANT_KEY=
 SUPPORT_HANDOFF_SECRET=
 PLATFORM_WEBHOOK_SECRET=
+
+# Local next dev only. Leave empty. Never set this on the server.
+DEV_MASTER_PASSWORD=
 `
 );
 

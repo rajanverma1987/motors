@@ -521,7 +521,7 @@ export default function RepairFlowCreateQuoteModal({
           <div className="mt-3 flex flex-wrap items-center gap-4 border-t border-border pt-3">
             <span className="text-sm text-secondary">Scope total: {fmt(scopeTotal)}</span>
             <span className="text-sm text-secondary">Other Cost total: {fmt(partsTotalSum)}</span>
-            <span className="font-semibold text-title">Service proposal total: {fmt(serviceProposalTotal)}</span>
+            <span className="font-semibold text-title">Quotation total: {fmt(serviceProposalTotal)}</span>
           </div>
         </FormSection>
 

@@ -188,7 +188,7 @@ export function logisticsChargeBackAmount(record) {
 }
 
 /**
- * Total logistics charges billed to the client on a service proposal / invoice row.
+ * Total logistics charges billed to the client on a quotation / invoice row.
  * @param {Record<string, unknown>|null|undefined} doc
  */
 export function proposalLogisticsChargesTotal(doc) {
@@ -249,7 +249,7 @@ export function applyCustomerLogisticsChargeToOtherItems(
   return [...filled, emptyOtherLine()];
 }
 
-/** Strip auto logistics charge lines (used when copying a proposal). */
+/** Strip auto logistics charge lines (used when copying a quotation). */
 export function stripLogisticsChargeOtherItems(otherItems) {
   const items = Array.isArray(otherItems) ? otherItems : [];
   const kept = items.filter((line) => {

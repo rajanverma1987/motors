@@ -314,7 +314,7 @@ export async function buildQuoteInvoicePdfBuffer({
           ]
         : [
             `Customer PO: ${txt(q.customerPo) || "—"}`,
-            `Proposal Sent Date: ${dateLabel(q.proposalSubmitDate || q.date, currency)}`,
+            `Quotation Sent Date: ${dateLabel(q.proposalSubmitDate || q.date, currency)}`,
           ],
     shopName: txt(extras.fromShopName || shopName),
     shopContact: txt(extras.fromShopContact),
@@ -334,17 +334,17 @@ export async function buildQuoteInvoicePdfBuffer({
   const right = [txt(extras.customerToName), txt(extras.customerBillingAddress, 800)].filter(Boolean).join("\n");
   y = drawTwoCol(pdf, y, "From", left || "—", "To", right || "—");
 
-  y = drawSectionTitle(pdf, y, "Proposal Info");
+  y = drawSectionTitle(pdf, y, "Quotation Info");
   y = drawInfoGrid(
     pdf,
     y,
     kind === "invoice"
       ? [
           { label: `${SERVICE_PROPOSAL_DOCUMENT_TITLE}#`, value: txt(q.rfqNumber) || "—" },
-          { label: "Proposal Sent Date", value: dateLabel(q.proposalSubmitDate || q.date, currency) },
+          { label: "Quotation Sent Date", value: dateLabel(q.proposalSubmitDate || q.date, currency) },
           { label: "Prepared by", value: txt(q.preparedByDisplay || q.preparedBy) || "—" },
           {
-            label: "Proposal Approved By",
+            label: "Quotation Approved By",
             value: txt(q.proposalApprovedByDisplay || q.proposalApprovedBy) || "—",
           },
         ]
@@ -352,7 +352,7 @@ export async function buildQuoteInvoicePdfBuffer({
           { label: "Prepared by", value: txt(q.preparedByDisplay || q.preparedBy) || "—" },
           { label: "Date Approved", value: dateLabel(q.proposalAcceptedDate, currency) },
           {
-            label: "Proposal Approved By",
+            label: "Quotation Approved By",
             value: txt(q.proposalApprovedByDisplay || q.proposalApprovedBy) || "—",
           },
           { label: "Est. completion", value: dateLabel(q.estimatedCompletion, currency) },

@@ -39,7 +39,7 @@ const GENERATOR_BLOCKS = [
   { key: "rotorExciter", label: "Rotor & Exciter", columns: GENERATOR_ROTOR_COLUMNS },
 ];
 
-/** Four core measurements the shop keeps on the proposal itself (§9.8). */
+/** Four core measurements the shop keeps on the quotation itself (§9.8). */
 export const TRACK_CORE_MEASUREMENT_FIELDS = [
   { proposalKey: "sl", label: "Slots", acKey: "dataSheet.slots", dcKey: "armature.slots", generatorKey: "dataSheet.slots" },
   {
@@ -320,7 +320,7 @@ export function trackCoreMeasurementsFromDatasheet(data, powerType) {
 }
 
 /**
- * Merge the four core measurements coming back from a proposal into a datasheet-shaped object
+ * Merge the four core measurements coming back from a quotation into a datasheet-shaped object
  * so they can flow through the standard merge rules.
  * @param {Record<string, unknown>} proposal
  * @param {"AC"|"DC"} powerType

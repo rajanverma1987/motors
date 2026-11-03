@@ -133,14 +133,14 @@ export default function SimpleVendorFormFields({ form, setForm, disabled = false
               className={`${FIELD_INPUT} !w-full`}
               aria-label="City"
             />
-            <label className="shrink-0 text-xs font-bold text-title">State</label>
+            <label className="shrink-0 text-xs font-bold text-title">Province</label>
             <input
               type="text"
               disabled={disabled}
               value={form.state}
               onChange={(e) => patch("state", e.target.value)}
               className={`${FIELD_INPUT} !w-full`}
-              aria-label="State"
+              aria-label="Province"
             />
             <label className="shrink-0 text-xs font-bold text-title">Zip</label>
             <input

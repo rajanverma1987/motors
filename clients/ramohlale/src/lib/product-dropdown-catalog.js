@@ -63,7 +63,7 @@ export const PRODUCT_DROPDOWN_DEFINITIONS = {
   quote_type: {
     key: "quote_type",
     label: "Lead source",
-    description: "How the customer reached out on the proposal form (Phone, Email, Walk-in).",
+    description: "How the customer reached out on the quotation form (Phone, Email, Walk-in).",
     placeholder: "Select lead source",
     defaults: DEFAULT_QUOTE_TYPES,
   },

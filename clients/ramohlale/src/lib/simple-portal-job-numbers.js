@@ -28,7 +28,7 @@ export async function loadExistingSimplePortalJobNumbers(createdByEmail) {
 }
 
 /**
- * Next job number for Simple portal service proposals (queries full DB, not paginated UI rows).
+ * Next job number for Simple portal quotations (queries full DB, not paginated UI rows).
  * @param {string} createdByEmail
  * @param {ReturnType<typeof import("@/lib/user-settings").mergeUserSettings>} mergedSettings
  */

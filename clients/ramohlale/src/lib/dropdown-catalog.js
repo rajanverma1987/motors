@@ -56,7 +56,7 @@ export const PO_PAYMENT_STATUS_FALLBACK_TILE_INDEX = {
   "Partial Paid": 3,
 };
 
-/** System filter cards (Service Proposals / Invoices / Customers) — not user-extensible. */
+/** System filter cards (Quotations / Invoices / Customers) — not user-extensible. */
 export const OTHER_STATUS_ALL = "__all__";
 export const OTHER_STATUS_CUSTOMERS = "__customers__";
 export const OTHER_STATUS_LEADS = "__leads__";
@@ -626,7 +626,7 @@ export function buildQuoteStatusFilterCardSpecs(mergedSettings) {
   return specs;
 }
 
-/** Numeric order for Proposal Status column sort; unknown statuses sort last. */
+/** Numeric order for Quotation Status column sort; unknown statuses sort last. */
 export function quoteStatusSortOrderForValue(mergedSettings, value) {
   const entries = mergedSettings?.controlledDropdowns?.quote_status?.entries;
   const list = Array.isArray(entries) ? entries : normalizeQuoteEntries([]);
@@ -788,7 +788,7 @@ export function normalizeOtherStatusKey(value) {
   return hit || s;
 }
 
-/** Filter key used on Service Proposals / Invoices list (`""` for All). */
+/** Filter key used on Quotations / Invoices list (`""` for All). */
 export function otherStatusFilterKey(value) {
   const key = normalizeOtherStatusKey(value);
   return key === OTHER_STATUS_ALL ? "" : key;

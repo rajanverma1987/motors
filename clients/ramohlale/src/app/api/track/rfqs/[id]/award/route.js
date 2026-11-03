@@ -24,11 +24,11 @@ export async function POST(request, context) {
     const invitation = rfq.invitations.id(invitationId);
     if (!invitation) return NextResponse.json({ error: "Shop not found on this RFQ." }, { status: 404 });
     if (!invitation.response) {
-      return NextResponse.json({ error: "That shop has not sent a proposal yet." }, { status: 409 });
+      return NextResponse.json({ error: "That shop has not sent a quotation yet." }, { status: 409 });
     }
     if (trackIsExpired(invitation.response.validUntil)) {
       return NextResponse.json(
-        { error: "That proposal has expired. Ask the shop for a revision before awarding." },
+        { error: "That quotation has expired. Ask the shop for a revision before awarding." },
         { status: 409 }
       );
     }

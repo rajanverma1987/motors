@@ -786,7 +786,7 @@ async function buildCustomers(ownerEmail, filters, reportOpts = {}) {
     "Phone",
     "Email",
     "City",
-    "State",
+    "Province",
     "Credit limit",
     "Tax exempt",
     "Tax %",
