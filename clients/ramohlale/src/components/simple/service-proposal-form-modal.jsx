@@ -63,6 +63,8 @@ import {
   buildCustomerPayload,
   uploadCustomerDocumentFiles,
   INITIAL_CUSTOMER_FORM,
+  listCustomerJobContacts,
+  resolveCustomerJobContact,
 } from "@/lib/customer-record-form";
 import {
   invoiceStatusSelectOptionsFromMerged,
@@ -81,6 +83,7 @@ import {
   withShopAdminEmployee,
 } from "@/lib/technician-select-options";
 import { mergeUserSettings } from "@/lib/user-settings";
+import { totalsAfterDiscount } from "@/lib/quote-invoice-totals";
 import {
   resolveStatusTileProps,
   resolveWorkOrderStatusTileProps,
@@ -247,6 +250,12 @@ function buildProposalPoTableGroups(purchaseOrders) {
     groups.push({ poId, poNumber, vendorName, poStatus, poPaymentStatus, poDateRaw, items });
   }
   return groups;
+}
+
+function jobContactOptionLabel(contact) {
+  if (contact.email) return `${contact.name} (${contact.email})`;
+  if (contact.phone) return `${contact.name} (${contact.phone})`;
+  return contact.name;
 }
 
 function FieldRow({
@@ -563,7 +572,7 @@ function LineItemsTable({
           </tbody>
         </table>
       </div>
-      {!hidePrices ? (
+      {!hidePrices && totalLabel ? (
         <div className="flex items-center justify-end gap-2 border-t border-solid border-[hsl(var(--title)/0.35)] bg-muted/40 px-1 py-0.5 text-sm font-semibold dark:border-[hsl(var(--title)/0.4)]">
           <span className="font-bold text-title">{totalLabel}</span>
           <input
@@ -572,11 +581,7 @@ function LineItemsTable({
             className={`${CELL_INPUT_MUTED} !h-8 !w-32 text-right font-semibold tabular-nums`}
           />
         </div>
-      ) : (
-        <div className="flex items-center justify-end gap-2 border-t border-solid border-[hsl(var(--title)/0.35)] bg-muted/40 px-2 py-1 text-xs text-secondary dark:border-[hsl(var(--title)/0.4)]">
-          <span>Pricing hidden for employee role</span>
-        </div>
-      )}
+      ) : null}
     </div>
   );
 }
@@ -1013,17 +1018,35 @@ export default function ServiceProposalFormModal({
     }
   };
 
+  const applyCustomerContact = (customer, contactKey) => {
+    const contacts = listCustomerJobContacts(customer);
+    const contact = contacts.find((row) => row.key === contactKey) || contacts[0] || null;
+    return {
+      jobContactKey: contact?.key || "",
+      customerEmail: contact?.email || "",
+      customerPhone: contact?.phone || "",
+    };
+  };
+
   const handleCustomerChange = (customerId) => {
     const c = customers.find((row) => String(row.id || row._id || "") === String(customerId || "").trim());
     const taxExempt = c?.taxExempt !== false;
+    const contactFields = applyCustomerContact(c, "primary");
     setForm((f) => ({
       ...f,
       customerId,
       companyName: String(c?.companyName || c?.primaryContactName || "").trim(),
-      customerEmail: c?.email || "",
-      customerPhone: c?.phone || "",
+      ...contactFields,
       customerTaxExempt: taxExempt,
       taxPercent: taxExempt ? "" : String(c?.taxPercent ?? ""),
+    }));
+  };
+
+  const handleJobContactChange = (contactKey) => {
+    const contactFields = applyCustomerContact(selectedCustomer, contactKey);
+    setForm((f) => ({
+      ...f,
+      ...contactFields,
     }));
   };
 
@@ -1062,6 +1085,7 @@ export default function ServiceProposalFormModal({
           companyName: String(saved.companyName || newCustomerForm.companyName || "").trim(),
           customerEmail: saved.email || "",
           customerPhone: saved.phone || "",
+          jobContactKey: "primary",
           customerTaxExempt: saved.taxExempt !== false,
           taxPercent: saved.taxExempt !== false ? "" : String(saved.taxPercent ?? ""),
         }));
@@ -1081,6 +1105,7 @@ export default function ServiceProposalFormModal({
         companyName: String(saved.companyName || newCustomerForm.companyName || "").trim(),
         customerEmail: saved.email || "",
         customerPhone: saved.phone || "",
+        jobContactKey: "primary",
         customerTaxExempt: saved.taxExempt !== false,
         taxPercent: saved.taxExempt !== false ? "" : String(saved.taxPercent ?? ""),
       }));
@@ -1212,6 +1237,20 @@ export default function ServiceProposalFormModal({
     () => customers.find((c) => c.id === form.customerId) || null,
     [customers, form.customerId]
   );
+
+  const jobContacts = useMemo(() => listCustomerJobContacts(selectedCustomer), [selectedCustomer]);
+
+  const jobContactValue = useMemo(() => {
+    if (!jobContacts.length) return "";
+    const saved = String(form.jobContactKey || "").trim();
+    if (jobContacts.some((row) => row.key === saved)) return saved;
+    const email = String(form.customerEmail || "").trim().toLowerCase();
+    const phone = String(form.customerPhone || "").trim();
+    const match = jobContacts.find(
+      (row) => row.email.toLowerCase() === email && row.phone === phone
+    );
+    return match?.key || "";
+  }, [jobContacts, form.jobContactKey, form.customerEmail, form.customerPhone]);
 
   const datasheetInitial = useMemo(() => {
     const companyName =
@@ -1570,8 +1609,14 @@ export default function ServiceProposalFormModal({
       user,
       notesMode,
     });
-    const toEmail = String(customer?.email || form.customerEmail || "").trim();
-    const toName = String(customer?.primaryContactName || customer?.companyName || "").trim();
+    const selectedContact = resolveCustomerJobContact(customer, form);
+    const toEmail = String(selectedContact?.email || form.customerEmail || customer?.email || "").trim();
+    const toName = String(
+      (selectedContact?.key === "primary" ? customer?.primaryContactName : selectedContact?.printName) ||
+        customer?.primaryContactName ||
+        customer?.companyName ||
+        ""
+    ).trim();
     setPrintBundle(bundle);
     setPrintSendMeta({
       toEmail,
@@ -1586,14 +1631,18 @@ export default function ServiceProposalFormModal({
   const scopeTotal = sumLinePrices(form.scopeDetails);
   const otherTotal = sumOtherLinePrices(form.otherItems);
   const taxableOtherTotal = sumTaxableOtherLinePrices(form.otherItems);
-  const totalAmount = scopeTotal + otherTotal;
   const showTax = form.customerTaxExempt === false;
-  const taxPct = showTax
-    ? Number.parseFloat(String(form.taxPercent ?? "").replace(/[^0-9.-]/g, ""))
-    : 0;
-  const taxAmount =
-    showTax && Number.isFinite(taxPct) ? ((scopeTotal + taxableOtherTotal) * taxPct) / 100 : 0;
-  const billingTotal = totalAmount + taxAmount;
+  const priced = totalsAfterDiscount({
+    subtotal: scopeTotal + otherTotal,
+    taxableBase: scopeTotal + taxableOtherTotal,
+    discount: form.discount,
+    taxExempt: !showTax,
+    taxPercent: form.taxPercent,
+  });
+  const totalAmount = priced.subtotal;
+  const amountAfterDiscount = priced.total;
+  const taxAmount = priced.taxAmount;
+  const billingTotal = priced.grandTotal;
   const invoicePaymentSummary = useMemo(
     () => computeInvoicePaymentSummary(form.payments, billingTotal),
     [form.payments, billingTotal]
@@ -1800,6 +1849,77 @@ export default function ServiceProposalFormModal({
         {saving ? "Saving…" : "Save"}
       </Button>
     </>
+  );
+
+  const showOtherItemsSection =
+    form.recordType === RECORD_TYPE_INVOICE || mergedSettings.showQuotationOtherItems !== false;
+
+  const billingTotalsPanel = canViewFinancials ? (
+    <div className="ml-auto w-full max-w-xs space-y-1 border border-border bg-card p-2">
+      <FieldRow label="Subtotal" labelWidth="9rem" labelClassName={SIMPLE_TOTAL_LABEL}>
+        <input
+          readOnly
+          value={formatMoney(totalAmount)}
+          className={`${FIELD_INPUT} !h-8 text-right ${SIMPLE_TOTAL_INPUT}`}
+        />
+      </FieldRow>
+      <FieldRow label="Discount" labelWidth="9rem" labelClassName={SIMPLE_TOTAL_LABEL}>
+        <input
+          type="text"
+          inputMode="decimal"
+          value={form.discount ?? ""}
+          onChange={(e) => patch("discount", e.target.value)}
+          className={`${FIELD_INPUT} !h-8 text-right ${SIMPLE_TOTAL_INPUT}`}
+        />
+      </FieldRow>
+      <FieldRow label="Total" labelWidth="9rem" labelClassName={SIMPLE_TOTAL_LABEL}>
+        <input
+          readOnly
+          value={formatMoney(amountAfterDiscount)}
+          className={`${FIELD_INPUT} !h-8 text-right ${SIMPLE_TOTAL_INPUT}`}
+        />
+      </FieldRow>
+      {showTax ? (
+        <>
+          <FieldRow label="Tax%" labelWidth="9rem" labelClassName={SIMPLE_TOTAL_LABEL}>
+            <input
+              type="text"
+              inputMode="decimal"
+              value={form.taxPercent}
+              onChange={(e) => patch("taxPercent", e.target.value)}
+              className={`${FIELD_INPUT} !h-8 text-right ${SIMPLE_TOTAL_INPUT}`}
+            />
+          </FieldRow>
+          <FieldRow label="Tax Amount" labelWidth="9rem" labelClassName={SIMPLE_TOTAL_LABEL}>
+            <input
+              readOnly
+              value={formatMoney(taxAmount)}
+              className={`${FIELD_INPUT} !h-8 text-right ${SIMPLE_TOTAL_INPUT}`}
+            />
+          </FieldRow>
+        </>
+      ) : null}
+      <FieldRow
+        label={form.recordType === RECORD_TYPE_INVOICE ? "Invoice total" : "Quotation total"}
+        labelWidth="9rem"
+        labelClassName={SIMPLE_TOTAL_LABEL}
+      >
+        <input
+          readOnly
+          value={formatMoney(billingTotal)}
+          className={`${FIELD_INPUT} !h-8 !bg-muted text-right ${SIMPLE_TOTAL_INPUT} dark:!bg-card`}
+        />
+      </FieldRow>
+    </div>
+  ) : (
+    <div className="ml-auto flex w-full max-w-xs flex-col items-center justify-center gap-1 border border-border bg-card p-4 text-center">
+      <Badge variant="warning" className="rounded-full px-2.5 py-0.5 text-xs font-semibold">
+        Financial Totals Restricted
+      </Badge>
+      <p className="text-xs text-secondary">
+        Pricing, taxes, and billing totals are hidden for this employee role.
+      </p>
+    </div>
   );
 
   const formScrollBody = (
@@ -2035,6 +2155,21 @@ export default function ServiceProposalFormModal({
                   </button>
                 </div>
               </FieldRow>
+              {jobContacts.length > 0 ? (
+                <FieldRow label="Contact" labelWidth="7.75rem" controlClassName="min-w-0 flex-1">
+                  <SimpleSelect
+                    options={jobContacts.map((contact) => ({
+                      value: contact.key,
+                      label: jobContactOptionLabel(contact),
+                    }))}
+                    value={jobContactValue}
+                    onChange={(e) => handleJobContactChange(e.target.value)}
+                    placeholder="Select contact"
+                    searchable
+                    aria-label="Job contact"
+                  />
+                </FieldRow>
+              ) : null}
               <FieldRow label="Email" labelWidth="7.75rem" controlClassName="min-w-0 flex-1">
                 <input
                   type="email"
@@ -2611,121 +2746,64 @@ export default function ServiceProposalFormModal({
 
           {/* Tables + totals */}
           <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
-            <LineItemsTable
-              title="PROPOSAL BREAKDOWN (Taxed, if applicable)"
-              lines={form.scopeDetails}
-              onChange={(scopeDetails) => patch("scopeDetails", scopeDetails)}
-              totalLabel="Total For Quotation:"
-              formatMoney={formatMoney}
-              hidePrices={!canViewFinancials}
-              headerAction={
-                canViewFinancials ? (
-                  <Button
-                    type="button"
-                    variant="primary"
-                    size="sm"
-                    className="h-7 !rounded-none px-2 text-[11px]"
-                    disabled={!canAddCommission || saving || copying}
-                    title={
-                      canAddCommission
-                        ? "Add sales commission"
-                        : "Save the record before adding commission"
-                    }
-                    onClick={() => setCommissionOpen(true)}
-                  >
-                    {commissionCount > 0
-                      ? `Add Commission (${commissionCount})`
-                      : "Add Commission"}
-                  </Button>
-                ) : null
-              }
-            />
             <div className="flex min-w-0 flex-col gap-2">
               <LineItemsTable
-                title="OTHER ITEMS (NON TAXABLE)"
-                lines={form.otherItems}
-                onChange={(otherItems) => patch("otherItems", otherItems)}
-                totalLabel="Total:"
+                title="PROPOSAL BREAKDOWN (Taxed, if applicable)"
+                lines={form.scopeDetails}
+                onChange={(scopeDetails) => patch("scopeDetails", scopeDetails)}
+                totalLabel={showOtherItemsSection ? "Total For Quotation:" : ""}
                 formatMoney={formatMoney}
                 hidePrices={!canViewFinancials}
-                showTaxColumn={showTax}
                 headerAction={
-                  <Button
-                    type="button"
-                    variant="primary"
-                    size="sm"
-                    className="h-7 !rounded-none px-2 text-[11px]"
-                    onClick={() => setAddFromInventoryOpen(true)}
-                  >
-                    <FiPlus className="h-3.5 w-3.5 shrink-0" aria-hidden />
-                    Add From Inventory
-                  </Button>
+                  canViewFinancials ? (
+                    <Button
+                      type="button"
+                      variant="primary"
+                      size="sm"
+                      className="h-7 !rounded-none px-2 text-[11px]"
+                      disabled={!canAddCommission || saving || copying}
+                      title={
+                        canAddCommission
+                          ? "Add sales commission"
+                          : "Save the record before adding commission"
+                      }
+                      onClick={() => setCommissionOpen(true)}
+                    >
+                      {commissionCount > 0
+                        ? `Add Commission (${commissionCount})`
+                        : "Add Commission"}
+                    </Button>
+                  ) : null
                 }
               />
-              {canViewFinancials ? (
-                <div className="ml-auto w-full max-w-xs space-y-1 border border-border bg-card p-2">
-                  <FieldRow
-                    label="Total Amount"
-                    labelWidth="9rem"
-                    labelClassName={SIMPLE_TOTAL_LABEL}
-                  >
-                    <input
-                      readOnly
-                      value={formatMoney(totalAmount)}
-                      className={`${FIELD_INPUT} !h-8 text-right ${SIMPLE_TOTAL_INPUT}`}
-                    />
-                  </FieldRow>
-                  {showTax ? (
-                    <>
-                      <FieldRow
-                        label="Tax%"
-                        labelWidth="9rem"
-                        labelClassName={SIMPLE_TOTAL_LABEL}
-                      >
-                        <input
-                          type="text"
-                          inputMode="decimal"
-                          value={form.taxPercent}
-                          onChange={(e) => patch("taxPercent", e.target.value)}
-                          className={`${FIELD_INPUT} !h-8 text-right ${SIMPLE_TOTAL_INPUT}`}
-                        />
-                      </FieldRow>
-                      <FieldRow
-                        label="Tax Amount"
-                        labelWidth="9rem"
-                        labelClassName={SIMPLE_TOTAL_LABEL}
-                      >
-                        <input
-                          readOnly
-                          value={formatMoney(taxAmount)}
-                          className={`${FIELD_INPUT} !h-8 text-right ${SIMPLE_TOTAL_INPUT}`}
-                        />
-                      </FieldRow>
-                    </>
-                  ) : null}
-                  <FieldRow
-                    label="Total For Billing"
-                    labelWidth="9rem"
-                    labelClassName={SIMPLE_TOTAL_LABEL}
-                  >
-                    <input
-                      readOnly
-                      value={formatMoney(billingTotal)}
-                      className={`${FIELD_INPUT} !h-8 !bg-muted text-right ${SIMPLE_TOTAL_INPUT} dark:!bg-card`}
-                    />
-                  </FieldRow>
-                </div>
-              ) : (
-                <div className="ml-auto flex w-full max-w-xs flex-col items-center justify-center gap-1 border border-border bg-card p-4 text-center">
-                  <Badge variant="warning" className="rounded-full px-2.5 py-0.5 text-xs font-semibold">
-                    Financial Totals Restricted
-                  </Badge>
-                  <p className="text-xs text-secondary">
-                    Pricing, taxes, and billing totals are hidden for this employee role.
-                  </p>
-                </div>
-              )}
+              {showOtherItemsSection ? null : billingTotalsPanel}
             </div>
+            {showOtherItemsSection ? (
+              <div className="flex min-w-0 flex-col gap-2">
+                <LineItemsTable
+                  title="OTHER ITEMS (NON TAXABLE)"
+                  lines={form.otherItems}
+                  onChange={(otherItems) => patch("otherItems", otherItems)}
+                  totalLabel="Total:"
+                  formatMoney={formatMoney}
+                  hidePrices={!canViewFinancials}
+                  showTaxColumn={showTax}
+                  headerAction={
+                    <Button
+                      type="button"
+                      variant="primary"
+                      size="sm"
+                      className="h-7 !rounded-none px-2 text-[11px]"
+                      onClick={() => setAddFromInventoryOpen(true)}
+                    >
+                      <FiPlus className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                      Add From Inventory
+                    </Button>
+                  }
+                />
+                {billingTotalsPanel}
+              </div>
+            ) : null}
           </div>
         </Form>
         </div>
@@ -2828,6 +2906,10 @@ export default function ServiceProposalFormModal({
         companyName={user?.shopName || ""}
         customerEmail={String(form.customerEmail || selectedCustomer?.email || "").trim()}
         customerPhone={String(form.customerPhone || selectedCustomer?.phone || "").trim()}
+        manufacturer={form.manufacturer}
+        hpKw={form.hpKw}
+        frameType={form.frameType}
+        modelNumber={form.modelNumber}
         zIndex={130}
       />
 
@@ -2961,13 +3043,15 @@ export default function ServiceProposalFormModal({
           });
           setForm((current) => {
             if (String(current.customerId || "") !== cid) return current;
+            const contacts = listCustomerJobContacts({ ...customer, id: cid });
+            const chosen = contacts.find((row) => row.key === String(current.jobContactKey || "").trim());
             return {
               ...current,
               companyName: String(
                 customer?.companyName || customer?.primaryContactName || current.companyName || ""
               ).trim(),
-              customerEmail: customer?.email ?? current.customerEmail,
-              customerPhone: customer?.phone ?? current.customerPhone,
+              customerEmail: chosen ? chosen.email : (customer?.email ?? current.customerEmail),
+              customerPhone: chosen ? chosen.phone : (customer?.phone ?? current.customerPhone),
             };
           });
         }}

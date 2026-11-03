@@ -55,6 +55,9 @@ function injectDocumentPrintStyles() {
       .${PRINT_ROOT_CLASS}:has(.datasheet-print-root) {
         padding: 0.28in 0.45in 0.32in !important;
       }
+      .${PRINT_ROOT_CLASS}:has(.delivery-note-print) {
+        padding: 0.32in 0.45in 0.28in !important;
+      }
       .${PRINT_ROOT_CLASS} * {
         box-shadow: none !important;
       }

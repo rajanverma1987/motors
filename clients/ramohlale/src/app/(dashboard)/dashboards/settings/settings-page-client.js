@@ -728,6 +728,16 @@ export default function SettingsPageClient() {
               </div>
             </FormContainer>
             <FormContainer>
+              <FormSectionTitle as="h2">Quotation</FormSectionTitle>
+              <Checkbox
+                name="showQuotationOtherItems"
+                label="Show Other items (non taxable)"
+                help="Show the Other items (non taxable) section on the quotation form and on printed quotations."
+                checked={draft.showQuotationOtherItems !== false}
+                onChange={(e) => updateDraft({ showQuotationOtherItems: e.target.checked })}
+              />
+            </FormContainer>
+            <FormContainer>
               <FormSectionTitle as="h2">Calendar & dates</FormSectionTitle>
               <p className="mb-3 max-w-[42rem] text-sm text-secondary">
                 Shop week used on Employees → Punches for This week, Previous week, and By weeks.
@@ -1187,6 +1197,7 @@ export default function SettingsPageClient() {
       draft.quickBooksDefaultExpenseAccountId,
       draft.workOrderStatuses,
       draft.compactTables,
+      draft.showQuotationOtherItems,
       draft.currency,
       draft.zoomLevel,
       draft.fontSizeLevel,

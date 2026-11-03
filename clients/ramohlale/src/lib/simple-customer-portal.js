@@ -18,6 +18,7 @@ import {
   buildSimpleServiceProposalPrintBundle,
 } from "@/lib/simple-service-proposal-print";
 import { toInputDateValue } from "@/lib/format-date";
+import { totalsAfterDiscount } from "@/lib/quote-invoice-totals";
 
 function moneyFixed(n) {
   const value = Number.isFinite(n) ? n : 0;
@@ -66,10 +67,20 @@ function computeSpTotals(doc) {
   const taxableOtherTotal = sumTaxableOtherLinePrices(doc?.otherItems);
   const showTax = doc?.customerTaxExempt === false;
   const taxPct = showTax ? parseMoneyInput(doc?.taxPercent) : 0;
-  const taxAmount = showTax ? ((scopeTotal + taxableOtherTotal) * taxPct) / 100 : 0;
-  const subtotal = scopeTotal + otherTotal;
-  const grandTotal = subtotal + taxAmount;
-  return { scopeTotal, otherTotal, subtotal, taxAmount, grandTotal };
+  const priced = totalsAfterDiscount({
+    subtotal: scopeTotal + otherTotal,
+    taxableBase: scopeTotal + taxableOtherTotal,
+    discount: doc?.discount,
+    taxExempt: !showTax,
+    taxPercent: taxPct,
+  });
+  return {
+    scopeTotal,
+    otherTotal,
+    subtotal: priced.subtotal,
+    taxAmount: priced.taxAmount,
+    grandTotal: priced.grandTotal,
+  };
 }
 
 function isInvoiceDoc(doc) {

@@ -8,6 +8,8 @@ export const USER_SETTINGS_DEFAULTS = {
   tablePageSize: 25,
   /** Denser table rows on dashboard list / summary tables */
   compactTables: false,
+  /** Other items (non taxable) on the quotation form and printed quotation. */
+  showQuotationOtherItems: true,
   /**
    * Per-table hidden column keys for hub Tables (keyed by columnSettingsKey).
    * Example: { "simple-customers": ["phone", "email"] }
@@ -141,6 +143,7 @@ export const USER_SETTINGS_ALLOWED_KEYS = new Set([
   "leadEmailAlerts",
   "tablePageSize",
   "compactTables",
+  "showQuotationOtherItems",
   "tableColumnVisibility",
   "weekStartDay",
   "weekEndDay",
@@ -376,6 +379,7 @@ export function mergeUserSettings(stored) {
       Number.isFinite(m) && m >= 0 ? Math.min(1000, Math.round(m * 100) / 100) : 0;
   }
   merged.tableColumnVisibility = normalizeTableColumnVisibility(merged.tableColumnVisibility);
+  merged.showQuotationOtherItems = merged.showQuotationOtherItems !== false;
   merged.productDropdowns = normalizeProductDropdowns(merged.productDropdowns);
   merged.prefixRepairJob = sanitizeDocumentNumberPrefix(merged.prefixRepairJob);
   merged.prefixInvoice = sanitizeDocumentNumberPrefix(merged.prefixInvoice);

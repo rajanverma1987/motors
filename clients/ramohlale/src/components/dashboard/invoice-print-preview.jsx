@@ -63,6 +63,7 @@ export default function InvoicePrintPreview({
     taxablePartsTotal: q.taxablePartsTotal,
     taxExempt: q.customerTaxExempt,
     taxPercent: q.customerTaxPercent,
+    discount: q.discount,
   });
 
   return (
@@ -234,8 +235,16 @@ export default function InvoicePrintPreview({
               <td className="px-2 py-1.5 text-right text-neutral-900">{q.partsTotal ? fmt(q.partsTotal) : "—"}</td>
             </tr>
             <tr className="border-b border-neutral-200">
-              <td className="px-2 py-1.5 text-neutral-800">Invoice subtotal</td>
+              <td className="px-2 py-1.5 text-neutral-800">Subtotal</td>
               <td className="px-2 py-1.5 text-right text-neutral-900">{fmt(totals.subtotal)}</td>
+            </tr>
+            <tr className="border-b border-neutral-200">
+              <td className="px-2 py-1.5 text-neutral-800">Discount</td>
+              <td className="px-2 py-1.5 text-right text-neutral-900">{fmt(totals.discountAmount)}</td>
+            </tr>
+            <tr className="border-b border-neutral-200">
+              <td className="px-2 py-1.5 text-neutral-800">Total</td>
+              <td className="px-2 py-1.5 text-right text-neutral-900">{fmt(totals.total)}</td>
             </tr>
             <tr className="border-b border-neutral-200">
               <td className="px-2 py-1.5 text-neutral-800">
@@ -244,7 +253,7 @@ export default function InvoicePrintPreview({
               <td className="px-2 py-1.5 text-right text-neutral-900">{fmt(totals.taxAmount)}</td>
             </tr>
             <tr className="bg-neutral-100">
-              <td className="px-2 py-2 text-sm font-bold text-neutral-900">Grand total</td>
+              <td className="px-2 py-2 text-sm font-bold text-neutral-900">Invoice total</td>
               <td className="px-2 py-2 text-right text-sm font-bold text-neutral-900">{fmt(totals.grandTotal)}</td>
             </tr>
           </tbody>

@@ -1,4 +1,5 @@
 import { formatDateForCurrency, toInputDateValue } from "@/lib/format-date";
+import { totalsAfterDiscount } from "@/lib/quote-invoice-totals";
 import {
   parseMoneyInput,
   sumLinePrices,
@@ -64,9 +65,14 @@ export function computeSpMoney(doc) {
   const taxableOtherTotal = sumTaxableOtherLinePrices(doc?.otherItems);
   const showTax = doc?.customerTaxExempt === false;
   const taxPct = showTax ? parseMoneyInput(doc?.taxPercent) : 0;
-  const taxAmount = showTax ? ((scopeTotal + taxableOtherTotal) * taxPct) / 100 : 0;
-  const grandTotal = scopeTotal + otherTotal + taxAmount;
-  return { scopeTotal, otherTotal, taxAmount, grandTotal };
+  const priced = totalsAfterDiscount({
+    subtotal: scopeTotal + otherTotal,
+    taxableBase: scopeTotal + taxableOtherTotal,
+    discount: doc?.discount,
+    taxExempt: !showTax,
+    taxPercent: taxPct,
+  });
+  return { scopeTotal, otherTotal, taxAmount: priced.taxAmount, grandTotal: priced.grandTotal };
 }
 
 export function computePoMoney(doc) {

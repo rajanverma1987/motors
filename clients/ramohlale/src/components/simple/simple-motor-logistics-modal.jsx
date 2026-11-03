@@ -396,6 +396,10 @@ export default function SimpleMotorLogisticsModal({
   companyName = "",
   customerEmail = "",
   customerPhone = "",
+  manufacturer = "",
+  hpKw = "",
+  frameType = "",
+  modelNumber = "",
   zIndex = 130,
 }) {
   const alert = useAlert();
@@ -724,7 +728,7 @@ export default function SimpleMotorLogisticsModal({
 
           <LogisticsColumn
             kind={KIND_SHIPPING}
-            title="Shipping"
+            title="Delivery Notes"
             subtitle="Outbound / return after repair"
             form={shippingForm}
             patch={patchShipping}
@@ -793,6 +797,10 @@ export default function SimpleMotorLogisticsModal({
           customerEmail={customerEmail}
           customerPhone={customerPhone}
           paidByLabel={paidByLabel}
+          manufacturer={manufacturer}
+          hpKw={hpKw}
+          frameType={frameType}
+          modelNumber={modelNumber}
         />
       </DocumentPrintOffscreenPortal>
     ) : null}

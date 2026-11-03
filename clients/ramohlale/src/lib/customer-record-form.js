@@ -171,6 +171,65 @@ export function customerApiToForm(data) {
   };
 }
 
+/** Primary contact plus additional contacts, for picking a job contact. */
+export function listCustomerJobContacts(customer) {
+  if (!customer) return [];
+  const contacts = [];
+  const primaryName = String(customer.primaryContactName || "").trim();
+  const primaryEmail = String(customer.email || "").trim();
+  const primaryPhone = String(customer.phone || "").trim();
+  if (primaryName || primaryEmail || primaryPhone) {
+    contacts.push({
+      key: "primary",
+      name: primaryName || "Primary contact",
+      printName: primaryName,
+      email: primaryEmail,
+      phone: primaryPhone,
+    });
+  }
+  const extras = Array.isArray(customer.additionalContacts) ? customer.additionalContacts : [];
+  extras.forEach((ac, index) => {
+    const name = String(ac?.contactName || "").trim();
+    const email = String(ac?.email || "").trim();
+    const phone = String(ac?.phone || "").trim();
+    if (!name && !email && !phone) return;
+    contacts.push({
+      key: `extra:${index}`,
+      name: name || `Contact ${index + 1}`,
+      printName: name,
+      email,
+      phone,
+    });
+  });
+  return contacts;
+}
+
+/** Contact chosen on the quotation, or the one matching its email and phone. */
+export function resolveCustomerJobContact(customer, form) {
+  const contacts = listCustomerJobContacts(customer);
+  if (!contacts.length) return null;
+  const key = String(form?.jobContactKey || "").trim();
+  if (key) {
+    const byKey = contacts.find((row) => row.key === key);
+    if (byKey) return byKey;
+  }
+  const email = String(form?.customerEmail || "").trim().toLowerCase();
+  const phone = String(form?.customerPhone || "").trim();
+  if (email || phone) {
+    const match = contacts.find((row) => {
+      const sameEmail = !email || row.email.toLowerCase() === email;
+      const samePhone = !phone || row.phone === phone;
+      return sameEmail && samePhone && (email ? row.email.toLowerCase() === email : true);
+    });
+    if (match) return match;
+    if (email) {
+      const byEmail = contacts.find((row) => row.email.toLowerCase() === email);
+      if (byEmail) return byEmail;
+    }
+  }
+  return null;
+}
+
 export function buildCustomerPayload(form) {
   const f = form || {};
   return {

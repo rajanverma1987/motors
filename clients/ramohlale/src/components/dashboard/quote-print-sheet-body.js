@@ -44,6 +44,7 @@ export default function QuotePrintSheetBody({ quote: q, fmt }) {
     taxablePartsTotal: q.taxablePartsTotal,
     taxExempt: q.customerTaxExempt,
     taxPercent: q.customerTaxPercent,
+    discount: q.discount,
   });
 
   const notesMode = q.printNotesMode === "internal" ? "internal" : "customer";
@@ -206,19 +207,31 @@ export default function QuotePrintSheetBody({ quote: q, fmt }) {
         <h2 className={sectionLabel}>Totals</h2>
         <table className="w-full border border-neutral-300 text-xs tabular-nums print:text-[11px]">
           <tbody>
+            {q.showOtherCostTotal === false ? null : (
             <tr className="border-b border-neutral-200 bg-neutral-50">
               <td className="px-2 py-1.5 font-medium text-neutral-800">Scope total</td>
               <td className="px-2 py-1.5 text-right font-medium text-neutral-900">
                 {q.laborTotal ? format(q.laborTotal) : "—"}
               </td>
             </tr>
+            )}
+            {q.showOtherCostTotal === false ? null : (
+              <tr className="border-b border-neutral-200">
+                <td className="px-2 py-1.5 text-neutral-800">Other cost total</td>
+                <td className="px-2 py-1.5 text-right text-neutral-900">{q.partsTotal ? format(q.partsTotal) : "—"}</td>
+              </tr>
+            )}
             <tr className="border-b border-neutral-200">
-              <td className="px-2 py-1.5 text-neutral-800">Other cost total</td>
-              <td className="px-2 py-1.5 text-right text-neutral-900">{q.partsTotal ? format(q.partsTotal) : "—"}</td>
+              <td className="px-2 py-1.5 text-neutral-800">Subtotal</td>
+              <td className="px-2 py-1.5 text-right text-neutral-900">{format(totals.subtotal)}</td>
             </tr>
             <tr className="border-b border-neutral-200">
-              <td className="px-2 py-1.5 text-neutral-800">Quotation subtotal</td>
-              <td className="px-2 py-1.5 text-right text-neutral-900">{format(totals.subtotal)}</td>
+              <td className="px-2 py-1.5 text-neutral-800">Discount</td>
+              <td className="px-2 py-1.5 text-right text-neutral-900">{format(totals.discountAmount)}</td>
+            </tr>
+            <tr className="border-b border-neutral-200">
+              <td className="px-2 py-1.5 text-neutral-800">Total</td>
+              <td className="px-2 py-1.5 text-right text-neutral-900">{format(totals.total)}</td>
             </tr>
             <tr className="border-b border-neutral-200">
               <td className="px-2 py-1.5 text-neutral-800">
@@ -227,7 +240,7 @@ export default function QuotePrintSheetBody({ quote: q, fmt }) {
               <td className="px-2 py-1.5 text-right text-neutral-900">{format(totals.taxAmount)}</td>
             </tr>
             <tr className="bg-neutral-100">
-              <td className="px-2 py-2 text-sm font-bold text-neutral-900">Grand total</td>
+              <td className="px-2 py-2 text-sm font-bold text-neutral-900">Quotation total</td>
               <td className="px-2 py-2 text-right text-sm font-bold text-neutral-900">{format(totals.grandTotal)}</td>
             </tr>
           </tbody>

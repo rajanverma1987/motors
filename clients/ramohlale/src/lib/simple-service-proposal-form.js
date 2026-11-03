@@ -19,6 +19,7 @@ import { normalizeCmJobCalculation } from "@/lib/cm-job-calculation";
 import { normalizeProposalType, PROPOSAL_TYPE_SERVICE } from "@/lib/proposal-types";
 import { proposalDocumentTitle } from "@/lib/quote-document-labels";
 import { parseMarkupPercent, sellUnitPriceFromCostMarkup } from "@/lib/inventory-pricing";
+import { totalsAfterDiscount } from "@/lib/quote-invoice-totals";
 
 export const RECORD_TYPE_RFQ = "RFQ";
 export const RECORD_TYPE_JOB = "JOB";
@@ -249,6 +250,7 @@ export function createEmptyServiceProposalForm(overrides = {}) {
     companyName: "",
     customerEmail: "",
     customerPhone: "",
+    jobContactKey: "",
     customerTaxExempt: true,
     motorPower: "AC",
     namePlate: "Original",
@@ -295,6 +297,8 @@ export function createEmptyServiceProposalForm(overrides = {}) {
     jobStatus: "",
     status: "",
     taxPercent: "",
+    /** Amount taken off Total For Billing. Not tied to the other-items display setting. */
+    discount: "",
     scopeDetails: [emptyScopeLine()],
     otherItems: [emptyOtherLine()],
     attachments: [],
@@ -588,19 +592,23 @@ export function formatSimpleMoney(n) {
   return `$${value.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
-/** Totals from scope / other lines (+ tax when customer is not tax-exempt). */
+/** Totals from scope / other lines. Discount comes off the subtotal, then tax. */
 export function computeSimpleServiceProposalTotals(form) {
   const scopeTotal = sumLinePrices(form?.scopeDetails);
   const otherTotal = sumOtherLinePrices(form?.otherItems);
   const taxableOtherTotal = sumTaxableOtherLinePrices(form?.otherItems);
-  const subtotal = scopeTotal + otherTotal;
-  const showTax = form?.customerTaxExempt === false;
-  const taxPct = showTax ? parseMoneyInput(form?.taxPercent) : 0;
-  const taxAmount = showTax ? ((scopeTotal + taxableOtherTotal) * taxPct) / 100 : 0;
+  const priced = totalsAfterDiscount({
+    subtotal: scopeTotal + otherTotal,
+    taxableBase: scopeTotal + taxableOtherTotal,
+    discount: form?.discount,
+    taxExempt: form?.customerTaxExempt !== false,
+    taxPercent: form?.taxPercent,
+  });
   return {
-    proposalTotal: subtotal,
-    taxCollected: taxAmount,
-    total: subtotal + taxAmount,
+    proposalTotal: priced.subtotal,
+    taxCollected: priced.taxAmount,
+    discount: priced.discountAmount,
+    total: priced.grandTotal,
   };
 }
 
@@ -712,8 +720,10 @@ export function simpleServiceProposalDocToForm(doc) {
   next.companyName = String(d.companyName || "").trim();
   next.customerEmail = String(d.customerEmail || d.email || "").trim();
   next.customerPhone = String(d.customerPhone || d.phone || "").trim();
+  next.jobContactKey = String(d.jobContactKey || "").trim();
   next.customerTaxExempt = d.customerTaxExempt !== false;
   next.taxPercent = String(d.taxPercent ?? next.taxPercent ?? "").trim();
+  next.discount = String(d.discount ?? next.discount ?? "").trim();
   next.motorPower = resolveMachineType(d.motorPower, "AC");
   next.namePlate = String(d.namePlate || "Original").trim() || "Original";
   next.documentNumber = String(d.documentNumber || d.quote || "").trim();

@@ -1,5 +1,6 @@
 import { accountsPaymentTermsLabel } from "@/lib/accounts-display";
 import { customerInvoiceToBlock } from "@/lib/customer-invoice-address";
+import { resolveCustomerJobContact } from "@/lib/customer-record-form";
 import {
   RECORD_TYPE_INVOICE,
   parseMoneyInput,
@@ -115,17 +116,36 @@ export function buildSimpleServiceProposalPrintBundle({
 }) {
   const isInvoice = String(form?.recordType || "").toUpperCase() === RECORD_TYPE_INVOICE;
   const documentType = isInvoice ? "invoice" : "quote";
+  const selectedContact = resolveCustomerJobContact(customer, form);
+  const selectedName = selectedContact
+    ? selectedContact.key === "primary"
+      ? String(customer?.primaryContactName || "").trim()
+      : selectedContact.printName
+    : String(customer?.primaryContactName || "").trim();
+  const selectedEmail = String(
+    selectedContact?.email || form?.customerEmail || customer?.email || ""
+  ).trim();
   const customerForTo = customer
     ? {
         ...customer,
-        email: String(customer.email || form?.customerEmail || "").trim(),
+        primaryContactName: selectedName,
+        email: selectedEmail,
       }
     : null;
   const { toName: customerToName, billingAddress: customerBillingAddress } =
     customerInvoiceToBlock(customerForTo);
+  const customerVatNumber = String(customer?.ein || "").trim();
+  const invoiceCustomerBillingAddress =
+    customerVatNumber && customerBillingAddress
+      ? `${customerBillingAddress}\nVAT No. ${customerVatNumber}`
+      : customerVatNumber
+        ? `VAT No. ${customerVatNumber}`
+        : customerBillingAddress;
   const motor = motorLinesFromForm(form);
   const scopeLines = scopeLinesFromForm(form);
-  const partsLines = partsLinesFromForm(form);
+  const showQuotationOtherItems = accountSettings?.showQuotationOtherItems !== false;
+  const partsLines =
+    isInvoice || showQuotationOtherItems ? partsLinesFromForm(form) : [];
   const laborTotal = sumLinePrices(form?.scopeDetails);
   const partsTotal = sumOtherLinePrices(form?.otherItems);
   const preparedByDisplay = employeeDisplayName(employees, form?.preparedBy);
@@ -161,9 +181,11 @@ export function buildSimpleServiceProposalPrintBundle({
     partsLines,
     laborTotal: laborTotal ? String(laborTotal) : "",
     partsTotal: partsTotal ? String(partsTotal) : "",
+    showOtherCostTotal: isInvoice || showQuotationOtherItems,
     taxablePartsTotal: String(sumTaxableOtherLinePrices(form?.otherItems) || ""),
     customerTaxExempt: form?.customerTaxExempt !== false,
     customerTaxPercent: String(form?.taxPercent ?? "").trim(),
+    discount: String(form?.discount ?? "").trim(),
     notes,
     customerNotes,
     printNotesMode,
@@ -202,7 +224,7 @@ export function buildSimpleServiceProposalPrintBundle({
         fromShippingAddress,
         fromPaymentTermsLabel,
         customerToName,
-        customerBillingAddress,
+        customerBillingAddress: invoiceCustomerBillingAddress,
         invoicePaymentOptions,
         invoiceThankYouNote,
         printNotesMode,

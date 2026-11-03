@@ -11,6 +11,11 @@ import {
   computeListingDirectoryScore,
   mergeListingForDirectoryScore,
 } from "@/lib/listing-directory-score";
+import {
+  findPlatformListingForTenant,
+  getPlatformListingModel,
+  platformTenantIdentity,
+} from "@/lib/platform-listing-db";
 
 const STR = (v, max = LIMITS.shortText.max) => clampString(v, max);
 const URL_MAX = LIMITS.url.max;
@@ -26,6 +31,13 @@ const ALLOWED_UPDATE_KEYS = [
   "statesServed", "citiesOrMetrosServed", "areaCoveredFrom",
 ];
 
+function publicAssetUrl(url) {
+  const s = String(url || "").trim();
+  if (!s || /^https?:\/\//i.test(s)) return s;
+  if (!platformTenantIdentity().slug || !s.startsWith("/")) return s;
+  return `https://3phaseflow.com${s}`;
+}
+
 function serializeListing(doc) {
   if (!doc) return null;
   const o = typeof doc.toObject === "function" ? doc.toObject() : { ...doc };
@@ -33,7 +45,22 @@ function serializeListing(doc) {
     ...o,
     id: o._id?.toString?.() ?? o.id,
     _id: undefined,
+    logoUrl: publicAssetUrl(o.logoUrl),
+    galleryPhotoUrls: Array.isArray(o.galleryPhotoUrls)
+      ? o.galleryPhotoUrls.map(publicAssetUrl)
+      : o.galleryPhotoUrls,
   };
+}
+
+/** Directory rows live in the platform DB once this app is a provisioned shop. */
+async function listingStore() {
+  const identity = platformTenantIdentity();
+  if (!identity.slug) {
+    await connectDB();
+    return { Model: Listing, identity };
+  }
+  const Model = await getPlatformListingModel();
+  return { Model, identity };
 }
 
 async function parseMultipartListingRequest(request) {
@@ -65,11 +92,11 @@ export async function GET(request) {
     if (!user?.email) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
-    await connectDB();
     const email = user.email.trim().toLowerCase();
-    const doc = await Listing.findOne({ email })
-      .sort({ updatedAt: -1 })
-      .lean();
+    const { Model, identity } = await listingStore();
+    const doc = identity.slug
+      ? await findPlatformListingForTenant(Model, identity)
+      : await Model.findOne({ email }).sort({ updatedAt: -1 }).lean();
     return NextResponse.json({
       listing: doc ? serializeListing(doc) : null,
       accountEmail: email,
@@ -87,9 +114,12 @@ export async function POST(request) {
     if (!user?.email) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
-    await connectDB();
-    const email = user.email.trim().toLowerCase();
-    const existing = await Listing.findOne({ email }).select("_id").lean();
+    const userEmail = user.email.trim().toLowerCase();
+    const { Model, identity } = await listingStore();
+    const email = identity.ownerEmail || userEmail;
+    const existing = identity.slug
+      ? await findPlatformListingForTenant(Model, identity)
+      : await Model.findOne({ email }).select("_id").lean();
     if (existing) {
       return NextResponse.json(
         {
@@ -169,8 +199,9 @@ export async function POST(request) {
         ? logoUrlFromUpload
         : sanitizeListingLogoUrlForCreate(logoUrlBody, URL_MAX);
 
-    const doc = await Listing.create({
+    const doc = await Model.create({
       email: email.slice(0, LIMITS.email.max),
+      tenantSlug: identity.slug || "",
       companyName: STR(companyName, LIMITS.companyName.max),
       logoUrl: STR(logoUrl, URL_MAX),
       shortDescription: STR(shortDescription, 500),
@@ -217,10 +248,12 @@ export async function POST(request) {
       console.warn("New listing notification email failed:", e);
     }
 
-    try {
-      await applyListingOnlySubscriptionToShop(email);
-    } catch (e) {
-      console.warn("applyListingOnlySubscriptionToShop (dashboard new listing):", e);
+    if (!identity.slug) {
+      try {
+        await applyListingOnlySubscriptionToShop(email);
+      } catch (e) {
+        console.warn("applyListingOnlySubscriptionToShop (dashboard new listing):", e);
+      }
     }
 
     return NextResponse.json({ ok: true, listing: serializeListing(doc.toObject()) });
@@ -252,12 +285,17 @@ export async function PATCH(request) {
       return NextResponse.json({ error: "Listing id required" }, { status: 400 });
     }
 
-    await connectDB();
-    const doc = await Listing.findById(id);
+    const { Model, identity } = await listingStore();
+    const doc = await Model.findById(id);
     if (!doc) {
       return NextResponse.json({ error: "Not found" }, { status: 404 });
     }
-    if ((doc.email || "").trim().toLowerCase() !== userEmail) {
+    if (identity.slug) {
+      const owned = await findPlatformListingForTenant(Model, identity);
+      if (!owned || String(owned._id) !== String(doc._id)) {
+        return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+      }
+    } else if ((doc.email || "").trim().toLowerCase() !== userEmail) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
@@ -317,18 +355,18 @@ export async function PATCH(request) {
     }
 
     if (Object.keys(set).length === 0) {
-      const current = await Listing.findById(id).lean();
+      const current = await Model.findById(id).lean();
       return NextResponse.json({ ok: true, listing: serializeListing(current) });
     }
 
-    const existing = await Listing.findById(id).lean();
+    const existing = await Model.findById(id).lean();
     if (!existing) {
       return NextResponse.json({ error: "Not found" }, { status: 404 });
     }
     const merged = mergeListingForDirectoryScore(existing, set);
     set.directoryScore = computeListingDirectoryScore(merged);
 
-    const saved = await Listing.findByIdAndUpdate(
+    const saved = await Model.findByIdAndUpdate(
       id,
       { $set: set },
       { new: true, runValidators: true }

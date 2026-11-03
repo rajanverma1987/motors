@@ -291,8 +291,10 @@ export async function buildQuoteInvoicePdfBuffer({
   const totals = computeTotalsFromLaborAndParts({
     laborTotal: q.laborTotal,
     partsTotal: q.partsTotal,
+    taxablePartsTotal: q.taxablePartsTotal,
     taxExempt: q.customerTaxExempt,
     taxPercent: q.customerTaxPercent,
+    discount: q.discount,
   });
 
   const pdf = new PDFDocument({ size: "LETTER", margin: MARGIN });
@@ -412,12 +414,15 @@ export async function buildQuoteInvoicePdfBuffer({
   }
 
   y = drawSectionTitle(pdf, y, "Totals");
+  const hideItemTotals = q.showOtherCostTotal === false;
   y = drawTotals(pdf, y, [
-    { label: "Scope total", value: q.laborTotal },
-    { label: "Other cost total", value: q.partsTotal },
+    ...(hideItemTotals ? [] : [{ label: "Scope total", value: q.laborTotal }]),
+    ...(hideItemTotals ? [] : [{ label: "Other cost total", value: q.partsTotal }]),
     { label: "Subtotal", value: totals.subtotal },
+    { label: "Discount", value: totals.discountAmount },
+    { label: "Total", value: totals.total },
     { label: "Tax", value: totals.taxAmount },
-    { label: "Grand total", value: totals.grandTotal },
+    { label: kind === "invoice" ? "Invoice total" : "Quotation total", value: totals.grandTotal },
   ], currency);
 
   const notesText = txt(q.printNotesMode === "internal" ? q.notes : q.customerNotes, 4000);

@@ -44,24 +44,51 @@ export function computeGrandTotal(subtotal, taxExempt, taxPercent) {
   return roundMoney(base + tax);
 }
 
-/** laborTotal = scope sum; partsTotal = other cost. Tax applies to scope plus taxable other lines. */
+/**
+ * Subtotal, then discount, then tax on the discounted taxable share.
+ * Non-taxable amounts keep their share of the subtotal, so a discount does not tax them.
+ */
+export function totalsAfterDiscount({
+  subtotal,
+  taxableBase,
+  discount = 0,
+  taxExempt,
+  taxPercent,
+}) {
+  const base = roundMoney(Math.max(0, toNumber(subtotal)));
+  const taxable = Math.min(base, Math.max(0, roundMoney(toNumber(taxableBase))));
+  const discountAmount = Math.min(base, Math.max(0, roundMoney(toNumber(discount))));
+  const total = roundMoney(base - discountAmount);
+  const taxableAfter = base > 0 ? roundMoney((taxable * total) / base) : 0;
+  const taxAmount = computeTaxAmount(taxableAfter, taxExempt, taxPercent);
+  return {
+    subtotal: base,
+    discountAmount,
+    total,
+    taxAmount,
+    grandTotal: roundMoney(total + taxAmount),
+  };
+}
+
+/** laborTotal = scope sum; partsTotal = other cost. Tax applies after discount. */
 export function computeTotalsFromLaborAndParts({
   laborTotal,
   partsTotal,
   taxablePartsTotal = 0,
   taxExempt,
   taxPercent,
+  discount = 0,
 }) {
   const labor = roundMoney(toNumber(laborTotal));
   const parts = roundMoney(toNumber(partsTotal));
   const taxableParts = roundMoney(toNumber(taxablePartsTotal));
-  const subtotal = roundMoney(labor + parts);
-  const taxAmount = computeTaxAmount(roundMoney(labor + taxableParts), taxExempt, taxPercent);
-  return {
-    subtotal,
-    taxAmount,
-    grandTotal: roundMoney(subtotal + taxAmount),
-  };
+  return totalsAfterDiscount({
+    subtotal: labor + parts,
+    taxableBase: labor + taxableParts,
+    discount,
+    taxExempt,
+    taxPercent,
+  });
 }
 
 /** Invoices use the linked customer’s tax settings when a customer record exists. */
