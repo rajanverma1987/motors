@@ -734,7 +734,7 @@ export default function SimpleDatasheetModal({
               title={
                 typeof onSaveCmCalculation === "function"
                   ? cmSummary
-                    ? "Open the circular mills calculator. A match is saved on this job."
+                    ? "Open the circular mills calculator. The output is saved on this job."
                     : "Open the circular mills calculator"
                   : "Circular mills calculator"
               }
@@ -1082,6 +1082,7 @@ export default function SimpleDatasheetModal({
           initialCalculation={cmCalculation}
           onSaveToJob={typeof onSaveCmCalculation === "function" ? handleSaveCmCalculation : undefined}
           savingToJob={savingCm}
+          jobNumber={String(form.jobNumber || printContext?.documentNumber || "").trim()}
         />
       ) : null}
     </Modal>

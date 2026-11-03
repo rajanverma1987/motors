@@ -7,7 +7,7 @@ import Input from "@/components/ui/input";
 import Modal from "@/components/ui/modal";
 import { useConfirm } from "@/components/confirm-provider";
 import { calculateCMBestMatch } from "@/lib/cm-calculator";
-import { cmJobResultKey, formatCmJobResultSummary, normalizeCmJobCalculation } from "@/lib/cm-job-calculation";
+import { formatCmJobResultSummary, normalizeCmJobCalculation } from "@/lib/cm-job-calculation";
 import {
   CIR_MILLS_UNIT_AWG,
   CIR_MILLS_UNIT_METRIC,
@@ -186,9 +186,6 @@ function CmBestMatchResultsBody({
   results,
   resultContext,
   generatedLabel,
-  onSaveRow,
-  savingRow = false,
-  savedResultKey = "",
 }) {
   const [page, setPage] = useState(1);
 
@@ -279,9 +276,6 @@ function CmBestMatchResultsBody({
         <table className="cm-results-table w-full min-w-[920px] border-collapse text-sm">
           <thead>
             <tr className="border-b border-border bg-primary text-white dark:bg-primary/90">
-              {onSaveRow ? (
-                <th className="cm-print-hide w-16 px-2 py-2.5 text-left text-sm font-semibold">Save</th>
-              ) : null}
               <th className="whitespace-nowrap px-2 py-2.5 text-left text-sm font-semibold">Wire Size</th>
               <th className="whitespace-nowrap px-2 py-2.5 text-left text-sm font-semibold"># Wires</th>
               <th className="whitespace-nowrap px-2 py-2.5 text-left text-sm font-semibold">Wire Size 2</th>
@@ -302,21 +296,6 @@ function CmBestMatchResultsBody({
                 key={`${startItem + idx}-${row.totalCM}-${row.wiresInHand}-${row.percentDifference}`}
                 className={`border-b border-border last:border-b-0 ${resultRowClass(row.percentDifference)} ${resultRowPrintClass(row.percentDifference)}`}
               >
-                {onSaveRow ? (
-                  <td className="cm-print-hide px-2 py-1.5">
-                    <Button
-                      type="button"
-                      variant={savedResultKey && savedResultKey === cmJobResultKey(row) ? "outline" : "primary"}
-                      size="sm"
-                      className="h-7 px-2 text-xs"
-                      disabled={savingRow}
-                      title="Save this match on the job"
-                      onClick={() => onSaveRow(row)}
-                    >
-                      {savedResultKey && savedResultKey === cmJobResultKey(row) ? "Saved" : "Save"}
-                    </Button>
-                  </td>
-                ) : null}
                 <td className="px-2 py-2 tabular-nums text-title">{slotSize(row, 1)}</td>
                 <td className="px-2 py-2 tabular-nums text-secondary">{slotQty(row, 1)}</td>
                 <td className="px-2 py-2 tabular-nums text-title">{slotSize(row, 2)}</td>
@@ -592,6 +571,7 @@ export default function CmBestMatchCalculator({
   initialCalculation = null,
   onSaveToJob,
   savingToJob = false,
+  jobNumber = "",
 }) {
   const toast = useToast();
   const confirm = useConfirm();
@@ -606,9 +586,10 @@ export default function CmBestMatchCalculator({
   const [maxWires, setMaxWires] = useState(seeded?.maxWires || "10");
   const [originalWireQtys, setOriginalWireQtys] = useState(seeded?.originalWireQtys || {});
   const [catalogWireUnit, setCatalogWireUnit] = useState(seeded?.catalogWireUnit || CIR_MILLS_UNIT_AWG);
-  const [results, setResults] = useState([]);
+  const [results, setResults] = useState(() => (Array.isArray(seeded?.results) ? seeded.results : []));
   const [resultContext, setResultContext] = useState(seeded?.resultContext || null);
   const [savedSnapshot, setSavedSnapshot] = useState(seeded);
+  const [outputSaved, setOutputSaved] = useState(() => Array.isArray(seeded?.results) && seeded.results.length > 0);
   const [resultsModalOpen, setResultsModalOpen] = useState(false);
   const [catalogsByUnit, setCatalogsByUnit] = useState(() => ({
     [CIR_MILLS_UNIT_AWG]: getCirMillsSessionCatalog(CIR_MILLS_UNIT_AWG),
@@ -941,6 +922,7 @@ export default function CmBestMatchCalculator({
     setOriginalWireQtys({});
     setResults([]);
     setResultContext(null);
+    setOutputSaved(false);
     setResultsModalOpen(false);
   };
 
@@ -1046,6 +1028,7 @@ export default function CmBestMatchCalculator({
 
     const out = calculateCMBestMatch(wiresForCalc, t, minW, maxW);
     setResults(out);
+    setOutputSaved(false);
     if (out.length === 0) {
       setResultsModalOpen(false);
       toast.info("No combinations within ±5% of target with the current limits.");
@@ -1054,10 +1037,10 @@ export default function CmBestMatchCalculator({
     }
   };
 
-  const saveResultToJob = async (row) => {
+  const saveOutputToJob = async () => {
     if (typeof onSaveToJob !== "function") return;
-    if (!row) {
-      toast.warning("Calculate, then save a match to this job.");
+    if (!results.length) {
+      toast.warning("Calculate first, then save the output on this job.");
       return;
     }
     const snapshot = normalizeCmJobCalculation({
@@ -1072,22 +1055,27 @@ export default function CmBestMatchCalculator({
       maxWires,
       originalWireQtys,
       resultContext,
-      selectedResult: row,
+      results,
     });
-    if (!snapshot?.selectedResult) {
-      toast.warning("That match could not be saved.");
+    if (!snapshot?.results?.length) {
+      toast.warning("That output could not be saved.");
       return;
     }
     try {
       const ok = await onSaveToJob(snapshot);
-      if (ok) setSavedSnapshot(snapshot);
+      if (ok) {
+        setSavedSnapshot(snapshot);
+        setOutputSaved(true);
+      }
     } catch (err) {
-      toast.error(err?.message || "Could not save this calculation.");
+      toast.error(err?.message || "Could not save this output.");
     }
   };
 
   const savedSummary = formatCmJobResultSummary(savedSnapshot);
-  const savedResultKey = cmJobResultKey(savedSnapshot?.selectedResult);
+  const jobNumberLabel = String(jobNumber || "").trim();
+  const saveToJobLabel = jobNumberLabel ? `Save to Job#${jobNumberLabel}` : "Save to Job";
+  const savedToJobLabel = jobNumberLabel ? `Saved to Job#${jobNumberLabel}` : "Saved";
 
   return (
     <div className="flex w-full max-w-[1600px] flex-col gap-6">
@@ -1355,7 +1343,7 @@ export default function CmBestMatchCalculator({
           </div>
           {typeof onSaveToJob === "function" ? (
             <p className="text-xs text-secondary">
-              After you calculate, open the results and save the match you want to keep on this job.
+              After you calculate, open the results and save the output on this job.
             </p>
           ) : null}
         </section>
@@ -1420,19 +1408,29 @@ export default function CmBestMatchCalculator({
           zIndex={70}
           headerClassName="min-w-0"
           actions={
-            <Button type="button" variant="outline" size="sm" onClick={handlePrint} className="inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap">
-              <FiPrinter className="h-4 w-4 shrink-0" aria-hidden />
-              Print
-            </Button>
+            <>
+              {typeof onSaveToJob === "function" ? (
+                <Button
+                  type="button"
+                  variant="primary"
+                  size="sm"
+                  disabled={savingToJob || results.length === 0}
+                  onClick={saveOutputToJob}
+                >
+                  {savingToJob ? "Saving…" : outputSaved ? savedToJobLabel : saveToJobLabel}
+                </Button>
+              ) : null}
+              <Button type="button" variant="outline" size="sm" onClick={handlePrint} className="inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap">
+                <FiPrinter className="h-4 w-4 shrink-0" aria-hidden />
+                Print
+              </Button>
+            </>
           }
         >
           <CmBestMatchResultsBody
             results={results}
             resultContext={resultContext}
             generatedLabel={formatDateTime(new Date())}
-            onSaveRow={typeof onSaveToJob === "function" ? saveResultToJob : undefined}
-            savingRow={savingToJob}
-            savedResultKey={savedResultKey}
           />
         </Modal>
       ) : null}

@@ -34,6 +34,10 @@ export function cmJobResultKey(row) {
 }
 
 export function formatCmJobResultSummary(calc) {
+  const savedCount = Array.isArray(calc?.results) ? calc.results.length : 0;
+  if (savedCount > 0) {
+    return `${savedCount} match${savedCount === 1 ? "" : "es"} saved`;
+  }
   const row = calc?.selectedResult;
   if (!row || typeof row !== "object") return "";
   const parts = [1, 2, 3].map((index) => resultKeyPart(row, index)).filter(Boolean);
@@ -78,6 +82,20 @@ function normalizeQtyMap(raw) {
   return out;
 }
 
+const MAX_SAVED_RESULTS = 2000;
+
+function normalizeResults(raw) {
+  if (!Array.isArray(raw)) return [];
+  const out = [];
+  for (const item of raw) {
+    const row = normalizeSelectedResult(item);
+    if (!row) continue;
+    out.push(row);
+    if (out.length >= MAX_SAVED_RESULTS) break;
+  }
+  return out;
+}
+
 function normalizeResultContext(raw) {
   if (!raw || typeof raw !== "object") return null;
   return {
@@ -98,9 +116,10 @@ function normalizeResultContext(raw) {
 export function normalizeCmJobCalculation(raw) {
   if (!raw || typeof raw !== "object") return null;
   const selectedResult = normalizeSelectedResult(raw.selectedResult);
+  const results = normalizeResults(raw.results);
   const targetedCM = cleanText(raw.targetedCM, 40);
   const originalCM = cleanText(raw.originalCM, 40);
-  if (!selectedResult && !targetedCM && !originalCM) return null;
+  if (!selectedResult && results.length === 0 && !targetedCM && !originalCM) return null;
   const ids = Array.isArray(raw.selectedWireIds)
     ? raw.selectedWireIds.map((id) => cleanText(id, 80)).filter(Boolean).slice(0, MAX_SELECTED_WIRES)
     : [];
@@ -116,6 +135,7 @@ export function normalizeCmJobCalculation(raw) {
     maxWires: cleanText(raw.maxWires, 12) || "10",
     originalWireQtys: normalizeQtyMap(raw.originalWireQtys),
     resultContext: normalizeResultContext(raw.resultContext),
+    results,
     selectedResult,
   };
 }
