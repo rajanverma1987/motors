@@ -123,34 +123,31 @@
 
   html.cm-best-match-printing #cm-best-match-print-area .cm-print-vars {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 4pt 10pt;
+    grid-template-columns: auto auto;
+    justify-content: start;
+    gap: 6pt;
+    width: auto;
+    max-width: 100%;
     font-size: 8pt;
     margin: 0 0 8pt 0;
-    padding: 8pt;
-    border: 1px solid #333;
+    padding: 0;
+    border: none;
+    background: transparent;
     break-inside: avoid;
     page-break-inside: avoid;
   }
 
   html.cm-best-match-printing #cm-best-match-print-area .cm-print-vars .cm-var-label {
-    display: block;
-    font-weight: 600;
-    color: #222;
-    font-size: 7pt;
-    margin-bottom: 1pt;
+    display: inline;
+    font-weight: 500;
+    color: #333;
+    font-size: 9pt;
+    margin: 0;
   }
 
   html.cm-best-match-printing #cm-best-match-print-area .cm-print-vars .cm-var-value {
-    font-weight: 500;
-    font-size: 9pt;
-  }
-
-  html.cm-best-match-printing #cm-best-match-print-area .cm-print-selected {
-    grid-column: 1 / -1;
-    font-size: 7pt;
-    color: #333;
-    margin-top: 2pt;
+    font-weight: 700;
+    font-size: 10pt;
   }
 
   html.cm-best-match-printing #cm-best-match-print-area .cm-results-table-wrap {

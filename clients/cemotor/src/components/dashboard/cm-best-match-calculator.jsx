@@ -17,6 +17,7 @@ import {
 import { loadCirMillsSessionCatalogs, getCirMillsSessionCatalog, hasCirMillsSessionCatalogs } from "@/lib/cir-mills-session-cache";
 import { useToast } from "@/components/toast-provider";
 import { useFormatDateTime } from "@/contexts/user-settings-context";
+import DocumentPrintOffscreenPortal from "@/components/dashboard/document-print-offscreen-portal";
 import "./cm-best-match-print.css";
 
 const MAX_SELECT = 10;
@@ -60,9 +61,85 @@ function resultRowPrintClass(percentDifference) {
 
 function VarCell({ label, value }) {
   return (
-    <div>
-      <span className="cm-var-label block text-xs font-medium text-secondary">{label}</span>
-      <span className="cm-var-value tabular-nums text-sm font-semibold text-title">{value}</span>
+    <div className="flex items-baseline gap-4 rounded-md border border-border px-3 py-1.5">
+      <span className="cm-var-label shrink-0 text-sm text-secondary">{label}</span>
+      <span className="cm-var-value text-left text-sm font-bold text-title">{value}</span>
+    </div>
+  );
+}
+
+function splitInventoryPrintRows(rows) {
+  const tableCount = rows.length > 46 ? 3 : 2;
+  const size = Math.ceil(rows.length / tableCount);
+  const chunks = [];
+  for (let i = 0; i < tableCount; i += 1) {
+    const chunk = rows.slice(i * size, (i + 1) * size);
+    if (chunk.length) chunks.push(chunk);
+  }
+  return chunks;
+}
+
+function WireInventoryPrintSheet({ rows, unitLabel, generatedLabel }) {
+  const chunks = splitInventoryPrintRows(rows);
+  const perTable = chunks.reduce((max, chunk) => Math.max(max, chunk.length), 0);
+  const tight = perTable > 32;
+  const fontSize = tight ? "7.5pt" : "8.5pt";
+  const cellPad = tight ? "1pt 4pt" : "2pt 4pt";
+  const thStyle = {
+    border: "1px solid #222",
+    padding: cellPad,
+    textAlign: "left",
+    background: "#f3f0ea",
+    fontWeight: 600,
+    fontSize,
+  };
+  const tdStyle = {
+    border: "1px solid #222",
+    padding: cellPad,
+    textAlign: "left",
+    fontSize,
+    lineHeight: 1.15,
+  };
+  const unitTitle = unitLabel === "Metric" ? "Metric table" : "AWG table";
+  const hasCustom = rows.some((row) => row.custom);
+
+  return (
+    <div className="wire-inventory-print" style={{ breakInside: "avoid", pageBreakInside: "avoid" }}>
+      <h1 style={{ margin: "0", fontSize: "14pt", fontWeight: 700, lineHeight: 1.2 }}>Wire From Inventory</h1>
+      <p style={{ margin: "2pt 0 8pt", fontSize: "12pt", fontWeight: 700 }}>
+        {unitTitle}
+        {generatedLabel ? <span style={{ fontWeight: 500, fontSize: "8pt", color: "#444" }}>{` · ${generatedLabel}`}</span> : null}
+      </p>
+      <table style={{ width: "100%", borderCollapse: "separate", borderSpacing: "8pt 0" }}>
+        <tbody>
+          <tr>
+            {chunks.map((chunk, index) => (
+              <td key={index} style={{ width: `${100 / chunks.length}%`, verticalAlign: "top", padding: 0, border: "none" }}>
+                <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                  <thead>
+                    <tr>
+                      <th style={thStyle}>Size</th>
+                      <th style={{ ...thStyle, textAlign: "right" }}>Cir. Mills</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {chunk.map((row) => (
+                      <tr key={row.id || `${row.size}-${row.circularMills}`}>
+                        <td style={{ ...tdStyle, fontWeight: row.selected ? 700 : 400 }}>
+                          {row.size}
+                          {row.custom ? "*" : ""}
+                        </td>
+                        <td style={{ ...tdStyle, textAlign: "right", fontWeight: row.selected ? 700 : 400 }}>{row.circularMills}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </td>
+            ))}
+          </tr>
+        </tbody>
+      </table>
+      {hasCustom ? <p style={{ margin: "6pt 0 0", fontSize: "8pt", color: "#444" }}>* Custom size</p> : null}
     </div>
   );
 }
@@ -146,19 +223,20 @@ function CmBestMatchResultsBody({
         Print uses landscape (use Print preview in your browser).
       </p>
 
-      <div className="cm-print-vars mb-4 grid grid-cols-2 gap-3 rounded-lg border border-border bg-muted/10 p-4 sm:grid-cols-3 dark:bg-muted/5">
-        <VarCell label="Original Wires in Hand" value={resultContext.originalWiredInHand} />
-        <VarCell label="Original Wire Size" value={resultContext.originalWireSize} />
-        <VarCell label="Original CM" value={resultContext.originalCMDisplay} />
-        <VarCell label="Targeted CM" value={resultContext.targetedCM} />
-        <VarCell label="Desired Min Wires" value={resultContext.minWires} />
-        <VarCell label="Desired Max Wires" value={resultContext.maxWires} />
-        {resultContext.selectedCatalogSummary ? (
-          <div className="cm-print-selected sm:col-span-2 lg:col-span-3">
-            <span className="cm-var-label text-xs font-medium text-secondary">Catalog sizes used in search</span>
-            <p className="cm-var-value mt-1 text-sm leading-snug text-title">{resultContext.selectedCatalogSummary}</p>
-          </div>
-        ) : null}
+      <div className="cm-print-vars mb-4 grid w-max max-w-full grid-cols-1 gap-x-10 gap-y-1 sm:grid-cols-2">
+        <div className="flex min-w-[18rem] flex-col gap-1.5">
+          <VarCell label="Original Wires in Hand" value={resultContext.originalWiredInHand} />
+          <VarCell label="Original Wire Size" value={resultContext.originalWireSize} />
+          <VarCell label="Original CM" value={resultContext.originalCMDisplay} />
+        </div>
+        <div className="flex min-w-[22rem] max-w-xl flex-col gap-1.5">
+          <VarCell label="Desired Min Wires" value={resultContext.minWires} />
+          <VarCell label="Desired Max Wires" value={resultContext.maxWires} />
+          <VarCell label="Targeted CM" value={resultContext.targetedCM} />
+          {resultContext.selectedCatalogSummary ? (
+            <VarCell label="Chosen from Inventory" value={resultContext.selectedCatalogSummary} />
+          ) : null}
+        </div>
       </div>
 
       <p className="cm-print-hide mb-3 text-xs text-secondary">
@@ -538,6 +616,7 @@ export default function CmBestMatchCalculator({
   }));
   const [cirMillsLoading, setCirMillsLoading] = useState(() => !hasCirMillsSessionCatalogs());
   const [originalWiresModalOpen, setOriginalWiresModalOpen] = useState(false);
+  const [inventoryPrint, setInventoryPrint] = useState(null);
   const [shopWireRows, setShopWireRows] = useState([]);
   const [shopWiresLoading, setShopWiresLoading] = useState(true);
   const [newSize, setNewSize] = useState("");
@@ -871,6 +950,24 @@ export default function CmBestMatchCalculator({
     });
   }, []);
 
+  const printInventoryTable = () => {
+    if (wireRows.length === 0) {
+      toast.warning("There are no wire sizes to print.");
+      return;
+    }
+    setInventoryPrint({
+      rows: wireRows.map((w) => ({
+        id: w.id,
+        size: w.size,
+        circularMills: w.circularMills,
+        custom: w.source === "shop",
+        selected: Boolean(w.id && selected.has(w.id)),
+      })),
+      unitLabel: unitToggleLabel,
+      generatedLabel: formatDateTime(new Date()),
+    });
+  };
+
   const applyOriginalWireSelection = (selections) => {
     const { display, totalQty, totalCm } = formatOriginalWireSelection(selections);
     if (!display) {
@@ -1004,16 +1101,11 @@ export default function CmBestMatchCalculator({
         </div>
       ) : null}
       <div className="grid min-h-0 gap-6 lg:grid-cols-2 lg:items-start">
-        {/* Left: Wire catalog (shared Cir Mills) */}
-        <section className="flex min-h-0 min-w-0 flex-col rounded-lg border border-border bg-card p-5 shadow-sm dark:shadow-black/20">
+        {/* Right: wire inventory */}
+        <section className="order-2 flex min-h-0 min-w-0 flex-col rounded-lg border border-border bg-card p-5 shadow-sm dark:shadow-black/20">
           <div className="mb-3 flex w-full flex-wrap items-start gap-3">
             <div className="min-w-0 flex-1">
-              <h2 className="mb-1 text-sm font-semibold uppercase tracking-wide text-title">Wire catalog</h2>
-              <p className="text-xs text-secondary">
-                Shared Cir Mills table ({unitToggleLabel}) plus your shop&apos;s custom sizes. Select from AWG and
-                Metric — selections stay when you switch. Clear {unitToggleLabel} only clears this list. Up to{" "}
-                {MAX_SELECT} sizes for the search.
-              </p>
+              <h2 className="text-sm font-semibold uppercase tracking-wide text-title">Select Wire From Inventory</h2>
             </div>
             <WireUnitToggle wireUnit={catalogWireUnit} onUnitChange={setCatalogUnit} disabled={cirMillsLoading} />
             <Button
@@ -1025,37 +1117,6 @@ export default function CmBestMatchCalculator({
               onClick={clearCatalogCurrentUnit}
             >
               Clear {unitToggleLabel}
-            </Button>
-          </div>
-
-          <div className="mb-4 flex flex-col gap-3 rounded-md border border-border bg-muted/20 p-3 dark:bg-muted/10 sm:flex-row sm:flex-wrap sm:items-end">
-            <Input
-              label="New size"
-              className="min-w-0 flex-1 sm:min-w-[100px]"
-              value={newSize}
-              onChange={(e) => setNewSize(e.target.value)}
-              placeholder="e.g. 19 or 18.5"
-              disabled={savingWire}
-            />
-            <Input
-              label="Circular mils"
-              className="w-full sm:w-32"
-              type="text"
-              inputMode="decimal"
-              value={newCm}
-              onChange={(e) => setNewCm(e.target.value)}
-              placeholder="12360"
-              disabled={savingWire}
-            />
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={addWire}
-              disabled={savingWire}
-              className="shrink-0"
-            >
-              {savingWire ? "Adding…" : "Add to catalog"}
             </Button>
           </div>
 
@@ -1074,7 +1135,7 @@ export default function CmBestMatchCalculator({
             </div>
           ) : wireRows.length === 0 ? (
             <p className="text-sm text-secondary">
-              Add custom wire sizes above or ask an admin to seed the Cir Mills table.
+              Add a missing wire size below, or ask an admin to seed the Cir Mills table.
             </p>
           ) : (
             <div className="min-h-[220px] max-h-[min(420px,calc(100vh-340px))] flex-1 overflow-auto rounded-md border border-border bg-bg">
@@ -1137,17 +1198,64 @@ export default function CmBestMatchCalculator({
               max {MAX_SELECT} for calc
             </p>
           ) : null}
+
+          <div className="mt-4">
+            <div className="mb-2 flex items-center justify-between gap-3">
+              <h3 className="min-w-0 text-sm font-semibold uppercase tracking-wide text-title">
+                Add the missing wire size in the table above
+              </h3>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="shrink-0"
+                disabled={catalogLoading}
+                onClick={printInventoryTable}
+              >
+                <FiPrinter className="h-4 w-4 shrink-0" aria-hidden />
+                Print
+              </Button>
+            </div>
+            <div className="flex flex-col gap-3 rounded-md border border-border bg-muted/20 p-3 dark:bg-muted/10 sm:flex-row sm:flex-wrap sm:items-end">
+              <Input
+                label="New size"
+                className="min-w-0 flex-1 sm:min-w-[100px]"
+                value={newSize}
+                onChange={(e) => setNewSize(e.target.value)}
+                placeholder="e.g. 19 or 18.5"
+                disabled={savingWire}
+              />
+              <Input
+                label="Circular mils"
+                className="w-full sm:w-32"
+                type="text"
+                inputMode="decimal"
+                value={newCm}
+                onChange={(e) => setNewCm(e.target.value)}
+                placeholder="12360"
+                disabled={savingWire}
+              />
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={addWire}
+                disabled={savingWire}
+                className="shrink-0"
+              >
+                {savingWire ? "Adding…" : "Add"}
+              </Button>
+            </div>
+          </div>
         </section>
 
-        {/* Right: inputs */}
+        {/* Left: CM Best Match inputs */}
+        <div className="order-1 flex min-w-0 flex-col gap-4">
         <section className="flex min-w-0 flex-col rounded-lg border border-border bg-card p-5 shadow-sm dark:shadow-black/20">
           <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
-            <div className="min-w-0 flex-1">
-              <h2 className="mb-1 text-sm font-semibold uppercase tracking-wide text-title">CM Best Match</h2>
-              <p className="text-xs text-secondary">
-                Enter original winding data and search limits. Choose wire sizes in the catalog at left.
-              </p>
-            </div>
+            <p className="min-w-0 flex-1 text-xs text-secondary">
+              Enter original winding data and search limits. Choose wire sizes in the list on the right.
+            </p>
             <Button
               type="button"
               variant="primary"
@@ -1159,67 +1267,77 @@ export default function CmBestMatchCalculator({
             </Button>
           </div>
 
-          <div className="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <Input
-              label="Original Wires in Hand"
-              type="text"
-              inputMode="numeric"
-              value={originalWiredInHand}
-              onChange={(e) => setOriginalWiredInHand(e.target.value)}
-              placeholder="10"
-            />
-            <div className="flex min-w-0 flex-col gap-1">
-              <div className="flex items-center justify-between gap-2">
-                <span className="text-sm text-title">Original Wire Size</span>
-                <button
-                  type="button"
-                  className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-none border border-border bg-primary text-white hover:opacity-90"
-                  title="Select wire sizes and quantities"
-                  aria-label="Select original wire sizes"
-                  onClick={() => setOriginalWiresModalOpen(true)}
-                >
-                  <FiPlus className="h-3.5 w-3.5" aria-hidden />
-                </button>
-              </div>
-              <input
+          <div className="mb-4 grid grid-cols-1 sm:grid-cols-2">
+            <div className="flex min-w-0 flex-col gap-3 sm:pr-5">
+              <h2 className="text-sm font-semibold uppercase tracking-wide text-title">Original Inputs</h2>
+              <Input
+                label="Original Wires in Hand"
                 type="text"
-                value={originalWireSize}
-                onChange={(e) => setOriginalWireSize(e.target.value)}
-                placeholder="e.g. 12.5 #8, 13.5 #6"
-                className="w-full min-w-0 rounded-md border-[0.5px] border-border bg-bg px-3 py-2 text-text placeholder:text-sm placeholder:text-secondary focus:outline-none focus:ring-[0.5px] focus:ring-primary focus:border-primary/30"
-                aria-label="Original Wire Size"
+                inputMode="numeric"
+                value={originalWiredInHand}
+                onChange={(e) => setOriginalWiredInHand(e.target.value)}
+                placeholder="10"
+              />
+              <div className="flex min-w-0 flex-col gap-1">
+                <span className="text-sm text-title">Original Wire Size</span>
+                <input
+                  type="text"
+                  value={originalWireSize}
+                  onChange={(e) => setOriginalWireSize(e.target.value)}
+                  placeholder="e.g. 12.5 #8, 13.5 #6"
+                  className="w-full min-w-0 rounded-md border-[0.5px] border-border bg-bg px-3 py-2 text-text placeholder:text-sm placeholder:text-secondary focus:outline-none focus:ring-[0.5px] focus:ring-primary focus:border-primary/30"
+                  aria-label="Original Wire Size"
+                />
+              </div>
+              <Input
+                label="Original CM"
+                type="text"
+                inputMode="decimal"
+                value={originalCM}
+                onChange={(e) => setOriginalCM(e.target.value)}
+                placeholder="12360"
               />
             </div>
-            <Input
-              label="Original CM"
-              type="text"
-              inputMode="decimal"
-              value={originalCM}
-              onChange={(e) => setOriginalCM(e.target.value)}
-              placeholder="12360"
-            />
-            <Input
-              label="Targeted CM"
-              type="text"
-              inputMode="decimal"
-              value={targetedCM}
-              onChange={(e) => setTargetedCM(e.target.value)}
-              placeholder="12360"
-            />
-            <Input
-              label="Desired Min Wires"
-              type="text"
-              inputMode="numeric"
-              value={minWires}
-              onChange={(e) => setMinWires(e.target.value)}
-            />
-            <Input
-              label="Desired Max Wires"
-              type="text"
-              inputMode="numeric"
-              value={maxWires}
-              onChange={(e) => setMaxWires(e.target.value)}
-            />
+            <div className="mt-4 flex min-w-0 flex-col gap-3 border-t-2 border-title/35 pt-4 sm:mt-0 sm:border-l-2 sm:border-t-0 sm:pl-5 sm:pt-0">
+              <h2 className="text-sm font-semibold uppercase tracking-wide text-title">Redesigned Output</h2>
+              <div className="grid grid-cols-2 gap-3">
+                <Input
+                  label="Desired Min Wires"
+                  type="text"
+                  inputMode="numeric"
+                  value={minWires}
+                  onChange={(e) => setMinWires(e.target.value)}
+                />
+                <Input
+                  label="Desired Max Wires"
+                  type="text"
+                  inputMode="numeric"
+                  value={maxWires}
+                  onChange={(e) => setMaxWires(e.target.value)}
+                />
+              </div>
+              <div>
+                <Button
+                  type="button"
+                  size="sm"
+                  title="Choose Original Wires"
+                  aria-label="Choose Original Wires"
+                  className="!w-full !justify-start"
+                  onClick={() => setOriginalWiresModalOpen(true)}
+                >
+                  <FiPlus className="h-4 w-4 shrink-0" aria-hidden />
+                  Choose Original Wires
+                </Button>
+              </div>
+              <Input
+                label="Targeted CM"
+                type="text"
+                inputMode="decimal"
+                value={targetedCM}
+                onChange={(e) => setTargetedCM(e.target.value)}
+                placeholder="12360"
+              />
+            </div>
           </div>
 
           <div className="mb-4 flex flex-wrap items-center justify-end gap-3 border-t border-border pt-4">
@@ -1236,47 +1354,52 @@ export default function CmBestMatchCalculator({
             </Button>
           </div>
           {typeof onSaveToJob === "function" ? (
-            <p className="mb-4 text-xs text-secondary">
+            <p className="text-xs text-secondary">
               After you calculate, open the results and save the match you want to keep on this job.
             </p>
           ) : null}
-
-          <div
-            className="mb-4 rounded-md border border-border bg-muted/20 p-3 text-xs leading-relaxed text-secondary dark:bg-muted/10"
-            aria-label="Variable descriptions"
-          >
-            <p className="mb-2 font-semibold text-title">What each field means</p>
-            <dl className="m-0 space-y-2.5">
-              <div>
-                <dt className="font-medium text-title">Original Wires in Hand</dt>
-                <dd className="mt-0.5 text-secondary">
-                  Total conductor count from your original winding (auto-filled when you pick sizes with +).
-                </dd>
-              </div>
-              <div>
-                <dt className="font-medium text-title">Original Wire Size</dt>
-                <dd className="mt-0.5 text-secondary">
-                  Use <strong className="text-title">+</strong> to pick sizes and qty from the Cir Mills table. Shown as{" "}
-                  <span className="tabular-nums text-title">12.5 #8, 13.5 #6</span> (size # quantity).
-                </dd>
-              </div>
-              <div>
-                <dt className="font-medium text-title">Original CM / Targeted CM</dt>
-                <dd className="mt-0.5 text-secondary">
-                  Filled from Cir. Mills × qty for all selected original sizes. Targeted CM is the search goal (±5%).
-                </dd>
-              </div>
-              <div>
-                <dt className="font-medium text-title">Desired Min Wires / Desired Max Wires</dt>
-                <dd className="mt-0.5 text-secondary">
-                  Allowed total conductor count in a combination (all wires in parallel, up to three different sizes).
-                  Results stay between these limits.
-                </dd>
-              </div>
-            </dl>
-          </div>
         </section>
+
+        <aside
+          className="rounded-md border border-dashed border-border bg-muted/40 px-4 py-3 text-xs leading-relaxed text-secondary"
+          aria-label="Field notes"
+        >
+          <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-secondary">Notes</p>
+          <dl className="m-0 space-y-2.5">
+            <div>
+              <dt className="font-medium text-title">Original Wires in Hand</dt>
+              <dd className="mt-0.5">
+                Total conductor count from your original winding (auto-filled when you choose original wires).
+              </dd>
+            </div>
+            <div>
+              <dt className="font-medium text-title">Original Wire Size</dt>
+              <dd className="mt-0.5">
+                Use Choose Original Wires to pick sizes and qty from the Cir Mills table. Shown as{" "}
+                <span className="tabular-nums text-title">12.5 #8, 13.5 #6</span> (size # quantity).
+              </dd>
+            </div>
+            <div>
+              <dt className="font-medium text-title">Original CM / Targeted CM</dt>
+              <dd className="mt-0.5">
+                Filled from Cir. Mills × qty for all selected original sizes. Targeted CM is the search goal (±5%).
+              </dd>
+            </div>
+            <div>
+              <dt className="font-medium text-title">Desired Min Wires / Desired Max Wires</dt>
+              <dd className="mt-0.5">
+                Allowed total conductor count in a combination (all wires in parallel, up to three different sizes).
+                Results stay between these limits.
+              </dd>
+            </div>
+          </dl>
+        </aside>
+        </div>
       </div>
+
+      <DocumentPrintOffscreenPortal open={Boolean(inventoryPrint)} onClose={() => setInventoryPrint(null)}>
+        {inventoryPrint ? <WireInventoryPrintSheet {...inventoryPrint} /> : null}
+      </DocumentPrintOffscreenPortal>
 
       <OriginalWiresSelectModal
         open={originalWiresModalOpen}
