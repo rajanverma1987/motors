@@ -1,15 +1,18 @@
 /**
  * CM Best Match print: landscape, top-aligned, full table width.
- * Requires html.cm-best-match-printing (set in beforeprint when #cm-best-match-print-area exists).
+ * Applied only while printing the results sheet (html.cm-best-match-printing).
  */
 
-@media print {
-  @page {
-    size: landscape;
-    margin: 6mm;
-  }
+@page cm-best-match-page {
+  size: landscape;
+  margin: 6mm;
+}
 
-  /* Only hijack print when CM results modal content is present */
+#cm-best-match-print-area {
+  page: cm-best-match-page;
+}
+
+@media print {
   html.cm-best-match-printing,
   html.cm-best-match-printing body {
     background: white !important;
@@ -21,72 +24,12 @@
     overflow: visible !important;
   }
 
-  /*
-   * visibility:hidden still reserves layout — the full app stack stayed on page 1 and pushed
-   * CM content to page 2. Hide non-print roots from layout instead.
-   */
-  html.cm-best-match-printing body > *:not(#cm-best-match-modal-host) {
+  html.cm-best-match-printing body > *:not(.document-print-offscreen-root) {
     display: none !important;
   }
 
-  /* Flatten centered modal — start content at top-left of the page */
-  html.cm-best-match-printing #cm-best-match-modal-host {
-    position: static !important;
-    display: block !important;
-    inset: auto !important;
-    top: auto !important;
-    left: auto !important;
-    right: auto !important;
-    bottom: auto !important;
-    z-index: auto !important;
-    width: 100% !important;
-    max-width: none !important;
-    height: auto !important;
-    min-height: 0 !important;
-    padding: 0 !important;
-    margin: 0 !important;
-    overflow: visible !important;
-    transform: none !important;
-  }
-
-  html.cm-best-match-printing #cm-best-match-modal-host > div:first-child {
-    display: none !important;
-  }
-
-  html.cm-best-match-printing #cm-best-match-modal-host > div:nth-child(2) {
-    position: static !important;
-    top: auto !important;
-    left: auto !important;
-    right: auto !important;
-    bottom: auto !important;
-    transform: none !important;
-    display: block !important;
-    width: 100% !important;
-    max-width: none !important;
-    height: auto !important;
-    max-height: none !important;
-    min-height: 0 !important;
-    margin: 0 !important;
-    padding: 0 !important;
-    border: none !important;
-    border-radius: 0 !important;
-    box-shadow: none !important;
-    background: white !important;
-    overflow: visible !important;
-  }
-
-  /* Hide modal toolbar (Print / Close) */
-  html.cm-best-match-printing #cm-best-match-modal-host > div:nth-child(2) > div:first-child {
-    display: none !important;
-  }
-
-  html.cm-best-match-printing #cm-best-match-modal-host > div:nth-child(2) > div:last-child {
-    overflow: visible !important;
-    max-height: none !important;
-    min-height: 0 !important;
-    flex: none !important;
-    padding: 0 !important;
-    margin: 0 !important;
+  html.cm-best-match-printing .document-print-offscreen-root {
+    padding: 6mm !important;
   }
 
   html.cm-best-match-printing #cm-best-match-print-area {
