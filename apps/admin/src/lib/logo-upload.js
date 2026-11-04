@@ -2,8 +2,7 @@ import { mkdirSync, writeFileSync } from "fs";
 import path from "path";
 import sharp from "sharp";
 import { validateUploadBuffer } from "@/lib/upload-security";
-
-const UPLOAD_DIR = "public/uploads/logos";
+import { getPublicUploadsRoot } from "@/lib/public-upload-fs";
 const MAX_SIZE_MB = 2;
 /** Max dimension for stored logos — keeps directory listings fast; Next/Image also optimizes on the fly. */
 const LOGO_MAX_EDGE_PX = 1200;
@@ -51,7 +50,7 @@ export async function saveUploadedLogoFile(file) {
   if (!validation.ok) {
     throw new Error(validation.error);
   }
-  const dir = path.join(process.cwd(), UPLOAD_DIR);
+  const dir = path.join(getPublicUploadsRoot(), "logos");
   mkdirSync(dir, { recursive: true });
 
   const optimized = await optimizeLogoBuffer(buffer);

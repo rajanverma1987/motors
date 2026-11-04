@@ -1,5 +1,5 @@
 import path from "path";
-import { mkdirSync, writeFileSync } from "fs";
+import { existsSync, mkdirSync, writeFileSync } from "fs";
 
 const CLIENT_ALLOWED_EXT = new Set([".pdf", ".png", ".jpg", ".jpeg", ".gif", ".webp"]);
 const CLIENT_MAX_BYTES = 2 * 1024 * 1024;
@@ -43,7 +43,34 @@ export function sanitizeUploadSegment(value) {
 }
 
 /**
- * Resolve a safe absolute path under upload root from URL path segments.
+ * Directories that may hold listing logos and gallery files.
+ * Writes go to getPublicUploadsRoot(). Older files still sit in the repo-root
+ * public/uploads folder, or in the other app's public/uploads on the same server.
+ * @returns {string[]}
+ */
+export function listPublicUploadRoots() {
+  const cwd = /* turbopackIgnore: true */ process.cwd();
+  const roots = [];
+  const push = (dir) => {
+    const abs = path.resolve(dir);
+    if (!roots.includes(abs)) roots.push(abs);
+  };
+  const fromEnv = String(process.env.UPLOADS_DIR || "").trim();
+  if (fromEnv) push(fromEnv);
+  push(getPublicUploadsRoot());
+  push(path.join(cwd, "public", "uploads"));
+  push(path.join(cwd, "../../public/uploads"));
+  push(path.join(cwd, "../marketing/public/uploads"));
+  push(path.join(cwd, "../admin/public/uploads"));
+  push(path.join(cwd, "../../../../public/uploads"));
+  push(path.join(cwd, "../../../marketing/public/uploads"));
+  push(path.join(cwd, "../../../admin/public/uploads"));
+  return roots;
+}
+
+/**
+ * Resolve a safe absolute path under an upload root from URL path segments.
+ * Returns the first root that actually has the file.
  * @param {string[]} parts e.g. ["listings", "abc", "photo.jpg"]
  * @returns {string | null}
  */
@@ -52,13 +79,13 @@ export function resolvePublicUploadFilePath(parts) {
     .map((p) => String(p || "").trim())
     .filter(Boolean);
   if (!cleaned.length) return null;
-  if (cleaned.some((p) => p.includes("..") || p.includes("\\"))) return null;
-  const root = getPublicUploadsRoot();
-  const resolved = path.resolve(/* turbopackIgnore: true */ root, ...cleaned);
-  if (!resolved.startsWith(`${root}${path.sep}`) && resolved !== root) {
-    return null;
+  if (cleaned.some((p) => p.includes("..") || p.includes("/") || p.includes("\\"))) return null;
+  for (const root of listPublicUploadRoots()) {
+    const resolved = path.resolve(/* turbopackIgnore: true */ root, ...cleaned);
+    if (resolved !== root && !resolved.startsWith(`${root}${path.sep}`)) continue;
+    if (existsSync(resolved)) return resolved;
   }
-  return resolved;
+  return null;
 }
 
 /**
