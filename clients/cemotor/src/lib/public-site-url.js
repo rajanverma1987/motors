@@ -5,6 +5,8 @@
 
 const DEFAULT_PUBLIC_SITE_URL = "https://3phaseflow.com";
 
+const APEX_HOSTS = new Set(["3phaseflow.com", "www.3phaseflow.com"]);
+
 const LEGACY_HOSTS = new Set([
   "motorswinding.com",
   "www.motorswinding.com",
@@ -53,19 +55,65 @@ function normalizeSiteUrl(raw) {
   return stripTrailingSlash(u);
 }
 
-/**
- * @param {Request} [request] Optional; used only when env/VERCEL are missing/localhost to read x-forwarded-host (must not be localhost).
- */
-export function getPublicSiteUrl(request) {
+function isClientApp() {
+  return String(process.env.APP_ROLE || "").toLowerCase() === "client";
+}
+
+function isApexHost(hostname) {
+  return APEX_HOSTS.has(String(hostname || "").toLowerCase());
+}
+
+function hostnameOfSiteUrl(url) {
+  try {
+    return new URL(url).hostname.toLowerCase();
+  } catch {
+    return "";
+  }
+}
+
+/** Shop apps must not print time clock, email, or QR links on the marketing host. */
+function shopOriginFromAllowedHosts() {
+  if (!isClientApp()) return "";
+  const hosts = String(process.env.ALLOWED_HOSTS || "")
+    .split(",")
+    .map((s) => s.trim().toLowerCase())
+    .filter(Boolean);
+  const shop = hosts.find((h) => !isLocalhostHost(h) && !isApexHost(h));
+  return shop ? `https://${shop}` : "";
+}
+
+function configuredSiteUrl({ allowApex }) {
   for (const key of ["NEXT_PUBLIC_SITE_URL", "SITE_URL"]) {
     const u = normalizeSiteUrl(process.env[key]);
-    if (u) return u;
+    if (!u) continue;
+    if (!allowApex && isApexHost(hostnameOfSiteUrl(u))) continue;
+    return u;
   }
   if (process.env.VERCEL_URL) {
     const host = String(process.env.VERCEL_URL).replace(/^https?:\/\//, "").split("/")[0];
     const u = normalizeSiteUrl(`https://${host}`);
-    if (u) return u;
+    if (u && (allowApex || !isApexHost(hostnameOfSiteUrl(u)))) return u;
   }
+  return "";
+}
+
+/**
+ * @param {Request} [request] Optional; used only when env/VERCEL are missing/localhost to read x-forwarded-host (must not be localhost).
+ */
+export function getPublicSiteUrl(request) {
+  if (isClientApp()) {
+    const fromEnv = configuredSiteUrl({ allowApex: false });
+    if (fromEnv) return fromEnv;
+    if (request) {
+      const fromProxy = getSafeForwardedOrigin(request);
+      if (fromProxy && !isApexHost(hostnameOfSiteUrl(fromProxy))) return fromProxy;
+    }
+    const fromAllowed = shopOriginFromAllowedHosts();
+    if (fromAllowed) return fromAllowed;
+  }
+
+  const fromEnv = configuredSiteUrl({ allowApex: true });
+  if (fromEnv) return fromEnv;
   if (request) {
     const fromProxy = getSafeForwardedOrigin(request);
     if (fromProxy) return fromProxy;
