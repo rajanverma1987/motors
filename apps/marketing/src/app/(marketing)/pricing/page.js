@@ -2,8 +2,11 @@ import Breadcrumbs from "@/components/seo/breadcrumbs";
 import HeroBackground from "@/components/marketing/HeroBackground";
 import { marketingPageMetadata } from "@/lib/marketing-page-metadata";
 import { getPublicSiteUrl } from "@/lib/public-site-url";
+import { getFounderSpotCounts } from "@/lib/founder-spots";
 import PricingCardsClient from "./pricing-cards-client";
 import PricingContactFaqClient from "./pricing-contact-faq-client";
+
+export const dynamic = "force-dynamic";
 
 export const metadata = marketingPageMetadata({
   path: "/pricing",
@@ -209,7 +212,9 @@ const INCLUDED_FEATURES = [
   },
 ];
 
-export default function PricingPage() {
+export default async function PricingPage() {
+  const founderSpots = await getFounderSpotCounts();
+
   return (
     <>
       <script
@@ -246,7 +251,7 @@ export default function PricingPage() {
 
       <section className="py-12 sm:py-16">
         <div className="mx-auto max-w-4xl px-4 sm:px-6">
-          <PricingCardsClient />
+          <PricingCardsClient founderSpotsTaken={founderSpots.taken} />
 
           <section aria-labelledby="included-heading" className="mb-12">
             <h2 id="included-heading" className="text-xl font-bold text-title sm:text-2xl">

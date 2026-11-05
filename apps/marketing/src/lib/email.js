@@ -19,6 +19,7 @@ import {
   buildDemoAccountCredentialsEmailContent,
 } from "@/lib/demo-account-credentials-email";
 import { getDemoBookingUrl } from "@/lib/demo-booking-url";
+import { founderPricingOfferSentence, getFounderSpotCounts } from "@/lib/founder-spots";
 import {
   buildLeadContactDetailRowsHtml,
   getLeadFullContactInEmailUntilDate,
@@ -513,13 +514,14 @@ export async function sendLeadPlatformNurtureEmail({ to, name, bookingUrl, unsub
   const cal = String(bookingUrl || "https://cal.com/iqmotorbase/30min").trim();
   const unsub = String(unsubscribeUrl || "").trim();
   const subject = "You received a repair lead from 3PhaseFlow: here is how to get more";
+  const offerLine = founderPricingOfferSentence(await getFounderSpotCounts());
   const html = `
     <p>Hi ${esc(displayName)},</p>
     <p>Your shop received a repair inquiry through 3PhaseFlow recently. A buyer in your area found your listing and submitted a request.</p>
     <p>That lead came through our free directory listing. The platform can do a lot more than that.</p>
     <p>3PhaseFlow is a shop management system built specifically for electric motor repair, not adapted from auto repair software, not a generic CRM. Work orders with full motor nameplate data, job tracking from intake to test bench, customer and motor history, invoicing, accounts receivable, inventory, QuickBooks sync, and more repair leads from our directory.</p>
     <p>I wanted to reach out personally because your shop is already in our network and already receiving inquiries. You are not starting from scratch.</p>
-    <p>We are currently offering founder pricing to the first 10 shops, a permanently locked discounted rate. One spot is already taken. If you want to see the platform before the founder spots are gone, I can show you everything in 30 minutes.</p>
+    <p>${esc(offerLine)}</p>
     <p><a href="${esc(cal)}" style="display:inline-block;padding:12px 22px;background:#9a5d33;color:#fff;text-decoration:none;border-radius:6px;font-weight:600;">Book a free 30-min demo</a></p>
     <p>Book a time here: <a href="${esc(cal)}">${esc(cal)}</a></p>
     <p>Or just reply to this email and we will find a time that works.</p>

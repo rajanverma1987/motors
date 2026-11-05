@@ -6,8 +6,6 @@ import Button from "@/components/ui/button";
 import DemoBookingLink from "@/components/marketing/demo-booking-link";
 
 const FOUNDER_SPOTS_TOTAL = 10;
-const FOUNDER_SPOTS_TAKEN = 1;
-const FOUNDER_SPOTS_LEFT = FOUNDER_SPOTS_TOTAL - FOUNDER_SPOTS_TAKEN;
 
 const STANDARD_FEATURES = [
   "Simple service proposals: RFQ, Job, and Invoice",
@@ -36,10 +34,16 @@ const FOUNDER_FEATURES = [
   "Founder badge on your directory listing",
 ];
 
-export { FOUNDER_SPOTS_LEFT, FOUNDER_SPOTS_TOTAL };
+export { FOUNDER_SPOTS_TOTAL };
 
-export default function PricingCardsClient() {
+export default function PricingCardsClient({ founderSpotsTaken = 0 }) {
   const [billing, setBilling] = useState("annual");
+  const taken = Math.min(
+    FOUNDER_SPOTS_TOTAL,
+    Math.max(0, Math.floor(Number(founderSpotsTaken) || 0))
+  );
+  const left = FOUNDER_SPOTS_TOTAL - taken;
+  const spotsWord = left === 1 ? "spot" : "spots";
 
   const scrollToContact = () => {
     document.getElementById("pricing-contact-form")?.scrollIntoView({
@@ -128,7 +132,7 @@ export default function PricingCardsClient() {
 
         <div className="rounded-2xl border-2 border-warning/50 bg-warning/5 p-6 shadow-sm sm:p-7">
           <span className="inline-block rounded-full bg-warning px-3 py-1 text-xs font-bold text-white">
-            Limited: {FOUNDER_SPOTS_LEFT} of {FOUNDER_SPOTS_TOTAL} spots left
+            Limited: {left} of {FOUNDER_SPOTS_TOTAL} spots left
           </span>
           <h2 className="mt-4 text-xl font-bold text-title">Founder Pricing</h2>
           <div className="mt-3 flex items-baseline gap-1">
@@ -163,7 +167,7 @@ export default function PricingCardsClient() {
             Request founder pricing →
           </Button>
           <p className="mt-2 text-center text-xs text-warning">
-            {FOUNDER_SPOTS_LEFT} spots remaining. No obligation to ask.
+            {left} {spotsWord} remaining. No obligation to ask.
           </p>
         </div>
       </div>
@@ -174,13 +178,13 @@ export default function PricingCardsClient() {
             <span
               key={i}
               className={`h-3.5 w-3.5 rounded-full ${
-                i < FOUNDER_SPOTS_TAKEN ? "bg-warning" : "border border-border bg-muted"
+                i < taken ? "bg-warning" : "border border-border bg-muted"
               }`}
             />
           ))}
         </div>
         <p className="text-sm text-secondary">
-          <strong className="text-title">{FOUNDER_SPOTS_LEFT} founder spots remaining</strong>. Once filled,
+          <strong className="text-title">{left} founder {spotsWord} remaining</strong>. Once filled,
           pricing returns to standard rate permanently.
         </p>
       </div>
