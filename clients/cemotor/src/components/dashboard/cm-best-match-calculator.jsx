@@ -1221,19 +1221,6 @@ export default function CmBestMatchCalculator({
                 <FiPlus className="h-4 w-4 shrink-0" aria-hidden />
                 Choose Wires from inventory
               </Button>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                title="Print inventory"
-                aria-label="Print inventory"
-                className="!w-full !justify-start"
-                disabled={catalogLoading || wireRows.length === 0}
-                onClick={printInventoryTable}
-              >
-                <FiPrinter className="h-4 w-4 shrink-0" aria-hidden />
-                Print inventory
-              </Button>
               <Input
                 label="Targeted CM"
                 type="text"
@@ -1273,7 +1260,7 @@ export default function CmBestMatchCalculator({
               <span className="font-medium text-title">Wire count limits.</span> Set desired min and max wires. Matches stay inside that range, using up to three sizes in parallel.
             </li>
             <li>
-              <span className="font-medium text-title">Inventory.</span> Use Choose Wires from inventory and check the sizes to search. Up to 10 sizes. They show in Wires in Inventory. Print inventory prints that list.
+              <span className="font-medium text-title">Inventory.</span> Use Choose Wires from inventory and check the sizes to search. Up to 10 sizes. They show in Wires in Inventory.
             </li>
             <li>
               <span className="font-medium text-title">Targeted CM.</span> This is the search goal, within 5% either way. Choosing original wires copies original CM here. Change it if the redesign should land on a different CM.
