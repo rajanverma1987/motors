@@ -1849,9 +1849,95 @@ export default function ServiceProposalFormModal({
             className={`mb-2 flex flex-wrap gap-1.5 border-b border-border py-1.5 ${
               isPage
                 ? "simple-sp-page-toolbar items-stretch justify-start"
-                : "items-end justify-end"
+                : "items-end justify-start"
             }`}
           >
+              {!isPage ? (
+                <div className="flex min-w-0 flex-1 flex-wrap items-end gap-2">
+                  <div className="flex min-w-[16rem] max-w-sm flex-1 flex-col gap-0.5">
+                    <span className="text-left text-xs font-bold text-title">Customer</span>
+                    <div className="flex min-w-0 items-center gap-1">
+                      <button
+                        type="button"
+                        className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded text-primary hover:bg-primary/10 focus:outline-none focus:ring-2 focus:ring-primary disabled:cursor-not-allowed disabled:opacity-40"
+                        title="Open customer"
+                        aria-label="Open customer"
+                        disabled={!String(form.customerId || "").trim()}
+                        onClick={() => setCustomerViewOpen(true)}
+                      >
+                        <FiEye className="h-4 w-4" aria-hidden />
+                      </button>
+                      <div className="min-w-0 flex-1">
+                        <SimpleSelect
+                          options={customerOptions}
+                          value={form.customerId}
+                          onChange={(e) => handleCustomerChange(e.target.value)}
+                          placeholder={loadingCustomers ? "Loading…" : "Select…"}
+                          disabled={loadingCustomers}
+                          searchable
+                          triggerClassName="!h-9"
+                          aria-label="Customer"
+                        />
+                      </div>
+                      <button
+                        type="button"
+                        className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-none border border-border bg-primary text-white hover:opacity-90"
+                        title="Add new customer"
+                        aria-label="Add new customer"
+                        onClick={openAddCustomer}
+                      >
+                        <FiPlus className="h-3.5 w-3.5" aria-hidden />
+                      </button>
+                    </div>
+                  </div>
+                  <label className="flex w-[8.5rem] flex-col gap-0.5">
+                    <span className="text-left text-xs font-bold text-title">
+                      {recordTypeJobNumberLabel(form.recordType)}
+                    </span>
+                    <input
+                      type="text"
+                      value={form.documentNumber}
+                      onChange={(e) => patch("documentNumber", e.target.value)}
+                      className={`${FIELD_INPUT} !h-9 border-primary/40 bg-primary/15 font-semibold text-primary focus:border-primary dark:bg-primary/25 dark:text-primary`}
+                      placeholder="Assigned on save"
+                      aria-label={recordTypeJobNumberLabel(form.recordType)}
+                    />
+                  </label>
+                  <label className="flex w-[11rem] flex-col gap-0.5">
+                    <span className="text-left text-xs font-bold text-title">Customer PO#</span>
+                    <input
+                      type="text"
+                      value={form.customerPo}
+                      onChange={(e) => patch("customerPo", e.target.value)}
+                      className={`${FIELD_INPUT} !h-9`}
+                      aria-label="Customer PO#"
+                    />
+                  </label>
+                  <Button
+                    type="button"
+                    variant="primary"
+                    size="sm"
+                    className={TOOLBAR_BTN}
+                    disabled={
+                      (form.recordType !== RECORD_TYPE_RFQ && form.recordType !== RECORD_TYPE_JOB) ||
+                      saving ||
+                      copying
+                    }
+                    title={
+                      form.recordType === RECORD_TYPE_JOB
+                        ? "Convert this job back to an RFQ"
+                        : "Convert this RFQ to a job"
+                    }
+                    onClick={() =>
+                      handleConvertRecordType(
+                        form.recordType === RECORD_TYPE_JOB ? RECORD_TYPE_RFQ : RECORD_TYPE_JOB
+                      )
+                    }
+                  >
+                    {form.recordType === RECORD_TYPE_JOB ? "Convert Job To RFQ" : "Convert RFQ To Job"}
+                  </Button>
+                </div>
+              ) : null}
               {canViewFinancials ? (
                 <>
                   <Button
@@ -1993,6 +2079,7 @@ export default function ServiceProposalFormModal({
           >
             {/* Column 1 */}
             <div className="flex min-w-0 flex-col gap-2">
+              {isPage ? (
               <FieldRow
                 label={
                   <span className="inline-flex items-center justify-end gap-1">
@@ -2035,6 +2122,7 @@ export default function ServiceProposalFormModal({
                   </button>
                 </div>
               </FieldRow>
+              ) : null}
               <FieldRow label="Email" labelWidth="7.75rem" controlClassName="min-w-0 flex-1">
                 <input
                   type="email"
@@ -2225,26 +2313,26 @@ export default function ServiceProposalFormModal({
 
             {/* Column 2 — meta */}
             <div className="flex h-full min-w-0 flex-col gap-2">
+              {isPage ? (
+                <>
               <div className="flex flex-wrap justify-end gap-1 py-1.5">
                 <Button
                   type="button"
                   variant="primary"
                   size="sm"
                   className={TOOLBAR_BTN}
-                  disabled={form.recordType !== RECORD_TYPE_RFQ || saving || copying}
-                  onClick={() => handleConvertRecordType(RECORD_TYPE_JOB)}
+                  disabled={
+                    (form.recordType !== RECORD_TYPE_RFQ && form.recordType !== RECORD_TYPE_JOB) ||
+                    saving ||
+                    copying
+                  }
+                  onClick={() =>
+                    handleConvertRecordType(
+                      form.recordType === RECORD_TYPE_JOB ? RECORD_TYPE_RFQ : RECORD_TYPE_JOB
+                    )
+                  }
                 >
-                  Convert RFQ To Job
-                </Button>
-                <Button
-                  type="button"
-                  variant="primary"
-                  size="sm"
-                  className={TOOLBAR_BTN}
-                  disabled={form.recordType !== RECORD_TYPE_JOB || saving || copying}
-                  onClick={() => handleConvertRecordType(RECORD_TYPE_RFQ)}
-                >
-                  Convert Job To RFQ
+                  {form.recordType === RECORD_TYPE_JOB ? "Convert Job To RFQ" : "Convert RFQ To Job"}
                 </Button>
               </div>
               <FieldRow label={docLabel} labelWidth="9.5rem" controlClassName="min-w-0 flex-1">
@@ -2264,6 +2352,8 @@ export default function ServiceProposalFormModal({
                   className={FIELD_INPUT}
                 />
               </FieldRow>
+                </>
+              ) : null}
               {form.recordType === RECORD_TYPE_INVOICE ? (
                 <FieldRow label="Terms" labelWidth="9.5rem" controlClassName="min-w-0 flex-1">
                   <input
