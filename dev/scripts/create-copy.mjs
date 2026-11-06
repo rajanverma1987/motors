@@ -7,7 +7,8 @@
  *   npm run createCopy -- --name "Acme Motors" --email owner@acme.com --port 5083 --skip-dns
  *
  * Writes clients/{slug}/.env with PLATFORM_TENANT_KEY + handoff secrets,
- * registers Tenant (with key hash), creates shop_uploads/{slug}, optional DNS.
+ * registers Tenant (with key hash), copies statuses and dropdowns from the
+ * template shop settings, creates shop_uploads/{slug}, optional DNS.
  */
 import { config } from "dotenv";
 import {
@@ -19,13 +20,14 @@ import {
   readFileSync,
   statSync,
 } from "fs";
-import { join, resolve } from "path";
+import { basename, join, resolve } from "path";
 import { randomBytes } from "crypto";
 import { spawnSync } from "child_process";
 import bcrypt from "bcryptjs";
 import mongoose from "mongoose";
 import { repoRoot, scriptsDir } from "./_paths.mjs";
 import { slugifyCustomerName, withDbName, nextClientPort } from "./lib/client-slug.mjs";
+import { seedShopCatalogSettings } from "./lib/seed-shop-catalog-settings.mjs";
 
 config({ path: join(repoRoot, ".env") });
 
@@ -255,6 +257,14 @@ if (ownerEmail) {
   );
 }
 await mongoose.disconnect();
+
+await seedShopCatalogSettings({
+  baseUri,
+  templateSlug: basename(from),
+  templateEnvPath: join(from, ".env"),
+  destDbName: mongoDbName,
+  destOwnerEmail: ownerEmail,
+});
 
 if (!skipDns) {
   const r = spawnSync(process.execPath, [join(scriptsDir, "dns-upsert.mjs"), "--slug", slug], {
