@@ -47,6 +47,8 @@ export default function Modal({
   headerCenter,
   /** Optional class on header row (e.g. flex-wrap). */
   headerClassName = "",
+  /** Replaces the default title classes when the title is a custom heading. */
+  titleClassName = "",
   /** Optional class on the scrollable body wrapper. */
   bodyClassName = "",
   /** @deprecated Ignored when ModalStackProvider is active — stack order sets z-index. */
@@ -267,7 +269,10 @@ export default function Modal({
                   {title != null ? (
                     <h2
                       id="modal-title"
-                      className="pointer-events-none max-w-[min(9rem,28vw)] shrink-0 self-center truncate text-base font-semibold leading-snug text-title sm:max-w-[12rem] sm:text-lg md:max-w-[14rem]"
+                      className={
+                        titleClassName ||
+                        "pointer-events-none max-w-[min(9rem,28vw)] shrink-0 self-center truncate text-base font-semibold leading-snug text-title sm:max-w-[12rem] sm:text-lg md:max-w-[14rem]"
+                      }
                     >
                       {title}
                     </h2>
@@ -315,7 +320,10 @@ export default function Modal({
                 {title != null ? (
                   <h2
                     id="modal-title"
-                    className="pointer-events-none max-w-[min(9rem,28vw)] shrink-0 self-center truncate text-base font-semibold leading-snug text-title sm:max-w-[12rem] sm:text-lg md:max-w-[14rem]"
+                    className={
+                      titleClassName ||
+                      "pointer-events-none max-w-[min(9rem,28vw)] shrink-0 self-center truncate text-base font-semibold leading-snug text-title sm:max-w-[12rem] sm:text-lg md:max-w-[14rem]"
+                    }
                   >
                     {title}
                   </h2>
@@ -354,7 +362,10 @@ export default function Modal({
                 {title != null && (
                   <h2
                     id="modal-title"
-                    className="pointer-events-none max-w-[min(12rem,36vw)] shrink-0 self-center truncate text-lg font-semibold leading-snug text-title sm:max-w-[14rem] md:max-w-xs lg:max-w-sm"
+                    className={
+                      titleClassName ||
+                      "pointer-events-none max-w-[min(12rem,36vw)] shrink-0 self-center truncate text-lg font-semibold leading-snug text-title sm:max-w-[14rem] md:max-w-xs lg:max-w-sm"
+                    }
                   >
                     {title}
                   </h2>

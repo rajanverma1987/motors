@@ -249,6 +249,7 @@ export function createEmptyServiceProposalForm(overrides = {}) {
     companyName: "",
     customerEmail: "",
     customerPhone: "",
+    jobContactKey: "",
     customerTaxExempt: true,
     motorPower: "AC",
     namePlate: "Original",
@@ -497,8 +498,8 @@ export function sumTaxableOtherLinePrices(lines) {
  */
 export function recordTypeDisplayTitle(recordType, proposalType) {
   const t = String(recordType || RECORD_TYPE_RFQ).toUpperCase();
-  if (t === RECORD_TYPE_INVOICE) return "INVOICE";
-  return proposalDocumentTitle(proposalType).toUpperCase();
+  if (t === RECORD_TYPE_INVOICE) return "Invoice";
+  return proposalDocumentTitle(proposalType);
 }
 
 /** Document number field label (RFQ# / JOB# / Invoice#). */
@@ -712,6 +713,7 @@ export function simpleServiceProposalDocToForm(doc) {
   next.companyName = String(d.companyName || "").trim();
   next.customerEmail = String(d.customerEmail || d.email || "").trim();
   next.customerPhone = String(d.customerPhone || d.phone || "").trim();
+  next.jobContactKey = String(d.jobContactKey || "").trim();
   next.customerTaxExempt = d.customerTaxExempt !== false;
   next.taxPercent = String(d.taxPercent ?? next.taxPercent ?? "").trim();
   next.motorPower = resolveMachineType(d.motorPower, "AC");

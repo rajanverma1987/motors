@@ -5,6 +5,12 @@ import { FiPlus, FiPrinter, FiTrash2 } from "react-icons/fi";
 import Button from "@/components/ui/button";
 import Input from "@/components/ui/input";
 import Modal from "@/components/ui/modal";
+import SimpleSelect from "@/components/simple/simple-select";
+import {
+  fetchSimpleServiceProposal,
+  fetchSimpleServiceProposals,
+  updateSimpleServiceProposal,
+} from "@/lib/simple-portal-api";
 import { useConfirm } from "@/components/confirm-provider";
 import { calculateCMBestMatch } from "@/lib/cm-calculator";
 import { formatCmJobResultSummary, normalizeCmJobCalculation } from "@/lib/cm-job-calculation";
@@ -24,6 +30,7 @@ const MAX_SELECT = 10;
 const MAX_WIRES_CAP = 200;
 const RESULTS_PAGE_SIZE = 200;
 const ORIGINAL_WIRES_FORM_ID = "cm-original-wires-form";
+const ASSIGN_JOB_FORM_ID = "cm-assign-job-form";
 
 function num(v) {
   const n = parseFloat(String(v).replace(/,/g, ""));
@@ -187,6 +194,7 @@ function CmBestMatchResultsBody({
   resultContext,
   generatedLabel,
   areaId = "cm-best-match-print-area",
+  toolbar = null,
 }) {
   const [page, setPage] = useState(1);
 
@@ -213,7 +221,10 @@ function CmBestMatchResultsBody({
 
   return (
     <div id={areaId} className="text-title">
-      <h1 className="cm-print-title mb-1 text-lg font-bold text-title lg:text-xl">CM Best Match</h1>
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+        <h1 className="cm-print-title text-lg font-bold text-title lg:text-xl">CM Best Match</h1>
+        {toolbar ? <div className="cm-print-hide flex flex-wrap items-center justify-end gap-2">{toolbar}</div> : null}
+      </div>
       {hasRows ? (
         <p className="cm-print-meta mb-4 text-xs text-secondary">
           Generated {generatedLabel || "—"}
@@ -237,8 +248,8 @@ function CmBestMatchResultsBody({
             <VarCell label="Original CM" value={resultContext.originalCMDisplay} />
           </div>
           <div className="flex min-w-[22rem] max-w-xl flex-col gap-1.5">
-            <VarCell label="Desired Min Wires" value={resultContext.minWires} />
-            <VarCell label="Desired Max Wires" value={resultContext.maxWires} />
+            <VarCell label="Desired Min Wires in hand" value={resultContext.minWires} />
+            <VarCell label="Desired Max Wires in hand" value={resultContext.maxWires} />
             <VarCell label="Targeted CM" value={resultContext.targetedCM} />
             {resultContext.selectedCatalogSummary ? (
               <VarCell label="Chosen from Inventory" value={resultContext.selectedCatalogSummary} />
@@ -622,6 +633,12 @@ export default function CmBestMatchCalculator({
   const [cirMillsLoading, setCirMillsLoading] = useState(() => !hasCirMillsSessionCatalogs());
   const [originalWiresModalOpen, setOriginalWiresModalOpen] = useState(false);
   const [inventoryPrint, setInventoryPrint] = useState(null);
+  const [assignOpen, setAssignOpen] = useState(false);
+  const [assignJobId, setAssignJobId] = useState("");
+  const [assignJobs, setAssignJobs] = useState([]);
+  const [assignJobsLoading, setAssignJobsLoading] = useState(false);
+  const [assigning, setAssigning] = useState(false);
+  const [assignedJobNumber, setAssignedJobNumber] = useState("");
   const [shopWireRows, setShopWireRows] = useState([]);
   const [shopWiresLoading, setShopWiresLoading] = useState(true);
   const [newSize, setNewSize] = useState("");
@@ -1082,13 +1099,8 @@ export default function CmBestMatchCalculator({
     resultsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   }, [resultsScrollToken]);
 
-  const saveOutputToJob = async () => {
-    if (typeof onSaveToJob !== "function") return;
-    if (!results.length) {
-      toast.warning("Calculate first, then save the output on this job.");
-      return;
-    }
-    const snapshot = normalizeCmJobCalculation({
+  const currentSnapshot = () =>
+    normalizeCmJobCalculation({
       savedAt: new Date().toISOString(),
       catalogWireUnit,
       selectedWireIds: [...selected],
@@ -1102,6 +1114,14 @@ export default function CmBestMatchCalculator({
       resultContext,
       results,
     });
+
+  const saveOutputToJob = async () => {
+    if (typeof onSaveToJob !== "function") return;
+    if (!results.length) {
+      toast.warning("Calculate first, then save the output on this job.");
+      return;
+    }
+    const snapshot = currentSnapshot();
     if (!snapshot?.results?.length) {
       toast.warning("That output could not be saved.");
       return;
@@ -1117,24 +1137,101 @@ export default function CmBestMatchCalculator({
     }
   };
 
+  const openAssignJob = async () => {
+    if (!results.length) {
+      toast.warning("Calculate first, then assign the output to a job.");
+      return;
+    }
+    setAssignOpen(true);
+    setAssignJobsLoading(true);
+    try {
+      const list = await fetchSimpleServiceProposals();
+      const opts = [];
+      const seen = new Set();
+      for (const row of Array.isArray(list) ? list : []) {
+        const id = String(row.id || "").trim();
+        const num = String(row.documentNumber || row.quote || "").trim();
+        if (!id || !num || seen.has(id)) continue;
+        seen.add(id);
+        const company = String(row.companyName || "").trim();
+        opts.push({
+          value: id,
+          label: company ? `${num} · ${company}` : num,
+          jobNumber: num,
+        });
+      }
+      opts.sort((a, b) => a.jobNumber.localeCompare(b.jobNumber, undefined, { numeric: true }));
+      setAssignJobs(opts);
+      setAssignJobId((current) =>
+        opts.some((opt) => opt.value === current) ? current : opts[0]?.value || ""
+      );
+    } catch (err) {
+      toast.error(err?.message || "Could not load jobs.");
+      setAssignJobs([]);
+    } finally {
+      setAssignJobsLoading(false);
+    }
+  };
+
+  const assignToJob = async (e) => {
+    e?.preventDefault?.();
+    const jobId = String(assignJobId || "").trim();
+    const job = assignJobs.find((opt) => opt.value === jobId);
+    if (!jobId || !job) {
+      toast.warning("Select a job.");
+      return;
+    }
+    const snapshot = currentSnapshot();
+    if (!snapshot?.results?.length) {
+      toast.warning("Calculate first, then assign the output to a job.");
+      return;
+    }
+    setAssigning(true);
+    try {
+      const doc = await fetchSimpleServiceProposal(jobId);
+      if (!doc) throw new Error("Job not found.");
+      if (normalizeCmJobCalculation(doc.cmCalculation)?.results?.length) {
+        const ok = await confirm({
+          title: "Replace saved result",
+          message: `${job.jobNumber} already has a CM Best Match result. Replace it with this one?`,
+          confirmLabel: "Replace",
+          variant: "danger",
+        });
+        if (!ok) return;
+      }
+      await updateSimpleServiceProposal(jobId, { ...doc, cmCalculation: snapshot });
+      setSavedSnapshot(snapshot);
+      setOutputSaved(true);
+      setAssignedJobNumber(job.jobNumber);
+      setAssignOpen(false);
+      toast.success(`Assigned to ${job.jobNumber}.`);
+    } catch (err) {
+      toast.error(err?.message || "Could not assign this output.");
+    } finally {
+      setAssigning(false);
+    }
+  };
+
   const savedSummary = formatCmJobResultSummary(savedSnapshot);
   const jobNumberLabel = String(jobNumber || "").trim();
   const saveToJobLabel = jobNumberLabel ? `Save to Job#${jobNumberLabel}` : "Save to Job";
   const savedToJobLabel = jobNumberLabel ? `Saved to Job#${jobNumberLabel}` : "Saved";
 
   return (
-    <div className="flex w-full max-w-[1600px] flex-col gap-6">
+    <div className="flex w-full flex-col gap-6">
       {savedSummary ? (
         <div className="rounded-md border border-border bg-primary/[0.06] px-3 py-2 dark:bg-primary/10">
-          <p className="text-xs font-bold uppercase tracking-wide text-secondary">Saved on this job</p>
+          <p className="text-xs font-bold uppercase tracking-wide text-secondary">
+            {assignedJobNumber ? `Assigned to ${assignedJobNumber}` : "Saved on this job"}
+          </p>
           <p className="mt-0.5 text-sm font-semibold text-title">{savedSummary}</p>
           {savedSnapshot?.savedAt ? (
             <p className="mt-0.5 text-xs text-secondary">Saved {formatDateTime(savedSnapshot.savedAt)}</p>
           ) : null}
         </div>
       ) : null}
-      <div className="grid min-h-0 gap-6 lg:grid-cols-2 lg:items-start">
-        <section className="flex min-w-0 flex-col rounded-lg border border-border bg-card p-5 shadow-sm dark:shadow-black/20">
+      <div className="flex justify-center">
+        <section className="flex w-full max-w-6xl min-w-0 flex-col rounded-lg border border-border bg-card p-5 shadow-sm dark:shadow-black/20">
           <p className="mb-4 text-xs text-secondary">
             Enter original winding data and search limits. Choose original wires and inventory sizes from the buttons below.
           </p>
@@ -1154,11 +1251,13 @@ export default function CmBestMatchCalculator({
                 <span className="text-sm text-title">Original Wire Size</span>
                 <input
                   type="text"
+                  readOnly
+                  disabled
                   value={originalWireSize}
-                  onChange={(e) => setOriginalWireSize(e.target.value)}
-                  placeholder="e.g. 12.5 #8, 13.5 #6"
-                  className="w-full min-w-0 rounded-md border-[0.5px] border-border bg-bg px-3 py-2 text-text placeholder:text-sm placeholder:text-secondary focus:outline-none focus:ring-[0.5px] focus:ring-primary focus:border-primary/30"
+                  placeholder="Choose original wires"
+                  className="w-full min-w-0 rounded-md border-[0.5px] border-border bg-bg px-3 py-2 text-text placeholder:text-sm placeholder:text-secondary"
                   aria-label="Original Wire Size"
+                  title="Choose original wires to set this"
                 />
               </div>
               <Button
@@ -1185,14 +1284,14 @@ export default function CmBestMatchCalculator({
               <h2 className="text-sm font-semibold uppercase tracking-wide text-title">Redesigned Input</h2>
               <div className="grid grid-cols-2 gap-3">
                 <Input
-                  label="Desired Min Wires"
+                  label="Desired Min Wires in hand"
                   type="text"
                   inputMode="numeric"
                   value={minWires}
                   onChange={(e) => setMinWires(e.target.value)}
                 />
                 <Input
-                  label="Desired Max Wires"
+                  label="Desired Max Wires in hand"
                   type="text"
                   inputMode="numeric"
                   value={maxWires}
@@ -1236,9 +1335,6 @@ export default function CmBestMatchCalculator({
             <Button type="button" variant="outline" size="sm" onClick={clearBestMatchFields}>
               Clear fields
             </Button>
-            <Button type="button" variant="primary" size="sm" onClick={runCalculate}>
-              Calculate Best Match
-            </Button>
           </div>
           {typeof onSaveToJob === "function" ? (
             <p className="mt-3 text-xs text-secondary">
@@ -1246,66 +1342,59 @@ export default function CmBestMatchCalculator({
             </p>
           ) : null}
         </section>
-
-        <aside
-          className="rounded-md border border-dashed border-border bg-muted/40 px-4 py-3 text-xs leading-relaxed text-secondary"
-          aria-label="How to run this calculator"
-        >
-          <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-secondary">Notes</p>
-          <ol className="m-0 list-decimal space-y-2.5 pl-4">
-            <li>
-              <span className="font-medium text-title">Original winding.</span> Enter wires in hand, or use Choose Original Wires. That fills wire size, wire count, and original CM.
-            </li>
-            <li>
-              <span className="font-medium text-title">Wire count limits.</span> Set desired min and max wires. Matches stay inside that range, using up to three sizes in parallel.
-            </li>
-            <li>
-              <span className="font-medium text-title">Inventory.</span> Use Choose Wires from inventory and check the sizes to search. Up to 10 sizes. They show in Wires in Inventory.
-            </li>
-            <li>
-              <span className="font-medium text-title">Targeted CM.</span> This is the search goal, within 5% either way. Choosing original wires copies original CM here. Change it if the redesign should land on a different CM.
-            </li>
-            <li>
-              <span className="font-medium text-title">Calculate.</span> Click Calculate Best Match. Matches fill the table below. Green rows are within about 2% of target. Yellow rows are within about 5%.
-            </li>
-          </ol>
-        </aside>
       </div>
 
       <section
           ref={resultsRef}
           className="rounded-lg border border-border bg-card p-5 shadow-sm dark:shadow-black/20"
         >
-          <div className="cm-print-hide mb-4 flex flex-wrap items-center justify-end gap-2">
-            {typeof onSaveToJob === "function" && results.length > 0 ? (
-              <Button
-                type="button"
-                variant="primary"
-                size="sm"
-                disabled={savingToJob}
-                onClick={saveOutputToJob}
-              >
-                {savingToJob ? "Saving…" : outputSaved ? savedToJobLabel : saveToJobLabel}
-              </Button>
-            ) : null}
-            <Button
-              type="button"
-              variant="primary"
-              size="sm"
-              onClick={handlePrint}
-              disabled={results.length === 0}
-              title={results.length === 0 ? "Calculate first, then print the matches." : "Print matches"}
-              className="inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap"
-            >
-              <FiPrinter className="h-4 w-4 shrink-0" aria-hidden />
-              Print
-            </Button>
-          </div>
           <CmBestMatchResultsBody
             areaId="cm-best-match-screen"
             results={results}
             resultContext={resultContext}
             generatedLabel={formatDateTime(new Date())}
+            toolbar={
+              <>
+                <Button type="button" variant="primary" size="sm" onClick={runCalculate}>
+                  Calculate Best Match
+                </Button>
+                {typeof onSaveToJob === "function" && results.length > 0 ? (
+                  <Button
+                    type="button"
+                    variant="primary"
+                    size="sm"
+                    disabled={savingToJob}
+                    onClick={saveOutputToJob}
+                  >
+                    {savingToJob ? "Saving…" : outputSaved ? savedToJobLabel : saveToJobLabel}
+                  </Button>
+                ) : null}
+                {typeof onSaveToJob !== "function" ? (
+                  <Button
+                    type="button"
+                    variant="primary"
+                    size="sm"
+                    disabled={results.length === 0 || assigning}
+                    title={results.length === 0 ? "Calculate first, then assign to a job." : "Assign this result to a job"}
+                    onClick={openAssignJob}
+                  >
+                    Assign to a job
+                  </Button>
+                ) : null}
+                <Button
+                  type="button"
+                  variant="primary"
+                  size="sm"
+                  onClick={handlePrint}
+                  disabled={results.length === 0}
+                  title={results.length === 0 ? "Calculate first, then print the matches." : "Print matches"}
+                  className="inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap"
+                >
+                  <FiPrinter className="h-4 w-4 shrink-0" aria-hidden />
+                  Print
+                </Button>
+              </>
+            }
           />
         </section>
 
@@ -1318,16 +1407,28 @@ export default function CmBestMatchCalculator({
         height="min(86vh, 860px)"
         zIndex={80}
         actions={
-          <Button
-            type="button"
-            variant="primary"
-            size="sm"
-            disabled={catalogLoading || wireRows.length === 0}
-            onClick={printInventoryTable}
-          >
-            <FiPrinter className="h-4 w-4 shrink-0" aria-hidden />
-            Print
-          </Button>
+          <>
+            <Button
+              type="button"
+              variant="primary"
+              size="sm"
+              disabled={catalogLoading || wireRows.length === 0}
+              onClick={printInventoryTable}
+            >
+              <FiPrinter className="h-4 w-4 shrink-0" aria-hidden />
+              Print
+            </Button>
+            <Button
+              type="button"
+              variant="primary"
+              size="sm"
+              title="Apply Selection"
+              aria-label="Apply Selection"
+              onClick={() => setInventoryModalOpen(false)}
+            >
+              Apply Selection
+            </Button>
+          </>
         }
       >
         <div className="flex min-h-0 flex-col">
@@ -1460,6 +1561,45 @@ export default function CmBestMatchCalculator({
             </div>
           </div>
         </div>
+      </Modal>
+
+      <Modal
+        open={assignOpen}
+        onClose={() => !assigning && setAssignOpen(false)}
+        title="Assign to a job"
+        size="md"
+        showClose={!assigning}
+        closeOnOutsideClick={false}
+        actions={
+          <Button
+            type="submit"
+            form={ASSIGN_JOB_FORM_ID}
+            variant="primary"
+            size="sm"
+            disabled={assigning || assignJobsLoading || !assignJobId}
+          >
+            {assigning ? "Assigning…" : "Assign"}
+          </Button>
+        }
+      >
+        <form id={ASSIGN_JOB_FORM_ID} onSubmit={assignToJob} className="flex flex-col gap-3">
+          <p className="text-sm text-secondary">Save this CM Best Match result on the selected job.</p>
+          <div className="flex min-w-0 flex-col gap-1">
+            <span className="text-sm font-medium text-title">Job</span>
+            <SimpleSelect
+              options={assignJobs}
+              value={assignJobId}
+              onChange={(e) => setAssignJobId(e.target.value)}
+              placeholder={assignJobsLoading ? "Loading…" : "Select a job"}
+              disabled={assignJobsLoading || assigning || assignJobs.length === 0}
+              searchable
+              aria-label="Job"
+            />
+          </div>
+          {!assignJobsLoading && assignJobs.length === 0 ? (
+            <p className="text-sm text-secondary">No jobs are saved yet.</p>
+          ) : null}
+        </form>
       </Modal>
 
       <DocumentPrintOffscreenPortal open={Boolean(inventoryPrint)} onClose={() => setInventoryPrint(null)}>

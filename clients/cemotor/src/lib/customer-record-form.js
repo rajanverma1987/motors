@@ -169,6 +169,39 @@ export function customerApiToForm(data) {
   };
 }
 
+/** Primary contact plus additional contacts, for picking a job contact. */
+export function listCustomerJobContacts(customer) {
+  if (!customer) return [];
+  const contacts = [];
+  const primaryName = String(customer.primaryContactName || "").trim();
+  const primaryEmail = String(customer.email || "").trim();
+  const primaryPhone = String(customer.phone || "").trim();
+  if (primaryName || primaryEmail || primaryPhone) {
+    contacts.push({
+      key: "primary",
+      name: primaryName || "Primary contact",
+      printName: primaryName,
+      email: primaryEmail,
+      phone: primaryPhone,
+    });
+  }
+  const extras = Array.isArray(customer.additionalContacts) ? customer.additionalContacts : [];
+  extras.forEach((ac, index) => {
+    const name = String(ac?.contactName || "").trim();
+    const email = String(ac?.email || "").trim();
+    const phone = String(ac?.phone || "").trim();
+    if (!name && !email && !phone) return;
+    contacts.push({
+      key: `extra:${index}`,
+      name: name || `Contact ${index + 1}`,
+      printName: name,
+      email,
+      phone,
+    });
+  });
+  return contacts;
+}
+
 export function buildCustomerPayload(form) {
   const f = form || {};
   return {

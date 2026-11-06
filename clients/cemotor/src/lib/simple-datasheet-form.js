@@ -101,7 +101,7 @@ export const DC_FIELD_FRAME_FIELD_COLUMNS = [
     { key: "shunt_wires_size", label: "Shunt# Wires & Size" },
     { key: "i_pole_wires_size", label: "I-pole# Wires & Size" },
     { key: "conn_end", label: "Conn End" },
-    { key: "wind_end", label: "Wind End" },
+    { key: "wind_end", label: "Opp. Conn. End" },
     { key: "lead_length", label: "Lead Length" },
     { key: "lugs_hole_size", label: "Lugs Hole Size" },
     { key: "overloads", label: "OverLoads" },

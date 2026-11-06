@@ -45,6 +45,46 @@ html {
   }
 }
 
+/* Locked fields: light grey, distinct from the warm fill on editable controls. */
+input:is(:disabled, [readonly]):not(
+    [type="checkbox"],
+    [type="radio"],
+    [type="file"],
+    [type="range"],
+    [type="color"],
+    [type="hidden"],
+    [type="button"],
+    [type="submit"],
+    [type="reset"]
+  ),
+textarea:is(:disabled, [readonly]),
+select:disabled,
+.simple-select-trigger:disabled {
+  background-color: #e8e8e8 !important;
+  color: hsl(var(--secondary)) !important;
+  -webkit-text-fill-color: hsl(var(--secondary));
+  opacity: 1 !important;
+}
+
+html.dark input:is(:disabled, [readonly]):not(
+    [type="checkbox"],
+    [type="radio"],
+    [type="file"],
+    [type="range"],
+    [type="color"],
+    [type="hidden"],
+    [type="button"],
+    [type="submit"],
+    [type="reset"]
+  ),
+html.dark textarea:is(:disabled, [readonly]),
+html.dark select:disabled,
+html.dark .simple-select-trigger:disabled {
+  background-color: hsl(220 6% 22%) !important;
+  color: hsl(var(--secondary)) !important;
+  -webkit-text-fill-color: hsl(var(--secondary));
+}
+
 /* Marketing pages: prevent horizontal rubber-band scroll from wide children / 100vw quirks */
 .marketing-shell {
   width: 100%;

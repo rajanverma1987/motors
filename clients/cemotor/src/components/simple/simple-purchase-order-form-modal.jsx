@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import dynamic from "next/dynamic";
 import { FiArrowLeft, FiCornerUpLeft, FiDownload, FiEdit2, FiEye, FiPaperclip, FiPlus, FiPrinter, FiSend, FiX, FiChevronLeft, FiChevronRight } from "react-icons/fi";
 import Button from "@/components/ui/button";
 import Badge from "@/components/ui/badge";
@@ -11,12 +12,21 @@ import SimpleAddFromInventoryModal from "@/components/simple/simple-add-from-inv
 import SimplePoLineCancellationModal from "@/components/simple/simple-po-line-cancellation-modal";
 import SimplePoLineReturnModal from "@/components/simple/simple-po-line-return-modal";
 import SimplePurchaseOrderPrintPreviewModal from "@/components/simple/simple-purchase-order-print-preview-modal";
-import SimpleActivityLogPanel from "@/components/simple/simple-activity-log-panel";
 import SimplePurchaseOrderAttachmentsModal from "@/components/simple/simple-purchase-order-attachments-modal";
 import SimpleAttachmentPreviewModal, {
   resolveAttachmentHref,
 } from "@/components/simple/simple-attachment-preview-modal";
 import SimpleVendorFormFields from "@/components/simple/simple-vendor-form-fields";
+import SimpleDocumentFormTitle, {
+  DOCUMENT_FORM_TITLE_CLASS,
+} from "@/components/simple/simple-document-form-title";
+
+const CustomerViewModal = dynamic(() => import("@/components/dashboard/customer-view-modal"), {
+  ssr: false,
+});
+const SimpleVendorFormModal = dynamic(() => import("@/components/simple/simple-vendor-form-modal"), {
+  ssr: false,
+});
 import { Form } from "@/components/ui/form-layout";
 import { useAlert, useConfirm } from "@/components/confirm-provider";
 import { useAuth } from "@/contexts/auth-context";
@@ -136,6 +146,24 @@ function FieldRow({
   );
 }
 
+function RecordTitleButton({ label, onOpen, disabled, openLabel }) {
+  return (
+    <span className="flex items-center gap-1 text-left text-xs font-bold text-title">
+      <span>{label}</span>
+      <button
+        type="button"
+        className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded text-primary hover:bg-primary/10 disabled:cursor-not-allowed disabled:opacity-40"
+        title={openLabel}
+        aria-label={openLabel}
+        disabled={disabled}
+        onClick={onOpen}
+      >
+        <FiEye className="h-3.5 w-3.5" aria-hidden />
+      </button>
+    </span>
+  );
+}
+
 function formatMoney(n) {
   const value = Number.isFinite(n) ? n : 0;
   return `$${value.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -239,6 +267,8 @@ export default function SimplePurchaseOrderFormModal({
   const [loadingForm, setLoadingForm] = useState(false);
   const [saving, setSaving] = useState(false);
   const [addVendorOpen, setAddVendorOpen] = useState(false);
+  const [vendorViewOpen, setVendorViewOpen] = useState(false);
+  const [customerViewOpen, setCustomerViewOpen] = useState(false);
   const [vendorForm, setVendorForm] = useState(INITIAL_VENDOR_FORM);
   const [savingVendor, setSavingVendor] = useState(false);
   const [printOpen, setPrintOpen] = useState(false);
@@ -373,6 +403,7 @@ export default function SimplePurchaseOrderFormModal({
         const stored = Number(doc.total);
         setJobContext({
           id: String(doc.id || id),
+          customerId: String(doc.customerId || "").trim(),
           companyName: String(doc.companyName || "").trim(),
           amount: Number.isFinite(stored) && stored !== 0 ? stored : money.total,
         });
@@ -385,13 +416,7 @@ export default function SimplePurchaseOrderFormModal({
     };
   }, [open, form.serviceProposalId, serviceProposalId]);
 
-  const titleJob = String(form.jobNumber || jobNumber || "").trim();
-  const titlePo = String(form.poNumber || "").trim();
-  const modalTitle = isShopPo
-    ? titlePo || (isExistingPoMode ? "Shop PO" : "New Shop PO")
-    : titleJob
-      ? `PO-${titleJob}`
-      : titlePo || (isExistingPoMode ? "PO" : "New PO");
+  const modalTitle = <SimpleDocumentFormTitle>Purchase Order</SimpleDocumentFormTitle>;
 
   const sentToVendorLabel = useMemo(() => {
     if (!poWasSentToVendor(form)) return null;
@@ -487,6 +512,8 @@ export default function SimplePurchaseOrderFormModal({
     }
     let cancelled = false;
     setAddVendorOpen(false);
+    setVendorViewOpen(false);
+    setCustomerViewOpen(false);
     setVendorForm(INITIAL_VENDOR_FORM);
     setActiveTab(TAB_PO);
     setPaymentDraft(emptyPoPayment());
@@ -1330,6 +1357,120 @@ export default function SimplePurchaseOrderFormModal({
     </>
   );
 
+  const showHeaderJobSelect = !isPage && showTypeSelect && !isShopPo;
+  const showHeaderJobNumber =
+    !isPage &&
+    (jobNumberEditable || (!showTypeSelect && !isShopPo && Boolean(form.jobNumber || jobNumber)));
+  const headerJobFields =
+    !isPage && !showViewEmptyState ? (
+      <div className="flex min-w-0 items-end gap-2">
+        {showJobContextRow ? (
+          <>
+            <div className="flex w-[14rem] min-w-0 shrink-0 flex-col gap-0.5">
+              <RecordTitleButton
+                label="Customer Name"
+                openLabel="Open customer"
+                disabled={!String(jobContext?.customerId || "").trim()}
+                onOpen={() => setCustomerViewOpen(true)}
+              />
+              <input
+                type="text"
+                readOnly
+                tabIndex={-1}
+                value={jobContext?.companyName || "-"}
+                title={jobContext?.companyName || ""}
+                className={`${FIELD_INPUT} !bg-muted font-semibold`}
+                aria-label="Customer Name"
+              />
+            </div>
+            {canViewFinancials ? (
+              <div className="flex w-[8.5rem] shrink-0 flex-col gap-0.5">
+                <span className="text-left text-xs font-bold text-title">Proposal Amount</span>
+                <input
+                  type="text"
+                  readOnly
+                  tabIndex={-1}
+                  value={
+                    jobContext && Number.isFinite(jobContext.amount)
+                      ? formatMoney(jobContext.amount)
+                      : "-"
+                  }
+                  className={`${FIELD_INPUT} !bg-muted text-right font-semibold tabular-nums`}
+                  aria-label="Proposal Amount"
+                />
+              </div>
+            ) : null}
+          </>
+        ) : null}
+        {showHeaderJobSelect ? (
+          <div className="flex w-[11rem] shrink-0 flex-col gap-0.5">
+            <span className="text-left text-xs font-bold text-title">Job</span>
+            <SimpleSelect
+              options={jobOptions}
+              value={String(form.serviceProposalId || "")}
+              onChange={(e) => handleLinkedJobChange(e.target.value)}
+              placeholder={jobOptions.length ? "Select job…" : "No jobs saved"}
+              disabled={saving || !jobOptions.length}
+              searchable
+              aria-label="Job"
+            />
+          </div>
+        ) : null}
+        {showHeaderJobNumber ? (
+          <div className="flex w-[9.5rem] shrink-0 flex-col gap-0.5">
+            <span className="text-left text-xs font-bold text-title">Job</span>
+            <input
+              type="text"
+              readOnly={!jobNumberEditable}
+              tabIndex={jobNumberEditable ? undefined : -1}
+              value={form.jobNumber || jobNumber}
+              onChange={(e) => patch("jobNumber", e.target.value)}
+              title={form.jobNumber || jobNumber}
+              className={`${FIELD_INPUT} font-semibold tabular-nums ${
+                jobNumberEditable ? "" : "!bg-muted"
+              }`}
+              disabled={saving}
+              aria-label="Job"
+            />
+          </div>
+        ) : null}
+        <div className="flex shrink-0 flex-col gap-0.5">
+          <RecordTitleButton
+            label="Vendor"
+            openLabel="Open vendor"
+            disabled={!String(form.vendorId || "").trim()}
+            onOpen={() => setVendorViewOpen(true)}
+          />
+          <div className="flex min-w-0 items-center gap-1.5">
+            <div className="shrink-0" style={{ width: `${vendorFieldWidthCh}ch` }}>
+              <SimpleSelect
+                options={vendorOptions}
+                value={form.vendorId}
+                onChange={(e) => patch("vendorId", e.target.value)}
+                placeholder={loadingMeta ? "Loading…" : "Select vendor…"}
+                disabled={loadingMeta || saving}
+                searchable
+                aria-label="Vendor"
+              />
+            </div>
+            <button
+              type="button"
+              className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-none border border-border bg-primary text-white hover:opacity-90 disabled:opacity-60"
+              title="Add new vendor"
+              aria-label="Add new vendor"
+              onClick={() => {
+                setVendorForm(INITIAL_VENDOR_FORM);
+                setAddVendorOpen(true);
+              }}
+              disabled={saving}
+            >
+              <FiPlus className="h-3.5 w-3.5" aria-hidden />
+            </button>
+          </div>
+        </div>
+      </div>
+    ) : null;
+
   const modalHeaderActions = showViewEmptyState ? null : (
     <>
       {secondaryHeaderActions}
@@ -1468,6 +1609,8 @@ export default function SimplePurchaseOrderFormModal({
                   : "flex w-full shrink-0 flex-wrap items-end gap-3"
               }
             >
+              {isPage ? (
+              <>
               <FieldRow
                 label="Customer Name"
                 labelWidth="100%"
@@ -1515,6 +1658,8 @@ export default function SimplePurchaseOrderFormModal({
                     aria-label="Proposal Amount"
                   />
                 </FieldRow>
+              ) : null}
+              </>
               ) : null}
               {sentToVendorLabel || !hideViewJobButton ? (
                 <div
@@ -1592,7 +1737,7 @@ export default function SimplePurchaseOrderFormModal({
                 />
               </FieldRow>
             ) : null}
-            {showTypeSelect && !isShopPo ? (
+            {isPage && showTypeSelect && !isShopPo ? (
               <FieldRow
                 label="Job#"
                 labelWidth="100%"
@@ -1615,8 +1760,9 @@ export default function SimplePurchaseOrderFormModal({
                 />
               </FieldRow>
             ) : null}
-            {jobNumberEditable ||
-            (!showTypeSelect && !isShopPo && (form.jobNumber || jobNumber)) ? (
+            {isPage &&
+            (jobNumberEditable ||
+            (!showTypeSelect && !isShopPo && (form.jobNumber || jobNumber))) ? (
               <FieldRow
                 label="Job"
                 labelWidth="100%"
@@ -1643,16 +1789,21 @@ export default function SimplePurchaseOrderFormModal({
                 />
               </FieldRow>
             ) : null}
+            <div
+              className={
+                isPage ? "contents" : "flex w-full max-w-md shrink-0 flex-col gap-2"
+              }
+            >
             <FieldRow
               label="PO#"
-              labelWidth="100%"
+              labelWidth={isPage ? "100%" : "5.75rem"}
               labelClassName={`!text-left ${isPage ? "!text-[11px] !font-semibold uppercase tracking-wide !text-secondary" : ""}`}
               className={
                 isPage
                   ? "flex min-w-0 flex-col items-stretch gap-1"
-                  : "w-[10.5rem] shrink-0 flex-col items-stretch gap-1"
+                  : "w-full items-center"
               }
-              controlClassName="w-full min-w-0"
+              controlClassName={isPage ? "w-full min-w-0" : "min-w-0 flex-1"}
             >
               {isViewMode ? (
                 <SimpleSelect
@@ -1678,6 +1829,7 @@ export default function SimplePurchaseOrderFormModal({
                 />
               )}
             </FieldRow>
+            {isPage ? (
             <FieldRow
               label="Vendor"
               labelWidth="100%"
@@ -1721,16 +1873,17 @@ export default function SimplePurchaseOrderFormModal({
                 </button>
               </div>
             </FieldRow>
+            ) : null}
             <FieldRow
               label="PO Date"
-              labelWidth="100%"
+              labelWidth={isPage ? "100%" : "5.75rem"}
               labelClassName={`!text-left ${isPage ? "!text-[11px] !font-semibold uppercase tracking-wide !text-secondary" : ""}`}
               className={
                 isPage
                   ? "flex min-w-0 flex-col items-stretch gap-1"
-                  : "w-[10.25rem] shrink-0 flex-col items-stretch gap-1"
+                  : "w-full items-center"
               }
-              controlClassName="w-full min-w-0"
+              controlClassName={isPage ? "w-full min-w-0" : "min-w-0 flex-1"}
             >
               <input
                 type="date"
@@ -1742,14 +1895,14 @@ export default function SimplePurchaseOrderFormModal({
             </FieldRow>
             <FieldRow
               label="Due Date"
-              labelWidth="100%"
+              labelWidth={isPage ? "100%" : "5.75rem"}
               labelClassName={`!text-left ${isPage ? "!text-[11px] !font-semibold uppercase tracking-wide !text-secondary" : ""}`}
               className={
                 isPage
                   ? "flex min-w-0 flex-col items-stretch gap-1"
-                  : "w-[10.25rem] shrink-0 flex-col items-stretch gap-1"
+                  : "w-full items-center"
               }
-              controlClassName="w-full min-w-0"
+              controlClassName={isPage ? "w-full min-w-0" : "min-w-0 flex-1"}
             >
               <input
                 type="date"
@@ -1759,6 +1912,7 @@ export default function SimplePurchaseOrderFormModal({
                 disabled={saving}
               />
             </FieldRow>
+            </div>
           </div>
 
           <Tabs
@@ -2157,42 +2311,7 @@ export default function SimplePurchaseOrderFormModal({
                     </div>
 
                     <div className="mt-auto flex shrink-0 flex-col gap-3 border-t border-border pt-3">
-                      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between sm:gap-6">
-                        <div className="min-w-0 flex-1 rounded-none border border-border bg-primary/[0.04] px-3 py-2 dark:bg-primary/10">
-                          <p className="mb-1.5 text-xs font-bold uppercase tracking-wide text-secondary">
-                            Vendor
-                          </p>
-                          {selectedVendor ? (
-                            <div className="grid grid-cols-1 gap-1 text-sm sm:grid-cols-2">
-                              <p className="min-w-0">
-                                <span className="text-secondary">Term: </span>
-                                <span className="font-semibold text-title">
-                                  {canViewFinancials ? (selectedVendor.paymentTerms || "-") : "Restricted"}
-                                </span>
-                              </p>
-                              <p className="min-w-0">
-                                <span className="text-secondary">Contact: </span>
-                                <span className="font-semibold text-title">
-                                  {selectedVendor.contactName || "-"}
-                                </span>
-                              </p>
-                              <p className="min-w-0">
-                                <span className="text-secondary">Phone: </span>
-                                <span className="font-semibold text-title">
-                                  {selectedVendor.phone || "-"}
-                                </span>
-                              </p>
-                              <p className="min-w-0">
-                                <span className="text-secondary">Email: </span>
-                                <span className="font-semibold text-title">
-                                  {selectedVendor.email || "-"}
-                                </span>
-                              </p>
-                            </div>
-                          ) : (
-                            <p className="text-sm text-secondary">Select a vendor to view details.</p>
-                          )}
-                        </div>
+                      <div className="flex flex-col items-stretch gap-3 sm:items-end">
                         {canViewFinancials ? (
                           <div className="grid w-full grid-cols-1 gap-2 sm:max-w-sm sm:shrink-0">
                             <FieldRow label="Total" labelWidth="7.5rem" controlClassName="min-w-0 flex-1">
@@ -2293,6 +2412,7 @@ export default function SimplePurchaseOrderFormModal({
 
                     <div className="rounded-sm border border-border p-3">
                       <p className="mb-2 text-xs font-bold uppercase tracking-wide text-secondary">Record payment</p>
+                      <div className="flex flex-col gap-2">
                       <div className="flex flex-wrap items-end gap-2">
                         <FieldRow label="Date" labelWidth="3rem" className="w-[11rem] shrink-0" controlClassName="min-w-0 flex-1">
                           <input
@@ -2334,7 +2454,9 @@ export default function SimplePurchaseOrderFormModal({
                             aria-label="Paid by"
                           />
                         </FieldRow>
-                        <FieldRow label="Notes" labelWidth="3rem" className="min-w-[12rem] flex-1" controlClassName="min-w-0 flex-1">
+                      </div>
+                      <div className="flex w-full items-end gap-2">
+                        <FieldRow label="Notes" labelWidth="3rem" className="min-w-0 flex-1" controlClassName="min-w-0 flex-1">
                           <input
                             type="text"
                             value={paymentDraft.notes}
@@ -2343,9 +2465,10 @@ export default function SimplePurchaseOrderFormModal({
                             disabled={saving}
                           />
                         </FieldRow>
-                        <Button type="button" variant="primary" size="sm" onClick={handleAddPayment} disabled={saving}>
+                        <Button type="button" variant="primary" size="sm" className="shrink-0" onClick={handleAddPayment} disabled={saving}>
                           Add Payment Record
                         </Button>
+                      </div>
                       </div>
                     </div>
 
@@ -2518,12 +2641,6 @@ export default function SimplePurchaseOrderFormModal({
           </>
           )}
         </Form>
-        {String(form?.id || initialPoId || "").trim() ? (
-          <SimpleActivityLogPanel
-            recordKind="purchaseOrder"
-            recordId={String(form?.id || initialPoId || "").trim()}
-          />
-        ) : null}
           </div>
         </div>
         </div>
@@ -2543,7 +2660,7 @@ export default function SimplePurchaseOrderFormModal({
             >
               <FiArrowLeft className="h-5 w-5" aria-hidden />
             </button>
-            <h1 className="min-w-0 flex-1 truncate text-base font-bold text-title">{modalTitle}</h1>
+            <h1 className="min-w-0 flex-1">{modalTitle}</h1>
             {showViewEmptyState ? null : (
               <div className="shrink-0 [&_button]:!h-11 [&_button]:!min-h-[2.75rem] [&_button]:!px-4 [&_button]:!text-sm [&_button]:!font-semibold">
                 {saveButton}
@@ -2559,12 +2676,14 @@ export default function SimplePurchaseOrderFormModal({
           open={open}
           onClose={() => !saving && onClose?.()}
           title={modalTitle}
+          titleClassName={DOCUMENT_FORM_TITLE_CLASS}
           size="6xl"
           width="min(1760px, 98vw)"
           height={PO_MODAL_HEIGHT}
           zIndex={zIndex}
           showClose={!saving && !loadingForm}
           closeOnOutsideClick={false}
+          headerLeading={headerJobFields}
           headerCenter={headerCenter}
           actions={modalHeaderActions}
         >
@@ -2762,6 +2881,33 @@ export default function SimplePurchaseOrderFormModal({
             : "Purchase order print preview"
         }
       />
+
+      {customerViewOpen && String(jobContext?.customerId || "").trim() ? (
+        <CustomerViewModal
+          open
+          customerId={String(jobContext.customerId || "").trim()}
+          onClose={() => setCustomerViewOpen(false)}
+          portal="simple"
+          onCustomerUpdated={(customer) => {
+            const name = String(
+              customer?.companyName || customer?.primaryContactName || ""
+            ).trim();
+            if (!name) return;
+            setJobContext((current) => (current ? { ...current, companyName: name } : current));
+          }}
+        />
+      ) : null}
+
+      {vendorViewOpen && String(form.vendorId || "").trim() ? (
+        <SimpleVendorFormModal
+          open
+          vendorId={String(form.vendorId || "").trim()}
+          onClose={() => setVendorViewOpen(false)}
+          onVendorUpdated={() => {
+            void loadVendors({ force: true });
+          }}
+        />
+      ) : null}
     </>
   );
 }

@@ -11,6 +11,7 @@ import {
   FiMail,
   FiPlus,
   FiPrinter,
+  FiSave,
   FiX,
 } from "react-icons/fi";
 import Button from "@/components/ui/button";
@@ -25,6 +26,9 @@ import SimpleServiceProposalAttachmentsModal from "@/components/simple/simple-se
 import SimpleServiceProposalPrintPreviewModal from "@/components/simple/simple-service-proposal-print-preview-modal";
 import SimpleSalesCommissionModal from "@/components/simple/simple-sales-commission-modal";
 import SimplePurchaseOrderFormModal from "@/components/simple/simple-purchase-order-form-modal";
+import SimpleDocumentFormTitle, {
+  DOCUMENT_FORM_TITLE_CLASS,
+} from "@/components/simple/simple-document-form-title";
 import SimpleInvoicePaymentModal from "@/components/simple/simple-invoice-payment-modal";
 
 /** Loaded on demand so this form and CustomerViewModal do not import each other at startup. */
@@ -63,6 +67,7 @@ import {
   buildCustomerPayload,
   uploadCustomerDocumentFiles,
   INITIAL_CUSTOMER_FORM,
+  listCustomerJobContacts,
 } from "@/lib/customer-record-form";
 import {
   invoiceStatusSelectOptionsFromMerged,
@@ -247,6 +252,12 @@ function buildProposalPoTableGroups(purchaseOrders) {
     groups.push({ poId, poNumber, vendorName, poStatus, poPaymentStatus, poDateRaw, items });
   }
   return groups;
+}
+
+function jobContactOptionLabel(contact) {
+  if (contact.email) return `${contact.name} (${contact.email})`;
+  if (contact.phone) return `${contact.name} (${contact.phone})`;
+  return contact.name;
 }
 
 function FieldRow({
@@ -637,6 +648,7 @@ export default function ServiceProposalFormModal({
   const [addFromInventoryOpen, setAddFromInventoryOpen] = useState(false);
   const [salesMotorOpen, setSalesMotorOpen] = useState(false);
   const [printOpen, setPrintOpen] = useState(false);
+  const [printChoiceOpen, setPrintChoiceOpen] = useState(false);
   const [printStartSend, setPrintStartSend] = useState(false);
   const [printBundle, setPrintBundle] = useState(null);
   const [printSendMeta, setPrintSendMeta] = useState(null);
@@ -1013,17 +1025,38 @@ export default function ServiceProposalFormModal({
     }
   };
 
+  const applyCustomerContact = (customer, contactKey) => {
+    const contacts = listCustomerJobContacts(customer);
+    const contact = contacts.find((row) => row.key === contactKey) || contacts[0] || null;
+    return {
+      jobContactKey: contact?.key || "",
+      customerEmail: contact?.email || "",
+      customerPhone: contact?.phone || "",
+    };
+  };
+
   const handleCustomerChange = (customerId) => {
     const c = customers.find((row) => String(row.id || row._id || "") === String(customerId || "").trim());
     const taxExempt = c?.taxExempt !== false;
+    const contactFields = applyCustomerContact(c, "primary");
     setForm((f) => ({
       ...f,
       customerId,
       companyName: String(c?.companyName || c?.primaryContactName || "").trim(),
-      customerEmail: c?.email || "",
-      customerPhone: c?.phone || "",
+      ...contactFields,
       customerTaxExempt: taxExempt,
       taxPercent: taxExempt ? "" : String(c?.taxPercent ?? ""),
+    }));
+  };
+
+  const handleJobContactChange = (contactKey) => {
+    const customer = customers.find(
+      (row) => String(row.id || row._id || "") === String(form.customerId || "").trim()
+    );
+    const contactFields = applyCustomerContact(customer, contactKey);
+    setForm((f) => ({
+      ...f,
+      ...contactFields,
     }));
   };
 
@@ -1062,6 +1095,7 @@ export default function ServiceProposalFormModal({
           companyName: String(saved.companyName || newCustomerForm.companyName || "").trim(),
           customerEmail: saved.email || "",
           customerPhone: saved.phone || "",
+          jobContactKey: "primary",
           customerTaxExempt: saved.taxExempt !== false,
           taxPercent: saved.taxExempt !== false ? "" : String(saved.taxPercent ?? ""),
         }));
@@ -1081,6 +1115,7 @@ export default function ServiceProposalFormModal({
         companyName: String(saved.companyName || newCustomerForm.companyName || "").trim(),
         customerEmail: saved.email || "",
         customerPhone: saved.phone || "",
+        jobContactKey: "primary",
         customerTaxExempt: saved.taxExempt !== false,
         taxPercent: saved.taxExempt !== false ? "" : String(saved.taxPercent ?? ""),
       }));
@@ -1212,6 +1247,20 @@ export default function ServiceProposalFormModal({
     () => customers.find((c) => c.id === form.customerId) || null,
     [customers, form.customerId]
   );
+
+  const jobContacts = useMemo(() => listCustomerJobContacts(selectedCustomer), [selectedCustomer]);
+
+  const jobContactValue = useMemo(() => {
+    if (!jobContacts.length) return "";
+    const saved = String(form.jobContactKey || "").trim();
+    if (jobContacts.some((row) => row.key === saved)) return saved;
+    const email = String(form.customerEmail || "").trim().toLowerCase();
+    const phone = String(form.customerPhone || "").trim();
+    const match = jobContacts.find(
+      (row) => row.email.toLowerCase() === email && row.phone === phone
+    );
+    return match?.key || "";
+  }, [jobContacts, form.jobContactKey, form.customerEmail, form.customerPhone]);
 
   const datasheetInitial = useMemo(() => {
     const companyName =
@@ -1668,10 +1717,23 @@ export default function ServiceProposalFormModal({
     <div
       className={`grid min-w-0 ${
         statusInModalHeader
-          ? "mr-auto w-1/2 max-w-full grid-cols-3 gap-2 sm:gap-3"
+          ? "mr-auto w-2/3 max-w-full grid-cols-[10.25rem_minmax(0,1fr)_minmax(0,2fr)_minmax(0,1fr)] gap-2 sm:gap-3"
           : "w-full grid-cols-1 gap-3 sm:grid-cols-3"
       }`}
     >
+      <div className={statusInModalHeader ? "w-[10.25rem] shrink-0" : "min-w-0"}>
+        <label className={`${FIELD_LABEL} mb-0.5 block w-full !text-left`} htmlFor="sp-date-created">
+          Date
+        </label>
+        <input
+          id="sp-date-created"
+          type="date"
+          value={form.dateCreated}
+          onChange={(e) => patch("dateCreated", e.target.value)}
+          className={`${FIELD_INPUT}${statusInModalHeader ? " !w-[10.25rem] !min-w-0 !max-w-[10.25rem]" : ""}`}
+          aria-label="Date"
+        />
+      </div>
       <div className="min-w-0">
         <label className={`${FIELD_LABEL} mb-0.5 block w-full !text-left`} htmlFor="sp-proposal-type">
           Proposal Type
@@ -1789,6 +1851,36 @@ export default function ServiceProposalFormModal({
   const headerActions = (
     <>
       {headerRecordNav ? <div className="mr-5 shrink-0">{headerRecordNav}</div> : null}
+      {canViewFinancials ? (
+        <>
+          <Button
+            type="button"
+            variant="primary"
+            size="sm"
+            className="text-xs"
+            disabled={saving || copying}
+            title="Send By Email"
+            aria-label="Send By Email"
+            onClick={() => void openPrintPreview(PRINT_NOTES_CUSTOMER, { send: true })}
+          >
+            <FiMail className="h-4 w-4 shrink-0" aria-hidden />
+            Send By Email
+          </Button>
+          <Button
+            type="button"
+            variant="primary"
+            size="sm"
+            className="text-xs"
+            disabled={saving || copying}
+            title="Print"
+            aria-label="Print"
+            onClick={() => setPrintChoiceOpen(true)}
+          >
+            <FiPrinter className="h-4 w-4 shrink-0" aria-hidden />
+            Print
+          </Button>
+        </>
+      ) : null}
       <Button
         type="submit"
         form={FORM_ID}
@@ -1797,6 +1889,7 @@ export default function ServiceProposalFormModal({
         className="text-xs"
         disabled={saving || copying || loadingRecord || pagingRecord}
       >
+        <FiSave className="h-4 w-4 shrink-0" aria-hidden />
         {saving ? "Saving…" : "Save"}
       </Button>
     </>
@@ -1937,46 +2030,6 @@ export default function ServiceProposalFormModal({
                     {form.recordType === RECORD_TYPE_JOB ? "Convert Job To RFQ" : "Convert RFQ To Job"}
                   </Button>
                 </div>
-              ) : null}
-              {canViewFinancials ? (
-                <>
-                  <Button
-                    type="button"
-                    variant="primary"
-                    size="sm"
-                    className={`${TOOLBAR_BTN}${isPage ? " min-w-0 flex-1 basis-[calc(50%-0.25rem)]" : ""}`}
-                    disabled={saving || copying}
-                    title="Email to client"
-                    aria-label="Email to client"
-                    onClick={() => void openPrintPreview(PRINT_NOTES_CUSTOMER, { send: true })}
-                  >
-                    <FiMail className="h-4 w-4 shrink-0" aria-hidden />
-                    Email
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="primary"
-                    size="sm"
-                    className={`${TOOLBAR_BTN}${isPage ? " min-w-0 flex-1 basis-[calc(50%-0.25rem)]" : ""}`}
-                    disabled={saving || copying}
-                    title="Customer Print"
-                    aria-label="Customer Print"
-                    onClick={() => void openPrintPreview(PRINT_NOTES_CUSTOMER)}
-                  >
-                    <FiPrinter className="h-4 w-4 shrink-0" aria-hidden />
-                    {isPage ? "Print" : "Customer Print"}
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="primary"
-                    size="sm"
-                    className={`${TOOLBAR_BTN}${isPage ? " min-w-0 flex-1 basis-[calc(50%-0.25rem)]" : ""}`}
-                    disabled={saving || copying}
-                    onClick={() => openPrintPreview(PRINT_NOTES_INTERNAL)}
-                  >
-                    {isPage ? "Internal" : "Internal Print"}
-                  </Button>
-                </>
               ) : null}
               <Button
                 type="button"
@@ -2122,6 +2175,21 @@ export default function ServiceProposalFormModal({
                   </button>
                 </div>
               </FieldRow>
+              ) : null}
+              {jobContacts.length > 0 ? (
+                <FieldRow label="Contact" labelWidth="7.75rem" controlClassName="min-w-0 flex-1">
+                  <SimpleSelect
+                    options={jobContacts.map((contact) => ({
+                      value: contact.key,
+                      label: jobContactOptionLabel(contact),
+                    }))}
+                    value={jobContactValue}
+                    onChange={(e) => handleJobContactChange(e.target.value)}
+                    placeholder="Select contact"
+                    searchable
+                    aria-label="Job contact"
+                  />
+                </FieldRow>
               ) : null}
               <FieldRow label="Email" labelWidth="7.75rem" controlClassName="min-w-0 flex-1">
                 <input
@@ -2366,14 +2434,6 @@ export default function ServiceProposalFormModal({
                   />
                 </FieldRow>
               ) : null}
-              <FieldRow label="Date" labelWidth="9.5rem" controlClassName="min-w-0 flex-1">
-                <input
-                  type="date"
-                  value={form.dateCreated}
-                  onChange={(e) => patch("dateCreated", e.target.value)}
-                  className={FIELD_INPUT}
-                />
-              </FieldRow>
               <FieldRow label="Prepared By" labelWidth="9.5rem" controlClassName="min-w-0 flex-1">
                 <input
                   type="text"
@@ -2835,8 +2895,8 @@ export default function ServiceProposalFormModal({
             >
               <FiArrowLeft className="h-5 w-5" aria-hidden />
             </button>
-            <h1 className="simple-sp-page-header-title min-w-0 flex-1 truncate text-title">
-              {displayTitle}
+            <h1 className="min-w-0 flex-1">
+              <SimpleDocumentFormTitle>{displayTitle}</SimpleDocumentFormTitle>
             </h1>
             <div className="shrink-0 [&_button]:!h-11 [&_button]:!min-h-[2.75rem] [&_button]:!px-4 [&_button]:!text-sm [&_button]:!font-semibold">
               {headerActions}
@@ -2850,14 +2910,14 @@ export default function ServiceProposalFormModal({
         <Modal
           open={open}
           onClose={() => !saving && !copying && onClose?.()}
-          title={displayTitle}
+          title={<SimpleDocumentFormTitle>{displayTitle}</SimpleDocumentFormTitle>}
+          titleClassName={DOCUMENT_FORM_TITLE_CLASS}
           size="7xl"
           width="95vw"
           height="min(94vh, 920px)"
           zIndex={zIndex}
           showClose={!saving && !copying}
           closeOnOutsideClick={false}
-          headerClassName="[&_h2]:max-w-[12rem] [&_h2]:self-center [&_h2]:text-xl [&_h2]:font-bold [&_h2]:tracking-wide sm:[&_h2]:max-w-[14rem]"
           headerLeading={statusInModalHeader ? headerStatusSelects : undefined}
           actions={headerActions}
         >
@@ -2944,6 +3004,53 @@ export default function ServiceProposalFormModal({
         attachments={Array.isArray(form.attachments) ? form.attachments : []}
         onAttached={handleAttached}
       />
+
+      <Modal
+        open={printChoiceOpen}
+        onClose={() => setPrintChoiceOpen(false)}
+        title="Print"
+        size="md"
+        zIndex={zIndex + 20}
+        bodyClassName="!p-4"
+      >
+        <p className="mb-3 text-sm text-secondary">Choose which version to print.</p>
+        <div className="flex flex-col gap-2">
+          <button
+            type="button"
+            disabled={saving || copying}
+            className="flex w-full items-center gap-3 rounded-md border border-border bg-card px-3 py-3 text-left transition-colors hover:border-primary hover:bg-primary/5 focus:outline-none focus:ring-2 focus:ring-primary disabled:cursor-not-allowed disabled:opacity-50"
+            onClick={() => {
+              setPrintChoiceOpen(false);
+              void openPrintPreview(PRINT_NOTES_INTERNAL);
+            }}
+          >
+            <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
+              <FiPrinter className="h-5 w-5" aria-hidden />
+            </span>
+            <span className="min-w-0">
+              <span className="block text-sm font-semibold text-title">Service Proposal Office View Only</span>
+              <span className="mt-0.5 block text-xs text-secondary">Internal notes and shop details. Not for the customer.</span>
+            </span>
+          </button>
+          <button
+            type="button"
+            disabled={saving || copying}
+            className="flex w-full items-center gap-3 rounded-md border border-border bg-card px-3 py-3 text-left transition-colors hover:border-primary hover:bg-primary/5 focus:outline-none focus:ring-2 focus:ring-primary disabled:cursor-not-allowed disabled:opacity-50"
+            onClick={() => {
+              setPrintChoiceOpen(false);
+              void openPrintPreview(PRINT_NOTES_CUSTOMER);
+            }}
+          >
+            <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
+              <FiEye className="h-5 w-5" aria-hidden />
+            </span>
+            <span className="min-w-0">
+              <span className="block text-sm font-semibold text-title">Service Proposal Customer View</span>
+              <span className="mt-0.5 block text-xs text-secondary">The version the customer receives.</span>
+            </span>
+          </button>
+        </div>
+      </Modal>
 
       <SimpleServiceProposalPrintPreviewModal
         open={printOpen}
@@ -3051,13 +3158,15 @@ export default function ServiceProposalFormModal({
           });
           setForm((current) => {
             if (String(current.customerId || "") !== cid) return current;
+            const contacts = listCustomerJobContacts({ ...customer, id: cid });
+            const chosen = contacts.find((row) => row.key === String(current.jobContactKey || "").trim());
             return {
               ...current,
               companyName: String(
                 customer?.companyName || customer?.primaryContactName || current.companyName || ""
               ).trim(),
-              customerEmail: customer?.email ?? current.customerEmail,
-              customerPhone: customer?.phone ?? current.customerPhone,
+              customerEmail: chosen ? chosen.email : (customer?.email ?? current.customerEmail),
+              customerPhone: chosen ? chosen.phone : (customer?.phone ?? current.customerPhone),
             };
           });
         }}
