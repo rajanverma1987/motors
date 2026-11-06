@@ -142,6 +142,18 @@ function LogisticsColumn({
           </>
         )}
 
+        <FieldRow label="Site Name">
+          <input
+            type="text"
+            value={form.siteName || ""}
+            onChange={(e) => patch("siteName", e.target.value)}
+            className={FIELD_INPUT}
+            placeholder="Site or location name"
+            disabled={busy}
+            aria-label={`${title} site name`}
+          />
+        </FieldRow>
+
         <FieldRow label="Date">
           <input
             type="date"
@@ -796,7 +808,6 @@ export default function SimpleMotorLogisticsModal({
           companyName={companyName || user?.shopName || ""}
           customerEmail={customerEmail}
           customerPhone={customerPhone}
-          paidByLabel={paidByLabel}
           manufacturer={manufacturer}
           hpKw={hpKw}
           frameType={frameType}

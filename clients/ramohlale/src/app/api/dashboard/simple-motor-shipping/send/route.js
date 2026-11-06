@@ -137,11 +137,9 @@ export async function POST(request) {
         ${row("Invoice #", invoiceNumber)}
         ${row("PO Number", entry.shippingPo)}
         ${row("Date", entry.date)}
+        ${row("Site Name", entry.siteName)}
         ${row("Transport", entry.mannerOfTransport)}
-        ${row("Freight", entry.freight)}
         ${row("Picked by", entry.pickedBy)}
-        ${row("Charges", entry.charges)}
-        ${row("Paid By", entry.paidByLabel || entry.paidBy)}
         ${row("Notes", entry.notes)}
       </table>
     `;

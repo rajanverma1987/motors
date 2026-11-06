@@ -66,8 +66,56 @@ export function emptyScopeLine() {
   return {
     id: typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : `scope-${Date.now()}`,
     description: "",
+    qty: "",
+    rate: "",
     price: "",
   };
+}
+
+function parseScopeQty(value) {
+  const raw = String(value ?? "").trim();
+  if (!raw) return 1;
+  const n = Number.parseFloat(raw.replace(/[^0-9.-]/g, ""));
+  return Number.isFinite(n) ? n : 0;
+}
+
+/** Price = qty × rate. Empty qty counts as 1 once a rate is entered. */
+export function applyScopeQtyRate(line, patch = {}) {
+  const next = { ...emptyScopeLine(), ...(line && typeof line === "object" ? line : {}), ...patch };
+  next.qty = String(next.qty ?? "");
+  next.rate = String(next.rate ?? "");
+  const qtyRaw = next.qty.trim();
+  const rateRaw = next.rate.trim();
+  if (!qtyRaw && !rateRaw) {
+    next.price = "";
+    return next;
+  }
+  const qty = qtyRaw ? parseScopeQty(qtyRaw) : 1;
+  const rate = parseSpMoney(rateRaw);
+  next.price = String(roundSpMoney(qty * rate));
+  return next;
+}
+
+/** Keep older lines that only stored a lump price: qty 1, rate = that price. */
+export function normalizeScopeLine(line) {
+  const id = String(line?.id || "").trim() || emptyScopeLine().id;
+  const description = String(line?.description || "").trim();
+  let qty = String(line?.qty ?? "").trim();
+  let rate = String(line?.rate ?? "").trim();
+  const price = String(line?.price ?? "").trim();
+  if (!qty && !rate && price) {
+    qty = "1";
+    rate = price;
+  }
+  return applyScopeQtyRate({
+    ...emptyScopeLine(),
+    ...(line && typeof line === "object" ? line : {}),
+    id,
+    description,
+    qty,
+    rate,
+    price,
+  });
 }
 
 export function emptyOtherLine() {
@@ -764,13 +812,7 @@ export function simpleServiceProposalDocToForm(doc) {
 
   next.scopeDetails =
     Array.isArray(d.scopeDetails) && d.scopeDetails.length
-      ? d.scopeDetails.map((line) => ({
-          ...emptyScopeLine(),
-          ...(line && typeof line === "object" ? line : {}),
-          id: String(line?.id || "").trim() || emptyScopeLine().id,
-          description: String(line?.description || "").trim(),
-          price: String(line?.price ?? "").trim(),
-        }))
+      ? d.scopeDetails.map((line) => normalizeScopeLine(line))
       : [emptyScopeLine()];
 
   next.otherItems =

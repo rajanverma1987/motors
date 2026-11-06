@@ -73,6 +73,7 @@ export function emptyMotorLogisticsRecord(kind, defaults = {}) {
     invoiceNumber: !isReceiving ? String(defaults.invoiceNumber || "").trim() : "",
     shippingPo: !isReceiving ? String(defaults.shippingPo || "").trim() : "",
     mannerOfTransport: "",
+    siteName: "",
     freight: "",
     droppedBy: "",
     pickedBy: "",
@@ -118,6 +119,7 @@ export function normalizeMotorLogisticsRecord(raw, kind, defaults = {}) {
       ? String(raw.shippingPo || defaults.shippingPo || "").trim()
       : "",
     mannerOfTransport: String(raw.mannerOfTransport || "").trim(),
+    siteName: String(raw.siteName || "").trim(),
     freight: String(raw.freight || "").trim(),
     droppedBy: String(raw.droppedBy || "").trim(),
     pickedBy: String(raw.pickedBy || "").trim(),
@@ -150,6 +152,7 @@ export function motorLogisticsFormToStored(form, kind) {
     invoiceNumber: !isReceiving ? String(src.invoiceNumber || "").trim() : "",
     shippingPo: !isReceiving ? String(src.shippingPo || "").trim() : "",
     mannerOfTransport: String(src.mannerOfTransport || "").trim(),
+    siteName: String(src.siteName || "").trim(),
     freight: String(src.freight || "").trim(),
     droppedBy: isReceiving ? String(src.droppedBy || "").trim() : "",
     pickedBy: !isReceiving ? String(src.pickedBy || "").trim() : "",
@@ -166,6 +169,7 @@ export function motorLogisticsRecordHasData(record) {
   if (!record || typeof record !== "object") return false;
   return Boolean(
     String(record.mannerOfTransport || "").trim() ||
+      String(record.siteName || "").trim() ||
       String(record.freight || "").trim() ||
       String(record.droppedBy || "").trim() ||
       String(record.pickedBy || "").trim() ||

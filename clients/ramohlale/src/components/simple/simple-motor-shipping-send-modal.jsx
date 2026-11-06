@@ -201,11 +201,9 @@ export default function SimpleMotorShippingSendModal({
               <DetailRow label="Invoice #" value={entry?.invoiceNumber} />
               <DetailRow label="PO Number" value={entry?.shippingPo} />
               <DetailRow label="Date" value={entry?.date ? formatDate(entry.date) : ""} />
+              <DetailRow label="Site Name" value={entry?.siteName} />
               <DetailRow label="Transport" value={entry?.mannerOfTransport} />
-              <DetailRow label="Freight" value={entry?.freight} />
               <DetailRow label="Picked by" value={entry?.pickedBy} />
-              <DetailRow label="Charges" value={entry?.charges} />
-              <DetailRow label="Paid By" value={paidByLabel || entry?.paidBy} />
               <DetailRow label="Notes" value={entry?.notes} />
             </div>
           </div>

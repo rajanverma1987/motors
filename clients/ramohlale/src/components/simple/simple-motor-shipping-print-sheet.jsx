@@ -7,13 +7,17 @@ function textValue(value) {
   return String(value ?? "").trim();
 }
 
+function shown(value) {
+  return textValue(value) || "-";
+}
+
 function DetailRow({ label, value }) {
   return (
     <tr>
-      <th className="w-[7.5rem] border border-black/20 bg-neutral-100 px-2 py-1 text-left text-[10px] font-semibold uppercase tracking-wide text-black/70">
+      <th className="w-[7.5rem] border border-neutral-300 bg-neutral-100 px-2 py-1 text-left text-[10px] font-semibold uppercase tracking-wide text-neutral-700">
         {label}
       </th>
-      <td className="border border-black/20 px-2 py-1 text-xs font-semibold text-black">{textValue(value) || " "}</td>
+      <td className="border border-neutral-300 px-2 py-1 text-xs font-semibold text-neutral-900">{shown(value)}</td>
     </tr>
   );
 }
@@ -27,7 +31,6 @@ export default function SimpleMotorShippingPrintSheet({
   companyName = "",
   customerEmail = "",
   customerPhone = "",
-  paidByLabel = "",
   manufacturer = "",
   hpKw = "",
   frameType = "",
@@ -39,103 +42,93 @@ export default function SimpleMotorShippingPrintSheet({
   const shopName = String(companyName || settings?.shopName || "").trim();
   const dateLabel = entry.date ? formatDate(entry.date) || textValue(entry.date) : "";
   const invoiceNumber = textValue(entry.invoiceNumber);
+  const siteName = textValue(entry.siteName);
   const notes = textValue(entry.notes);
-  const chargeBack = entry.chargeBackToClient ? "Yes" : "No";
 
   return (
     <div
-      className="delivery-note-print bg-white text-black"
+      className="delivery-note-print mx-auto max-w-[52.8rem] bg-white text-sm leading-snug text-neutral-900 print:max-w-none print:text-black"
       style={{ printColorAdjust: "exact", WebkitPrintColorAdjust: "exact" }}
     >
-      <header className="flex items-start justify-between gap-4 border-b-2 border-black pb-2">
-        <div className="flex min-w-0 items-center gap-4">
-          <PrintShopLogo logoUrl={logoUrl} alt={shopName || "Shop"} />
-          <div className="min-w-0">
-            {shopName ? <p className="text-lg font-bold leading-tight tracking-tight">{shopName}</p> : null}
-            <p className="mt-1 text-[11px] font-semibold uppercase tracking-[0.22em] text-black/60">Delivery note</p>
+      <header className="mb-2 border-b border-neutral-300 pb-1.5">
+        <div className="grid grid-cols-[1fr_auto_1fr] items-start gap-2">
+          <div className="min-w-0 justify-self-start">
+            <PrintShopLogo logoUrl={logoUrl} alt={shopName || "Shop"} />
+          </div>
+          <h1 className="px-2 text-center text-3xl font-bold tracking-tight text-neutral-900 print:text-[22pt]">
+            Delivery Note
+          </h1>
+          <div className="min-w-0 shrink-0 justify-self-end text-right">
+            <p className="mt-0.5 text-xl font-bold leading-tight tracking-tight text-neutral-900 print:text-[16pt]">
+              {invoiceNumber || "-"}
+            </p>
+            <p className="mt-1.5 text-xs text-neutral-800">
+              <span className="font-semibold">PO: </span>
+              {shown(entry.shippingPo)}
+            </p>
+            <p className="text-xs text-neutral-800">
+              <span className="font-semibold">Date: </span>
+              {dateLabel || "-"}
+            </p>
           </div>
         </div>
-        <div className="w-44 shrink-0 border border-black">
-          <div className="border-b border-black bg-black px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.16em] text-white">
-            Delivery Notes
+        {shopName ? (
+          <div className="mt-1 min-w-0">
+            <p className="text-[10px] font-semibold uppercase tracking-wide text-neutral-600">From</p>
+            <p className="text-sm font-semibold text-neutral-900">{shopName}</p>
           </div>
-          <div className="px-3 py-2">
-            <p className="text-[10px] font-semibold uppercase tracking-wider text-black/55">Invoice</p>
-            <p className="text-base font-bold leading-tight">{invoiceNumber || " "}</p>
-            <p className="mt-2 text-[10px] font-semibold uppercase tracking-wider text-black/55">Date</p>
-            <p className="text-sm font-semibold leading-tight">{dateLabel || " "}</p>
-          </div>
-        </div>
+        ) : null}
       </header>
 
-      <section className="mt-3 grid grid-cols-2 gap-3">
-        <article className="border border-black/80">
-          <h2 className="border-b border-black/80 bg-black px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.16em] text-white">
+      <section className="grid grid-cols-2 gap-3">
+        <article className="min-w-0 border border-neutral-300">
+          <h2 className="border-b border-neutral-300 bg-neutral-900 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.16em] text-white">
             Deliver to
           </h2>
           <div className="space-y-0.5 px-3 py-2">
-            <p className="text-base font-bold leading-snug">{textValue(customerName) || " "}</p>
-            <p className="text-sm">
-              <span className="text-black/55">Phone </span>
-              <span className="font-semibold">{textValue(customerPhone) || " "}</span>
+            <p className="text-base font-bold leading-snug text-neutral-900">{shown(customerName)}</p>
+            <p className="text-sm text-neutral-800">
+              <span className="text-neutral-500">Site name </span>
+              <span className="font-semibold">{siteName || "-"}</span>
             </p>
-            <p className="break-all text-sm">
-              <span className="text-black/55">Email </span>
-              <span className="font-semibold">{textValue(customerEmail) || " "}</span>
+            <p className="text-sm text-neutral-800">
+              <span className="text-neutral-500">Phone </span>
+              <span className="font-semibold">{shown(customerPhone)}</span>
+            </p>
+            <p className="break-all text-sm text-neutral-800">
+              <span className="text-neutral-500">Email </span>
+              <span className="font-semibold">{shown(customerEmail)}</span>
             </p>
           </div>
         </article>
-        <article className="border border-black/80">
-          <h2 className="border-b border-black/80 bg-black px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.16em] text-white">
-            References
+        <article className="min-w-0">
+          <h2 className="mb-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-neutral-600">
+            Delivery details
           </h2>
-          <div className="space-y-1 px-3 py-2 text-sm">
-            <p>
-              <span className="text-black/55">PO number </span>
-              <span className="font-semibold">{textValue(entry.shippingPo) || " "}</span>
-            </p>
-            <p>
-              <span className="text-black/55">Invoice </span>
-              <span className="font-semibold">{invoiceNumber || " "}</span>
-            </p>
-            <p>
-              <span className="text-black/55">Date </span>
-              <span className="font-semibold">{dateLabel || " "}</span>
-            </p>
-          </div>
-        </article>
-      </section>
-
-      <section className="mt-3 grid grid-cols-2 gap-3">
-        <div>
-          <h2 className="mb-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-black/70">Machine</h2>
-          <table className="w-full border-collapse">
-            <tbody>
-              <DetailRow label="Manufacturer" value={manufacturer} />
-              <DetailRow label="HP/KW" value={hpKw} />
-              <DetailRow label="Frame/Type" value={frameType} />
-              <DetailRow label="Model#" value={modelNumber} />
-            </tbody>
-          </table>
-        </div>
-        <div>
-          <h2 className="mb-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-black/70">Delivery details</h2>
           <table className="w-full border-collapse">
             <tbody>
               <DetailRow label="Transport" value={entry.mannerOfTransport} />
-              <DetailRow label="Freight" value={entry.freight} />
               <DetailRow label="Picked by" value={entry.pickedBy} />
-              <DetailRow label="Charges" value={entry.charges} />
-              <DetailRow label="Paid by" value={paidByLabel || entry.paidBy} />
-              <DetailRow label="Charge back" value={chargeBack} />
             </tbody>
           </table>
-        </div>
+        </article>
       </section>
 
       <section className="mt-3">
-        <h2 className="mb-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-black/70">Notes</h2>
-        <div className="min-h-[2.25rem] whitespace-pre-wrap border border-black/30 bg-neutral-50 px-3 py-2 text-sm leading-snug">
+        <h2 className="mb-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-neutral-600">Machine</h2>
+        <table className="w-full border-collapse">
+          <tbody>
+            <DetailRow label="Manufacturer" value={manufacturer} />
+            <DetailRow label="HP/KW" value={hpKw} />
+            <DetailRow label="Frame/Type" value={frameType} />
+            <DetailRow label="Model#" value={modelNumber} />
+          </tbody>
+        </table>
+      </section>
+
+      <section className="mt-3">
+        <h2 className="mb-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-neutral-600">Notes</h2>
+        <div className="min-h-[2.25rem] whitespace-pre-wrap border border-neutral-300 bg-neutral-50 px-3 py-2 text-sm leading-snug text-neutral-900">
           {notes || " "}
         </div>
       </section>
@@ -143,13 +136,13 @@ export default function SimpleMotorShippingPrintSheet({
       <section className="mt-4 grid grid-cols-3 gap-6">
         {["Received by", "Signature", "Date"].map((label) => (
           <div key={label}>
-            <div className="h-6 border-b border-black" />
-            <p className="mt-1 text-[10px] font-semibold uppercase tracking-wider text-black/55">{label}</p>
+            <div className="h-6 border-b border-neutral-900" />
+            <p className="mt-1 text-[10px] font-semibold uppercase tracking-wider text-neutral-500">{label}</p>
           </div>
         ))}
       </section>
 
-      <p className="mt-3 border-t border-black/15 pt-1.5 text-[10px] leading-relaxed text-black/55">
+      <p className="mt-3 border-t border-neutral-200 pt-1.5 text-[10px] leading-relaxed text-neutral-500">
         Please check the goods on delivery and note any shortage or damage before signing.
       </p>
     </div>

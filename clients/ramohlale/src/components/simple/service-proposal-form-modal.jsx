@@ -114,6 +114,7 @@ import {
   resolveRecordTypeOnSave,
   resolveSimpleInvoiceStatusFromPayments,
   simpleServiceProposalDocToForm,
+  applyScopeQtyRate,
   sumLinePrices,
   sumOtherLinePrices,
   sumTaxableOtherLinePrices,
@@ -282,12 +283,13 @@ function FieldRow({
   );
 }
 
-function lineHasContent(line, { withUom = false, withQty = false } = {}) {
+function lineHasContent(line, { withUom = false, withQty = false, withRate = false } = {}) {
   return Boolean(
     String(line?.description ?? "").trim() ||
       String(line?.price ?? "").trim() ||
       (withUom && String(line?.uom ?? "").trim()) ||
-      (withQty && String(line?.qty ?? "").trim())
+      (withQty && String(line?.qty ?? "").trim()) ||
+      (withRate && String(line?.rate ?? "").trim())
   );
 }
 
@@ -305,7 +307,7 @@ function LineItemsTable({
   const showLineTax = isOther && !hidePrices && showTaxColumn;
   const total = isOther ? sumOtherLinePrices(lines) : sumLinePrices(lines);
   const newEmptyLine = () => (isOther ? emptyOtherLine() : emptyScopeLine());
-  const lineContentOpts = { withUom: isOther, withQty: isOther };
+  const lineContentOpts = { withUom: isOther, withQty: true, withRate: !isOther };
 
   const ensureTrailingEmpty = (rows) => {
     const list = Array.isArray(rows) ? [...rows] : [];
@@ -358,7 +360,8 @@ function LineItemsTable({
           <thead>
             <tr className={`text-left ${SIMPLE_TABLE_HEAD}`}>
               <th className={LINE_HEAD}>Description</th>
-              {isOther ? <th className={`w-16 ${LINE_HEAD}`}>Qty</th> : null}
+              <th className={`w-16 ${LINE_HEAD}`}>Qty</th>
+              {isOther ? null : !hidePrices ? <th className={`w-24 ${LINE_HEAD}`}>Rate</th> : null}
               {isOther ? <th className={`w-16 ${LINE_HEAD}`}>UOM</th> : null}
               {showLineTax ? (
                 <th className={`w-16 text-center ${LINE_HEAD}`} title="Apply the quotation tax percent">
@@ -379,7 +382,7 @@ function LineItemsTable({
                       <th className={`w-28 ${LINE_HEAD}`}>Total</th>
                     </>
                   ) : (
-                    <th className={`w-24 ${LINE_HEAD}`}>Price</th>
+                    <th className={`w-36 ${LINE_HEAD}`}>Price</th>
                   )}
                 </>
               ) : (
@@ -401,15 +404,34 @@ function LineItemsTable({
                       className={CELL_INPUT}
                     />
                   </td>
-                  {isOther ? (
+                  <td className={LINE_CELL}>
+                    <input
+                      type="text"
+                      inputMode="decimal"
+                      value={line.qty ?? ""}
+                      onChange={(e) =>
+                        updateLine(
+                          line.id,
+                          isOther
+                            ? { qty: e.target.value }
+                            : applyScopeQtyRate(line, { qty: e.target.value })
+                        )
+                      }
+                      className={`${CELL_INPUT} text-right tabular-nums`}
+                      aria-label="Quantity"
+                    />
+                  </td>
+                  {!isOther && !hidePrices ? (
                     <td className={LINE_CELL}>
                       <input
                         type="text"
                         inputMode="decimal"
-                        value={line.qty ?? ""}
-                        onChange={(e) => updateLine(line.id, { qty: e.target.value })}
+                        value={line.rate ?? ""}
+                        onChange={(e) =>
+                          updateLine(line.id, applyScopeQtyRate(line, { rate: e.target.value }))
+                        }
                         className={`${CELL_INPUT} text-right tabular-nums`}
-                        aria-label="Quantity"
+                        aria-label="Rate"
                       />
                     </td>
                   ) : null}
@@ -525,12 +547,15 @@ function LineItemsTable({
                         <td className={LINE_CELL}>
                           <div className="flex min-w-0 items-center">
                             <input
-                              type="text"
-                              inputMode="decimal"
-                              value={line.price}
-                              onChange={(e) => updateLine(line.id, { price: e.target.value })}
-                              className={`${CELL_INPUT} min-w-0 flex-1 text-right tabular-nums`}
+                              readOnly
+                              value={
+                                lineHasContent(line, lineContentOpts) && String(line.price ?? "").trim()
+                                  ? formatMoney(line.price)
+                                  : ""
+                              }
+                              className={`${CELL_INPUT_MUTED} min-w-[6.5rem] flex-1 text-right tabular-nums`}
                               aria-label="Price"
+                              title="Qty times rate"
                             />
                             {!isBlankTrail ? (
                               <button
@@ -658,8 +683,12 @@ export default function ServiceProposalFormModal({
   const hasHydratedRecordRef = useRef(false);
 
   const formatMoney = useCallback((n) => {
-    const value = Number.isFinite(n) ? n : 0;
-    return `$${value.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    const value =
+      typeof n === "number" && Number.isFinite(n)
+        ? n
+        : Number.parseFloat(String(n ?? "").replace(/[^0-9.-]/g, ""));
+    const safe = Number.isFinite(value) ? value : 0;
+    return `$${safe.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   }, []);
 
   const jobStatusOptions = useMemo(

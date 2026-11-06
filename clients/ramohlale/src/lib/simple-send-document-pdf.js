@@ -530,7 +530,6 @@ export async function buildPurchaseOrderPdfBuffer({ po, vendor = {}, shopName = 
  *   companyName?: string,
  *   customerEmail?: string,
  *   customerPhone?: string,
- *   paidByLabel?: string,
  *   ownerEmail?: string,
  *   settings?: object,
  * }} opts
@@ -541,7 +540,6 @@ export async function buildMotorShippingPdfBuffer({
   companyName = "",
   customerEmail = "",
   customerPhone = "",
-  paidByLabel = "",
   ownerEmail = "",
   settings = {},
 }) {
@@ -551,27 +549,52 @@ export async function buildMotorShippingPdfBuffer({
   const pdf = new PDFDocument({ size: "LETTER", margin: MARGIN });
   const done = collectPdf(pdf);
   let y = MARGIN;
-  y = await drawMasthead(pdf, y, {
-    title: "Motor Shipping",
-    shopName: txt(companyName),
-    shopContact: "",
-    logoBuffer,
-    logoScale: settings?.logoDocumentScale,
+  const { heightRem, maxWidthRem } = logoDocumentSizeRem(settings?.logoDocumentScale);
+  const logoH = Math.max(28, Math.min(72, heightRem * 12));
+  const logoW = Math.max(72, Math.min(160, maxWidthRem * 12));
+  if (logoBuffer) {
+    try {
+      pdf.image(logoBuffer, MARGIN, y, { fit: [logoW, logoH], align: "left", valign: "top" });
+    } catch {
+      /* logo is optional */
+    }
+  }
+  pdf.font("Helvetica-Bold").fontSize(22).fillColor("#1c1917").text("Delivery Note", MARGIN, y + 6, {
+    width: CONTENT_W,
+    align: "center",
   });
-  y = drawSectionTitle(pdf, y, "Shipping details");
+  const invoiceNumber = txt(e.invoiceNumber) || "-";
+  pdf.font("Helvetica-Bold").fontSize(14).fillColor("#1c1917").text(invoiceNumber, MARGIN, y, {
+    width: CONTENT_W,
+    align: "right",
+  });
+  pdf.font("Helvetica").fontSize(9).fillColor("#44403c").text(`PO: ${txt(e.shippingPo) || "-"}`, MARGIN, pdf.y + 2, {
+    width: CONTENT_W,
+    align: "right",
+  });
+  pdf.font("Helvetica").fontSize(9).fillColor("#44403c").text(`Date: ${dateLabel(e.date, currency) || "-"}`, MARGIN, pdf.y + 1, {
+    width: CONTENT_W,
+    align: "right",
+  });
+  y = Math.max(y + logoH, pdf.y) + 8;
+  y = drawRule(pdf, y);
+  if (txt(companyName)) {
+    pdf.font("Helvetica").fontSize(8).fillColor("#57534e").text("FROM", MARGIN, y);
+    y = pdf.y + 2;
+    pdf.font("Helvetica-Bold").fontSize(10).fillColor("#1c1917").text(txt(companyName), MARGIN, y, { width: CONTENT_W });
+    y = pdf.y + 8;
+  }
+  y = drawSectionTitle(pdf, y, "Deliver to");
   y = drawInfoGrid(pdf, y, [
-    { label: "Customer", value: txt(customerName) || "—" },
-    { label: "Company", value: txt(companyName || customerName) || "—" },
-    { label: "Phone", value: txt(customerPhone) || "—" },
-    { label: "Email", value: txt(customerEmail) || "—" },
-    { label: "Invoice #", value: txt(e.invoiceNumber) || "—" },
-    { label: "Date", value: dateLabel(e.date, currency) },
-    { label: "PO Number", value: txt(e.shippingPo) || "—" },
-    { label: "Transport", value: txt(e.mannerOfTransport) || "—" },
-    { label: "Freight", value: txt(e.freight) || "—" },
-    { label: "Picked by", value: txt(e.pickedBy) || "—" },
-    { label: "Charges", value: txt(e.charges) || "—" },
-    { label: "Paid By", value: txt(paidByLabel || e.paidBy) || "—" },
+    { label: "Customer", value: txt(customerName) || "-" },
+    { label: "Site Name", value: txt(e.siteName) || "-" },
+    { label: "Phone", value: txt(customerPhone) || "-" },
+    { label: "Email", value: txt(customerEmail) || "-" },
+  ]);
+  y = drawSectionTitle(pdf, y, "Delivery details");
+  y = drawInfoGrid(pdf, y, [
+    { label: "Transport", value: txt(e.mannerOfTransport) || "-" },
+    { label: "Picked by", value: txt(e.pickedBy) || "-" },
   ]);
   drawNotes(pdf, y, "Notes", e.notes);
   return finishPdf(pdf, done);

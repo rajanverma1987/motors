@@ -54,12 +54,14 @@ export default function QuotePrintSheetBody({ quote: q, fmt }) {
   return (
     <div className="mx-auto max-w-[52.8rem] bg-white text-sm leading-snug text-neutral-900 print:max-w-none print:text-black">
       <header className="mb-2 border-b border-neutral-300 pb-1.5">
-        <div className="flex flex-wrap items-start justify-between gap-2">
-          <PrintShopLogo logoUrl={q.fromShopLogoUrl} scale={q.logoDocumentScale} alt="" />
-          <div className="shrink-0 text-right">
-            <h1 className="text-lg font-semibold tracking-tight text-neutral-900 print:text-[13pt]">
-              {SERVICE_PROPOSAL_DOCUMENT_TITLE}
-            </h1>
+        <div className="grid grid-cols-[1fr_auto_1fr] items-start gap-2">
+          <div className="min-w-0 justify-self-start">
+            <PrintShopLogo logoUrl={q.fromShopLogoUrl} scale={q.logoDocumentScale} alt="" />
+          </div>
+          <h1 className="px-2 text-center text-3xl font-bold tracking-tight text-neutral-900 print:text-[22pt]">
+            {SERVICE_PROPOSAL_DOCUMENT_TITLE}
+          </h1>
+          <div className="min-w-0 shrink-0 justify-self-end text-right">
             <p className="mt-0.5 text-xl font-bold leading-tight tracking-tight text-neutral-900 print:text-[16pt]">
               {q.rfqNumber || "—"}
             </p>
@@ -97,17 +99,17 @@ export default function QuotePrintSheetBody({ quote: q, fmt }) {
             </div>
           ) : null}
         </div>
-        <div className="min-w-0 sm:text-right print:text-right">
-          <p className={sectionLabel + " sm:text-right"}>To</p>
+        <div className="min-w-0 justify-self-end text-right">
+          <p className={sectionLabel + " text-right"}>To</p>
           {q.customerToName ? (
-            <p className="whitespace-pre-wrap text-xs font-medium text-neutral-900 sm:ml-auto sm:text-right">
+            <p className="whitespace-pre-wrap text-right text-xs font-medium text-neutral-900">
               {q.customerToName}
             </p>
           ) : (
-            <p className="text-xs text-neutral-500">—</p>
+            <p className="text-right text-xs text-neutral-500">—</p>
           )}
           {q.customerBillingAddress ? (
-            <p className="mt-1.5 whitespace-pre-wrap text-xs text-neutral-800 sm:ml-auto sm:text-right">
+            <p className="mt-1.5 whitespace-pre-wrap text-right text-xs text-neutral-800">
               {q.customerBillingAddress}
             </p>
           ) : null}
@@ -116,7 +118,7 @@ export default function QuotePrintSheetBody({ quote: q, fmt }) {
 
       <section className="mb-2">
         <h2 className={sectionLabel}>Quotation Info</h2>
-        <dl className="grid gap-x-4 gap-y-1 text-xs sm:grid-cols-2 lg:grid-cols-3">
+        <dl className="grid grid-cols-3 gap-x-4 gap-y-1 text-xs">
           <div>
             <dt className={infoFieldLabel}>Prepared by</dt>
             <dd className="text-neutral-900">{q.preparedByDisplay || q.preparedBy || "—"}</dd>
@@ -154,6 +156,8 @@ export default function QuotePrintSheetBody({ quote: q, fmt }) {
             <thead className={thRow}>
               <tr>
                 <th className={thCell + " text-left"}>Scope</th>
+                <th className={thCell + " w-12 text-right"}>Qty</th>
+                <th className={thCell + " w-[5.5rem] text-right"}>Rate</th>
                 <th className={thCell + " w-[7rem] text-right"}>Price</th>
               </tr>
             </thead>
@@ -161,6 +165,8 @@ export default function QuotePrintSheetBody({ quote: q, fmt }) {
               {q.scopeLines.map((row, i) => (
                 <tr key={i}>
                   <td className={tdCell + " align-top"}>{row.scope || "—"}</td>
+                  <td className={tdCell + " text-right tabular-nums"}>{row.qty || "-"}</td>
+                  <td className={tdCell + " text-right tabular-nums"}>{row.rate ? format(row.rate) : "-"}</td>
                   <td className={tdCell + " text-right tabular-nums"}>{row.price ? format(row.price) : "—"}</td>
                 </tr>
               ))}

@@ -56,9 +56,17 @@ function motorLinesFromForm(form) {
 
 function scopeLinesFromForm(form) {
   return (Array.isArray(form?.scopeDetails) ? form.scopeDetails : [])
-    .filter((line) => String(line?.description ?? "").trim() || String(line?.price ?? "").trim())
+    .filter(
+      (line) =>
+        String(line?.description ?? "").trim() ||
+        String(line?.price ?? "").trim() ||
+        String(line?.qty ?? "").trim() ||
+        String(line?.rate ?? "").trim()
+    )
     .map((line) => ({
       scope: String(line.description || "").trim(),
+      qty: String(line.qty ?? "").trim(),
+      rate: String(line.rate ?? "").trim(),
       price: String(line.price ?? "").trim(),
     }));
 }
