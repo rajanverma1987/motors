@@ -9,6 +9,7 @@ import { MAX_DASHBOARD_ENTITY_ATTACHMENTS } from "@/lib/dashboard-entity-attachm
 import { saveEntityUploadFiles } from "@/lib/safe-buffer-upload";
 import {
   employeePayrollPaymentToJson,
+  hoursPaidForAmount,
   isValidPeriodMonth,
   periodMonthBounds,
 } from "@/lib/employee-payroll-payment";
@@ -101,19 +102,20 @@ export async function PATCH(request, context) {
     if (payType === "salary") {
       hoursPaid = 0;
     } else {
-      if (!Number.isFinite(hours) || hours <= 0) {
+      const derivedHours = hoursPaidForAmount(amount, doc.hourlyRate);
+      if (derivedHours != null) hoursPaid = derivedHours;
+      if (!Number.isFinite(hoursPaid) || hoursPaid <= 0) {
         return NextResponse.json({ error: "Enter the hours to pay." }, { status: 400 });
       }
       const unpaidHours = await hourlyUnpaidHoursForEmployee(owner, doc.employeeId, periodMonth, paidAt);
       const available = unpaidHours + (Number(doc.hours) || 0);
-      if (hours > available + 0.001) {
+      if (hoursPaid > available + 0.001) {
         return NextResponse.json(
           { error: "Hours to pay cannot be more than the unpaid hours." },
           { status: 400 }
         );
       }
       hoursDue = available;
-      hoursPaid = hours;
     }
 
     const bounds = periodMonthBounds(periodMonth);
@@ -137,6 +139,31 @@ export async function PATCH(request, context) {
   } catch (err) {
     console.error("Update employee payroll payment error:", err);
     return NextResponse.json({ error: err.message || "Failed to update payment" }, { status: 500 });
+  }
+}
+
+export async function DELETE(request, context) {
+  const { allowed } = await checkRateLimit(request, "employee-payroll-delete", 20);
+  if (!allowed) {
+    return NextResponse.json({ error: "Too many requests. Try again later." }, { status: 429 });
+  }
+  try {
+    const user = await getPortalUserFromRequest(request);
+    if (!user?.email) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    const params = await getParams(context);
+    const id = String(params?.id || "").trim();
+    if (!id) return NextResponse.json({ error: "Payment id required" }, { status: 400 });
+
+    await connectDB();
+    const doc = await EmployeePayrollPayment.findOneAndDelete({
+      _id: id,
+      createdByEmail: user.email.trim().toLowerCase(),
+    });
+    if (!doc) return NextResponse.json({ error: "Not found" }, { status: 404 });
+    return NextResponse.json({ ok: true });
+  } catch (err) {
+    console.error("Delete employee payroll payment error:", err);
+    return NextResponse.json({ error: err.message || "Failed to delete payment" }, { status: 500 });
   }
 }
 

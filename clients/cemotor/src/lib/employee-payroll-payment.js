@@ -62,6 +62,14 @@ export function parsePayRate(value) {
   return Number.isFinite(n) && n >= 0 ? n : 0;
 }
 
+/** Hours covered by a payment amount at the employee's hourly rate. */
+export function hoursPaidForAmount(amount, rate) {
+  const r = parsePayRate(rate);
+  const a = Number.parseFloat(String(amount ?? "").replace(/[^0-9.-]/g, ""));
+  if (!Number.isFinite(a) || a < 0 || r <= 0) return null;
+  return Math.round((a / r + Number.EPSILON) * 100) / 100;
+}
+
 function inclusiveDayCount(from, to) {
   const start = Date.parse(`${from}T00:00:00.000Z`);
   const end = Date.parse(`${to}T00:00:00.000Z`);

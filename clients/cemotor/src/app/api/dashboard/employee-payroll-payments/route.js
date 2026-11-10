@@ -7,6 +7,7 @@ import { getPortalUserFromRequest } from "@/lib/auth-portal";
 import { clampString } from "@/lib/validation";
 import {
   employeePayrollPaymentToJson,
+  hoursPaidForAmount,
   isValidPeriodMonth,
   periodMonthBounds,
 } from "@/lib/employee-payroll-payment";
@@ -195,18 +196,21 @@ export async function POST(request) {
       }
       hoursPaid = 0;
     } else {
+      const rate = hourlyRate || String(employee.hourlyRate || "").trim();
+      const derivedHours = hoursPaidForAmount(amount, rate);
+      const hoursPaidCandidate = derivedHours == null ? hours : derivedHours;
       const unpaidHours = await hourlyUnpaidHoursForEmployee(owner, employeeId, periodMonth, paidAt);
-      if (!Number.isFinite(hours) || hours <= 0) {
+      if (!Number.isFinite(hoursPaidCandidate) || hoursPaidCandidate <= 0) {
         return NextResponse.json({ error: "Enter the hours to pay." }, { status: 400 });
       }
-      if (hours > unpaidHours + 0.001) {
+      if (hoursPaidCandidate > unpaidHours + 0.001) {
         return NextResponse.json(
           { error: "Hours to pay cannot be more than the unpaid hours." },
           { status: 400 }
         );
       }
       hoursDue = unpaidHours;
-      hoursPaid = hours;
+      hoursPaid = hoursPaidCandidate;
     }
 
     const payload = {

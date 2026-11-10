@@ -139,10 +139,10 @@ function sessionLine(session, day, timeZone) {
   return inTime || "-";
 }
 
-function sessionsAllPunchedOut(sessions) {
-  const list = Array.isArray(sessions) ? sessions : [];
-  if (list.length === 0) return false;
-  return list.every((session) => Boolean(session?.outAt) && !session?.open);
+function dayShiftStillOpen(sessions) {
+  return (Array.isArray(sessions) ? sessions : []).some(
+    (session) => !session?.outAt || session.open
+  );
 }
 
 /** Build Outlook-style weeks covering from..to, padded to weekStartDay. */
@@ -192,6 +192,7 @@ function OutlookDayCell({
   payEnabled,
   today,
   timeZone,
+  onMarkPaid,
 }) {
   const clocked = dayClockedHours(sessions);
   const total =
@@ -207,6 +208,9 @@ function OutlookDayCell({
     allocation?.hours != null &&
     (allocation.fullyPaid || unpaidHours <= 0.001);
   const hoursPartial = payEnabled && allocation?.hours != null && !hoursPaid && paidHours > 0.001;
+  const shiftOpen = dayShiftStillOpen(sessions);
+  const canMark =
+    typeof onMarkPaid === "function" && !shiftOpen && unpaidHours > 0.001;
   const isToday = cell.iso === today;
   const muted = !cell.inRange;
 
@@ -250,18 +254,26 @@ function OutlookDayCell({
             <FiCheck className="h-2.5 w-2.5 shrink-0" aria-hidden />
             Paid
           </span>
-        ) : hoursPartial ? (
+        ) : hoursPartial || !shiftOpen ? (
           <span className="flex w-fit flex-col gap-0.5">
-            <span className="inline-flex w-fit rounded-sm bg-success/15 px-1 py-0.5 text-[10px] font-bold tabular-nums text-success">
-              {paidHours.toFixed(2)} paid
-            </span>
-            <span className="inline-flex w-fit rounded-sm border border-primary/30 bg-primary/10 px-1 py-0.5 text-[10px] font-semibold tabular-nums text-primary">
-              {unpaidHours.toFixed(2)} unpaid
-            </span>
-          </span>
-        ) : sessionsAllPunchedOut(sessions) ? (
-          <span className="inline-flex w-fit rounded-sm border border-primary/30 bg-primary/10 px-1 py-0.5 text-[10px] font-semibold text-primary">
-            Unpaid
+            {hoursPartial ? (
+              <span className="inline-flex w-fit rounded-sm bg-success/15 px-1 py-0.5 text-[10px] font-bold tabular-nums text-success">
+                {paidHours.toFixed(2)} paid
+              </span>
+            ) : null}
+            {canMark ? (
+              <button
+                type="button"
+                className="inline-flex w-fit items-center rounded-sm border border-primary/40 bg-primary/10 px-1 py-0.5 text-[10px] font-semibold tabular-nums text-primary hover:bg-primary/15"
+                onClick={() => onMarkPaid(unpaidHours, cell.iso)}
+              >
+                Mark {unpaidHours.toFixed(2)} paid
+              </button>
+            ) : (
+              <span className="inline-flex w-fit rounded-sm border border-primary/30 bg-primary/10 px-1 py-0.5 text-[10px] font-semibold tabular-nums text-primary">
+                {unpaidHours > 0.001 ? `${unpaidHours.toFixed(2)} unpaid` : "Unpaid"}
+              </span>
+            )}
           </span>
         ) : null
       ) : null}
@@ -305,6 +317,7 @@ export default function SimpleEmployeePunchCalendar({
   employeeId,
   open = true,
   reloadToken = 0,
+  onMarkPaid,
 }) {
   const alert = useAlert();
   const { settings } = useUserSettings();
@@ -492,6 +505,7 @@ export default function SimpleEmployeePunchCalendar({
                     payEnabled={payEnabled}
                     today={today}
                     timeZone={timeZone}
+                    onMarkPaid={onMarkPaid}
                   />
                 );
               })

@@ -44,6 +44,7 @@ export default function SimpleEmployeePaymentHistoryModal({
   const [loading, setLoading] = useState(false);
   const [payments, setPayments] = useState([]);
   const [payOpen, setPayOpen] = useState(false);
+  const [paySeed, setPaySeed] = useState(null);
   const [hoursOpen, setHoursOpen] = useState(false);
   const [savingHours, setSavingHours] = useState(false);
   const [calendarReload, setCalendarReload] = useState(0);
@@ -357,7 +358,10 @@ export default function SimpleEmployeePaymentHistoryModal({
                   size="sm"
                   className="shrink-0"
                   disabled={!employeeId}
-                  onClick={() => setPayOpen(true)}
+                  onClick={() => {
+                    setPaySeed(null);
+                    setPayOpen(true);
+                  }}
                 >
                   Payment Record
                 </Button>
@@ -382,6 +386,17 @@ export default function SimpleEmployeePaymentHistoryModal({
                 employeeId={employeeId}
                 open={open}
                 reloadToken={calendarReload}
+                onMarkPaid={
+                  String(payType || "").toLowerCase() === "salary"
+                    ? undefined
+                    : (hours, day) => {
+                        const iso = String(day || "").slice(0, 10);
+                        const seeded = Math.round((Number(hours) + Number.EPSILON) * 100) / 100;
+                        if (!iso || !(seeded > 0)) return;
+                        setPaySeed({ hours: seeded, periodFrom: iso, periodTo: iso });
+                        setPayOpen(true);
+                      }
+                }
               />
             </div>
           </div>
@@ -398,7 +413,10 @@ export default function SimpleEmployeePaymentHistoryModal({
                 size="sm"
                 className="shrink-0"
                 disabled={!employeeId}
-                onClick={() => setPayOpen(true)}
+                onClick={() => {
+                  setPaySeed(null);
+                  setPayOpen(true);
+                }}
               >
                 Payment Record
               </Button>
@@ -540,7 +558,11 @@ export default function SimpleEmployeePaymentHistoryModal({
 
       <SimpleEmployeeRecordPaymentModal
         open={payOpen}
-        onClose={() => setPayOpen(false)}
+        onClose={() => {
+          setPayOpen(false);
+          setPaySeed(null);
+          setCalendarReload((n) => n + 1);
+        }}
         employee={
           payOpen && employeeId
             ? {
@@ -549,11 +571,16 @@ export default function SimpleEmployeePaymentHistoryModal({
                 employeeNumber: titleNumber,
                 payType,
                 hourlyRate,
+                hours: paySeed?.hours,
+                periodFrom: paySeed?.periodFrom,
+                periodTo: paySeed?.periodTo,
               }
             : null
         }
         onSaved={() => {
           setPayOpen(false);
+          setPaySeed(null);
+          setCalendarReload((n) => n + 1);
           if (!hasLeftPanel) void load();
         }}
       />

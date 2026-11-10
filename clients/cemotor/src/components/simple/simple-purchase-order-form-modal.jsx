@@ -899,6 +899,7 @@ export default function SimplePurchaseOrderFormModal({
       ...payment,
       id: payment.id,
       date: String(payment.date || "").slice(0, 10),
+      invoiceNumber: String(payment.invoiceNumber || ""),
       amount: String(payment.amount ?? ""),
       method: String(payment.method || ""),
       paidBy: String(payment.paidBy || ""),
@@ -927,6 +928,7 @@ export default function SimplePurchaseOrderFormModal({
               id: p.id,
               amount: String(editPayment.amount),
               date: String(editPayment.date || "").trim(),
+              invoiceNumber: String(editPayment.invoiceNumber || "").trim(),
               method: String(editPayment.method || "").trim(),
               paidBy: String(editPayment.paidBy || "").trim(),
               notes: String(editPayment.notes || "").trim(),
@@ -2423,6 +2425,16 @@ export default function SimplePurchaseOrderFormModal({
                             disabled={saving}
                           />
                         </FieldRow>
+                        <FieldRow label="Invoice #" labelWidth="4.5rem" className="w-[13rem] shrink-0" controlClassName="min-w-0 flex-1">
+                          <input
+                            type="text"
+                            value={paymentDraft.invoiceNumber}
+                            onChange={(e) => setPaymentDraft((d) => ({ ...d, invoiceNumber: e.target.value }))}
+                            className={FIELD_INPUT}
+                            disabled={saving}
+                            aria-label="Invoice number"
+                          />
+                        </FieldRow>
                         <FieldRow label="Amount" labelWidth="3.5rem" className="w-[10rem] shrink-0" controlClassName="min-w-0 flex-1">
                           <input
                             type="text"
@@ -2473,11 +2485,12 @@ export default function SimplePurchaseOrderFormModal({
                     </div>
 
                     <div className={`overflow-auto border border-border ${TABLE_SCROLL_MAX_CLASS}`}>
-                      <table className="w-full min-w-[44rem] border-collapse text-xs">
+                      <table className="w-full min-w-[52rem] border-collapse text-xs">
                         <thead className="sticky top-0 z-[1] bg-[color-mix(in_srgb,hsl(var(--primary))_4%,hsl(var(--card)))] text-title">
                           <tr className="border-b-2 border-border">
                             <th className="w-12 border-r border-border px-1 py-1 text-left font-semibold">Actions</th>
                             <th className="border-r border-border px-1 py-1 text-left font-semibold">Date</th>
+                            <th className="border-r border-border px-1 py-1 text-left font-semibold">Invoice #</th>
                             <th className="border-r border-border px-1 py-1 text-right font-semibold">Amount</th>
                             <th className="border-r border-border px-1 py-1 text-left font-semibold">Method</th>
                             <th className="border-r border-border px-1 py-1 text-left font-semibold">Paid By</th>
@@ -2488,7 +2501,7 @@ export default function SimplePurchaseOrderFormModal({
                         <tbody>
                           {(form.payments || []).length === 0 ? (
                             <tr>
-                              <td colSpan={7} className="px-2 py-4 text-center text-secondary">
+                              <td colSpan={8} className="px-2 py-4 text-center text-secondary">
                                 No payments recorded yet.
                               </td>
                             </tr>
@@ -2513,6 +2526,7 @@ export default function SimplePurchaseOrderFormModal({
                                   <td className="border-r border-border px-1 py-1 text-title">
                                     {p.date ? formatDate(p.date) : "—"}
                                   </td>
+                                  <td className="border-r border-border px-1 py-1 text-title">{p.invoiceNumber || "—"}</td>
                                   <td className="border-r border-border px-1 py-1 text-right font-semibold tabular-nums text-title">
                                     {formatMoney(parsePoMoney(p.amount))}
                                   </td>
@@ -2756,6 +2770,15 @@ export default function SimplePurchaseOrderFormModal({
                 value={editPayment.date}
                 onChange={(e) => setEditPayment((d) => ({ ...d, date: e.target.value }))}
                 className={FIELD_INPUT}
+              />
+            </FieldRow>
+            <FieldRow label="Invoice #" labelWidth="6.5rem">
+              <input
+                type="text"
+                value={editPayment.invoiceNumber}
+                onChange={(e) => setEditPayment((d) => ({ ...d, invoiceNumber: e.target.value }))}
+                className={FIELD_INPUT}
+                aria-label="Invoice number"
               />
             </FieldRow>
             <FieldRow label="Amount" labelWidth="6.5rem">

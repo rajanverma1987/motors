@@ -851,7 +851,10 @@ export default function SimplePunchesCalendar({
       <SimpleEmployeeRecordPaymentModal
         open={Boolean(payEmployee?.employeeId)}
         employee={payEmployee}
-        onClose={() => setPayEmployee(null)}
+        onClose={() => {
+          setPayEmployee(null);
+          void load();
+        }}
         onSaved={() => {
           setPayEmployee(null);
           void load();

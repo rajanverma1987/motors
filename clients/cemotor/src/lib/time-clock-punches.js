@@ -378,9 +378,10 @@ export function hoursOnLocalDay(punches, dayIso, now = new Date()) {
 }
 
 /**
- * Clocked plus manual hours strictly after a payment moment.
+ * Clocked plus manual hours strictly after a payment moment, through `now`.
  * Punch time after `after` counts, including the rest of that same day.
- * Manual hours are stored by date only, so they count only on later calendar days.
+ * Manual hours are stored by date only. A date counts when it is after the
+ * calendar day of `after` and on or before the calendar day of `now`.
  * @param {Array} punches
  * @param {Array<{ workDate?: string, hours?: number }>} manualEntries
  * @param {Date|string|number} after
@@ -390,7 +391,7 @@ export function workedHoursAfter(punches, manualEntries, after, now = new Date()
   const afterMs = new Date(after).getTime();
   const nowMs = now instanceof Date ? now.getTime() : new Date(now).getTime();
   if (!Number.isFinite(afterMs) || !Number.isFinite(nowMs) || nowMs <= afterMs) {
-    return manualHoursAfterDate(manualEntries, afterMs);
+    return 0;
   }
 
   const list = (Array.isArray(punches) ? punches : [])
@@ -439,19 +440,22 @@ export function workedHoursAfter(punches, manualEntries, after, now = new Date()
   if (openIn != null) addSession(nowMs);
 
   const clocked = totalMs / 3600000;
-  const manual = manualHoursAfterDate(manualEntries, afterMs);
+  const manual = manualHoursInWindow(manualEntries, afterMs, nowMs);
   return Math.round((clocked + manual) * 100) / 100;
 }
 
-function manualHoursAfterDate(manualEntries, afterMs) {
-  if (!Number.isFinite(afterMs)) return 0;
-  const day = localDateIso(new Date(afterMs));
+function manualHoursInWindow(manualEntries, afterMs, untilMs) {
+  if (!Number.isFinite(afterMs) || !Number.isFinite(untilMs)) return 0;
+  const afterDay = localDateIso(new Date(afterMs));
+  const untilDay = localDateIso(new Date(untilMs));
+  if (!afterDay || !untilDay || untilDay <= afterDay) return 0;
   let total = 0;
   for (const entry of Array.isArray(manualEntries) ? manualEntries : []) {
     const workDate = String(entry.workDate || entry.date || "").slice(0, 10);
     const hours = Number(entry.hours);
     if (!workDate || !Number.isFinite(hours) || hours <= 0) continue;
-    if (workDate > day) total += hours;
+    if (workDate <= afterDay || workDate > untilDay) continue;
+    total += hours;
   }
   return total;
 }
