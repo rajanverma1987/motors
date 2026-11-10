@@ -1,0 +1,90 @@
+import { NextResponse } from "next/server";
+import { cookies } from "next/headers";
+import { connectDB } from "@/lib/db";
+import UserSettings from "@/models/UserSettings";
+import { getPortalUserFromRequest, isPortalEmployee, setPortalUiCookie } from "@/lib/auth-portal";
+import {
+  mergeUserSettings,
+  sanitizeUserSettingsPatch,
+} from "@/lib/user-settings";
+import { userSettingsForClient } from "@/lib/workspace-smtp-fields";
+
+export async function GET(request) {
+  try {
+    const user = await getPortalUserFromRequest(request);
+    if (!user?.email) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    await connectDB();
+    const email = user.email.trim().toLowerCase();
+    const doc = await UserSettings.findOne({ ownerEmail: email }).lean();
+    const settings = userSettingsForClient(mergeUserSettings(doc?.settings));
+    return NextResponse.json({
+      settings,
+      ownerEmail: email,
+    });
+  } catch (err) {
+    console.error("GET dashboard settings:", err);
+    return NextResponse.json({ error: "Failed to load settings" }, { status: 500 });
+  }
+}
+
+export async function PATCH(request) {
+  try {
+    const user = await getPortalUserFromRequest(request);
+    if (!user?.email) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    if (isPortalEmployee(user)) {
+      return NextResponse.json(
+        { error: "Access denied. Settings can only be modified by the main shop login." },
+        { status: 403 }
+      );
+    }
+    const body = await request.json().catch(() => ({}));
+    const patch = sanitizeUserSettingsPatch(body);
+    if (Object.keys(patch).length === 0) {
+      return NextResponse.json({ error: "No valid settings to update" }, { status: 400 });
+    }
+    await connectDB();
+    const email = user.email.trim().toLowerCase();
+
+    if (patch.quickBooksEnabled === true) {
+      const existing = await UserSettings.findOne({ ownerEmail: email }).lean();
+      const mergedPreview = mergeUserSettings({
+        ...(existing?.settings || {}),
+        ...patch,
+      });
+      if (
+        !Array.isArray(mergedPreview.quickBooksJobClosedStatuses) ||
+        mergedPreview.quickBooksJobClosedStatuses.length === 0
+      ) {
+        return NextResponse.json(
+          { error: "Select at least one job closed status when QuickBooks sync is enabled." },
+          { status: 400 }
+        );
+      }
+    }
+
+    const doc = await UserSettings.findOneAndUpdate(
+      { ownerEmail: email },
+      {
+        $set: Object.fromEntries(
+          Object.entries(patch).map(([k, v]) => [`settings.${k}`, v])
+        ),
+        $setOnInsert: { ownerEmail: email },
+      },
+      { new: true, upsert: true }
+    ).lean();
+
+    const settings = userSettingsForClient(mergeUserSettings(doc?.settings));
+    if (Object.prototype.hasOwnProperty.call(patch, "portalUi")) {
+      const cookieStore = await cookies();
+      setPortalUiCookie(cookieStore, settings.portalUi);
+    }
+    return NextResponse.json({ ok: true, settings });
+  } catch (err) {
+    console.error("PATCH dashboard settings:", err);
+    return NextResponse.json({ error: err.message || "Failed to save" }, { status: 500 });
+  }
+}

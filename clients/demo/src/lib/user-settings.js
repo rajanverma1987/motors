@@ -1,0 +1,657 @@
+/** Default preferences when none saved yet (extend as you add UI). */
+export const USER_SETTINGS_DEFAULTS = {
+  /** Email about product tips & best practices */
+  marketingTips: true,
+  /** Notify when new leads arrive (future use) */
+  leadEmailAlerts: true,
+  /** Default rows per page for dashboard tables */
+  tablePageSize: 25,
+  /** Denser table rows on dashboard list / summary tables */
+  compactTables: false,
+  /**
+   * Per-table hidden column keys for hub Tables (keyed by columnSettingsKey).
+   * Example: { "simple-customers": ["phone", "email"] }
+   */
+  tableColumnVisibility: {},
+  /**
+   * Shop week: 0 Sunday … 6 Saturday.
+   * Legacy `weekStartsOn` (0/1) migrates into these in mergeUserSettings.
+   */
+  weekStartDay: 0,
+  weekEndDay: 6,
+  /** Windows time zone id for payroll sheet times and hours (for example Central Standard Time). */
+  shopTimeZone: "",
+  /** ISO 4217 — how amounts are shown across the dashboard */
+  currency: "USD",
+  /** UI zoom for dashboard only (75–150, step 5). 100 = default browser-like size. */
+  zoomLevel: DISPLAY_ZOOM_DEFAULT,
+  /** Base font scale for dashboard only (75–150, step 5). 100 = default; scales rem-based text. */
+  fontSizeLevel: DISPLAY_FONT_SIZE_DEFAULT,
+  /** Public path to uploaded shop logo (set via POST /api/dashboard/settings/logo only) */
+  logoUrl: "",
+  /** Logo size on printed documents and customer/vendor emails (50–300, step 10). 100 = current default. */
+  logoDocumentScale: LOGO_DOCUMENT_SCALE_DEFAULT,
+  /** Status dropdown options for work orders (order = list order) */
+  workOrderStatuses: [...DEFAULT_WORK_ORDER_STATUSES],
+  /**
+   * Subset of workOrderStatuses in column order (left → right) on shop floor job board.
+   * Omitted key in stored settings means “all statuses, same order as workOrderStatuses”.
+   */
+  shopFloorBoardOrder: [...DEFAULT_WORK_ORDER_STATUSES],
+  /** Shop floor job board layout: columns, lanes, or list. */
+  shopFloorBoardDesign: "columns",
+  /** When true, the shop floor job board is the second tab on the Hub. */
+  shopFloorBoardInHub: false,
+  /**
+   * Work order statuses that mark a Simple Job as closed (excluded from Open jobs / Due lists).
+   * Derived from controlledDropdowns.work_order_status.entries[].marksJobClosed.
+   */
+  workOrderClosedStatuses: [],
+  /** Company billing address (invoices, AR, remittance) */
+  accountsBillingAddress: "",
+  /** Company shipping / ship-from address */
+  accountsShippingAddress: "",
+  /** Default payment terms label for invoices & vendor docs */
+  accountsPaymentTerms: "net30",
+  /** Bank details, payment links, etc. — bottom of printed / customer invoice */
+  invoicePaymentOptions: "",
+  /** Shown below payment options on invoice (print + customer view) */
+  invoiceThankYouNote: "Thank you for your business!",
+  /** Bin / shelf labels for inventory items (dropdown on master inventory) */
+  inventoryLocations: [],
+  /** Default markup % when receiving PO lines into inventory / new inventory parts */
+  defaultInventoryMarkupPercent: 0,
+  /**
+   * Work order status → tile preset index (string "0"…"n") for shop floor column headers.
+   * Omitted statuses use automatic rotation by column order.
+   */
+  workOrderStatusTileColors: {},
+  /** Controlled dropdown definitions (quote_status, work_order_status, invoice_status, po_payment_status, other_status) — see dropdown-catalog.js */
+  controlledDropdowns: {},
+  /** Product form dropdowns (transport, quote type, payment methods) — see product-dropdown-catalog.js */
+  productDropdowns: {},
+  /** Optional prefix for new repair-flow job numbers (blank = RF-00001 style). */
+  prefixRepairJob: "",
+  /** Optional prefix prepended to quote RFQ# on new invoices. */
+  prefixInvoice: "",
+  /** Optional prefix for new work order numbers before RFQ/job segment (blank = W-). */
+  prefixWorkOrder: "",
+  /** Optional prefix for new Shop PO numbers (blank = P-A0001 style). */
+  prefixShopPo: "",
+  /** Workspace SMTP for customer-facing quote & invoice emails */
+  smtpEnabled: false,
+  smtpHost: "",
+  smtpPort: 587,
+  smtpSecure: false,
+  smtpUser: "",
+  smtpPassword: "",
+  smtpFromEmail: "",
+  smtpFromName: "",
+  /**
+   * Shop dashboard UI: "simple" (Basic) or "classic".
+   * Stored per shop in UserSettings — not a global SaaS flag.
+   */
+  portalUi: "simple",
+  /** One-way QuickBooks Online sync (requires OAuth connection). */
+  quickBooksEnabled: false,
+  /** Work-order statuses that trigger QBO sync when a JOB enters them. */
+  quickBooksJobClosedStatuses: ["Completed"],
+  /** QBO Chart of Accounts Id used for invoice service lines. */
+  quickBooksDefaultIncomeAccountId: "",
+  /** QBO Chart of Accounts Id used for vendor bill expense lines. */
+  quickBooksDefaultExpenseAccountId: "",
+  /** Purchase order expected delivery / due date notifications */
+  poDueNotificationEnabled: true,
+  poDueNotificationEmails: "",
+  poDueNotificationDaysBefore: 2,
+  poDueNotificationIncludeOverdue: true,
+  poDueNotificationAutoSend: true,
+  poDueNotificationLastAutoRunAt: "",
+  /** Financial access restrictions for employees (costs, margins, pricing, AP / AR) */
+  financialAccessRestrictionEnabled: true,
+  financialAllowedRoles: ["Manager", "Office", "Supervisor"],
+  simulateFinancialRestriction: false,
+};
+
+import { DISPLAY_ZOOM_DEFAULT, normalizeZoomLevel } from "@/lib/display-zoom";
+import { DISPLAY_FONT_SIZE_DEFAULT, normalizeFontSizeLevel } from "@/lib/display-font-size";
+import { LOGO_DOCUMENT_SCALE_DEFAULT, normalizeLogoDocumentScale } from "@/lib/logo-document-scale";
+import { normalizePortalUi } from "@/lib/portal-view";
+import { sanitizeDocumentNumberPrefix } from "@/lib/document-number-prefixes";
+import { isAllowedCurrency } from "@/lib/format-currency";
+import { DEFAULT_WORK_ORDER_STATUSES } from "@/lib/work-order-fields";
+import { normalizeWorkOrderStatusTileColors, sanitizeWorkOrderStatusTileColorsPatch } from "@/lib/work-order-status-tiles";
+import {
+  normalizeControlledDropdowns,
+  sanitizeControlledDropdownsPatch,
+  deriveWorkOrderFieldsFromControlledEntries,
+} from "@/lib/dropdown-catalog";
+import { normalizeWorkspaceSmtpFields } from "@/lib/workspace-smtp-fields";
+import { normalizeQuickBooksJobClosedStatuses } from "@/lib/quickbooks/job-closed-status";
+import { normalizeProductDropdowns, sanitizeProductDropdownsPatch } from "@/lib/product-dropdown-catalog";
+import { normalizeShopFloorBoardDesign } from "@/lib/simple-job-board";
+import { normalizeShopWeek } from "@/lib/shop-week";
+import { normalizeShopTimeZone } from "@/lib/windows-time-zones";
+
+export { normalizeShopTimeZone };
+
+/** Keys the API will accept on PATCH (add new keys here when you add controls). */
+export const USER_SETTINGS_ALLOWED_KEYS = new Set([
+  "marketingTips",
+  "leadEmailAlerts",
+  "tablePageSize",
+  "compactTables",
+  "tableColumnVisibility",
+  "weekStartDay",
+  "weekEndDay",
+  "shopTimeZone",
+  "currency",
+  "zoomLevel",
+  "fontSizeLevel",
+  "logoDocumentScale",
+  "workOrderStatuses",
+  "shopFloorBoardOrder",
+  "shopFloorBoardDesign",
+  "shopFloorBoardInHub",
+  "workOrderClosedStatuses",
+  "accountsBillingAddress",
+  "accountsShippingAddress",
+  "accountsPaymentTerms",
+  "invoicePaymentOptions",
+  "invoiceThankYouNote",
+  "inventoryLocations",
+  "defaultInventoryMarkupPercent",
+  "workOrderStatusTileColors",
+  "controlledDropdowns",
+  "productDropdowns",
+  "prefixRepairJob",
+  "prefixInvoice",
+  "prefixWorkOrder",
+  "prefixShopPo",
+  "smtpEnabled",
+  "smtpHost",
+  "smtpPort",
+  "smtpSecure",
+  "smtpUser",
+  "smtpPassword",
+  "smtpFromEmail",
+  "smtpFromName",
+  "portalUi",
+  "quickBooksEnabled",
+  "quickBooksJobClosedStatuses",
+  "quickBooksDefaultIncomeAccountId",
+  "quickBooksDefaultExpenseAccountId",
+  "poDueNotificationEnabled",
+  "poDueNotificationEmails",
+  "poDueNotificationDaysBefore",
+  "poDueNotificationIncludeOverdue",
+  "poDueNotificationAutoSend",
+  "poDueNotificationLastAutoRunAt",
+  "financialAccessRestrictionEnabled",
+  "financialAllowedRoles",
+  "simulateFinancialRestriction",
+]);
+
+const ACCOUNTS_PAYMENT_TERMS = new Set([
+  "on_receipt",
+  "net15",
+  "net30",
+  "net45",
+  "net60",
+]);
+
+const TABLE_PAGE_SIZES = new Set([10, 25, 50, 100]);
+
+const TABLE_COLUMN_VIS_ID_RE = /^[a-zA-Z0-9._:-]{1,80}$/;
+
+/**
+ * Normalize map of tableId → hidden column key arrays.
+ * @param {unknown} raw
+ * @returns {Record<string, string[]>}
+ */
+export function normalizeTableColumnVisibility(raw) {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return {};
+  const out = {};
+  for (const [tableId, keys] of Object.entries(raw)) {
+    const id = String(tableId || "").trim();
+    if (!TABLE_COLUMN_VIS_ID_RE.test(id)) continue;
+    if (!Array.isArray(keys)) continue;
+    const cleaned = [
+      ...new Set(
+        keys
+          .map((k) => String(k ?? "").trim().slice(0, 80))
+          .filter(Boolean)
+      ),
+    ].slice(0, 80);
+    out[id] = cleaned;
+    if (Object.keys(out).length >= 40) break;
+  }
+  return out;
+}
+
+/**
+ * @param {unknown} settingsOrMap
+ * @param {string} tableId
+ * @returns {string[]}
+ */
+export function getHiddenColumnKeysForTable(settingsOrMap, tableId) {
+  const id = String(tableId || "").trim();
+  if (!id) return [];
+  const map =
+    settingsOrMap && typeof settingsOrMap === "object" && !Array.isArray(settingsOrMap)
+      ? settingsOrMap.tableColumnVisibility && typeof settingsOrMap.tableColumnVisibility === "object"
+        ? settingsOrMap.tableColumnVisibility
+        : settingsOrMap
+      : {};
+  const keys = map?.[id];
+  return Array.isArray(keys) ? keys.map((k) => String(k)).filter(Boolean) : [];
+}
+
+/** Allowed dashboard table page sizes (Settings → Display → Rows per page). */
+export const TABLE_PAGE_SIZE_OPTIONS = [10, 25, 50, 100];
+
+/**
+ * Resolve a valid table page size from settings or a raw number.
+ * @param {unknown} settingsOrValue
+ */
+export function resolveTablePageSize(settingsOrValue) {
+  const n = Number(
+    settingsOrValue && typeof settingsOrValue === "object"
+      ? settingsOrValue.tablePageSize
+      : settingsOrValue
+  );
+  return TABLE_PAGE_SIZES.has(n) ? n : USER_SETTINGS_DEFAULTS.tablePageSize;
+}
+
+/** @param {unknown} raw */
+export function normalizeInventoryLocations(raw) {
+  const arr = Array.isArray(raw) ? raw : [];
+  const seen = new Set();
+  const out = [];
+  for (const item of arr) {
+    const label = String(item ?? "")
+      .trim()
+      .slice(0, 80);
+    if (!label || seen.has(label)) continue;
+    seen.add(label);
+    out.push(label);
+    if (out.length >= 50) break;
+  }
+  return out;
+}
+
+/** @param {unknown} raw */
+export function normalizeWorkOrderStatusList(raw) {
+  const arr = Array.isArray(raw) ? raw : [];
+  const seen = new Set();
+  const out = [];
+  for (const item of arr) {
+    const label = String(item ?? "")
+      .trim()
+      .slice(0, 80);
+    if (!label || seen.has(label)) continue;
+    seen.add(label);
+    out.push(label);
+    if (out.length >= 25) break;
+  }
+  return out.length ? out : [...DEFAULT_WORK_ORDER_STATUSES];
+}
+
+/**
+ * @param {unknown} boardRaw
+ * @param {string[]} statusList allowed labels (normalized)
+ */
+export function normalizeShopFloorBoardOrder(boardRaw, statusList) {
+  const list = Array.isArray(statusList) ? statusList : [];
+  /** @type {Map<string, string>} lower → canonical spelling from dropdown */
+  const allowedCanon = new Map();
+  for (const x of list) {
+    const raw = String(x ?? "").trim();
+    const k = raw.toLowerCase();
+    if (k && !allowedCanon.has(k)) allowedCanon.set(k, raw);
+  }
+  const arr = Array.isArray(boardRaw) ? boardRaw : [];
+  const seenLower = new Set();
+  const out = [];
+  for (const item of arr) {
+    const label = String(item ?? "").trim();
+    if (!label) continue;
+    const lower = label.toLowerCase();
+    if (seenLower.has(lower)) continue;
+    const canonical = allowedCanon.get(lower);
+    if (!canonical) continue;
+    seenLower.add(lower);
+    out.push(canonical);
+    if (out.length >= 25) break;
+  }
+  return out;
+}
+
+export function mergeUserSettings(stored) {
+  const s = stored && typeof stored === "object" && !Array.isArray(stored) ? stored : {};
+  const merged = { ...USER_SETTINGS_DEFAULTS, ...s };
+  merged.workOrderStatuses = normalizeWorkOrderStatusList(merged.workOrderStatuses);
+
+  const rawBoardForMigrate = Array.isArray(s.shopFloorBoardOrder) ? s.shopFloorBoardOrder : [];
+  merged.controlledDropdowns = normalizeControlledDropdowns(
+    merged.controlledDropdowns,
+    merged.workOrderStatuses,
+    merged.workOrderStatusTileColors,
+    rawBoardForMigrate
+  );
+  const woDerived = deriveWorkOrderFieldsFromControlledEntries(
+    merged.controlledDropdowns.work_order_status.entries
+  );
+  merged.workOrderStatuses = woDerived.statuses;
+  merged.workOrderStatusTileColors = woDerived.tileColors;
+  merged.shopFloorBoardOrder = normalizeShopFloorBoardOrder(
+    woDerived.shopFloorBoardOrder,
+    merged.workOrderStatuses
+  );
+  merged.shopFloorBoardDesign = normalizeShopFloorBoardDesign(merged.shopFloorBoardDesign);
+  merged.shopFloorBoardInHub = merged.shopFloorBoardInHub === true;
+  {
+    const legacyStart = Number(s.weekStartsOn);
+    const storedNew = s.weekStartDay !== undefined || s.weekEndDay !== undefined;
+    let start = merged.weekStartDay;
+    let end = merged.weekEndDay;
+    if (!storedNew && (legacyStart === 0 || legacyStart === 1)) {
+      start = legacyStart;
+      end = legacyStart === 1 ? 0 : 6;
+    }
+    const week = normalizeShopWeek(start, end);
+    merged.weekStartDay = week.weekStartDay;
+    merged.weekEndDay = week.weekEndDay;
+    delete merged.weekStartsOn;
+  }
+  merged.workOrderClosedStatuses = normalizeShopFloorBoardOrder(
+    woDerived.workOrderClosedStatuses,
+    merged.workOrderStatuses
+  );
+
+  merged.inventoryLocations = normalizeInventoryLocations(merged.inventoryLocations);
+  {
+    const m = Number(merged.defaultInventoryMarkupPercent);
+    merged.defaultInventoryMarkupPercent =
+      Number.isFinite(m) && m >= 0 ? Math.min(1000, Math.round(m * 100) / 100) : 0;
+  }
+  merged.tableColumnVisibility = normalizeTableColumnVisibility(merged.tableColumnVisibility);
+  merged.productDropdowns = normalizeProductDropdowns(merged.productDropdowns);
+  merged.prefixRepairJob = sanitizeDocumentNumberPrefix(merged.prefixRepairJob);
+  merged.prefixInvoice = sanitizeDocumentNumberPrefix(merged.prefixInvoice);
+  merged.prefixWorkOrder = sanitizeDocumentNumberPrefix(merged.prefixWorkOrder);
+  merged.prefixShopPo = sanitizeDocumentNumberPrefix(merged.prefixShopPo);
+  merged.zoomLevel = normalizeZoomLevel(merged.zoomLevel);
+  merged.fontSizeLevel = normalizeFontSizeLevel(merged.fontSizeLevel);
+  merged.logoDocumentScale = normalizeLogoDocumentScale(merged.logoDocumentScale);
+  merged.portalUi = normalizePortalUi(merged.portalUi);
+  merged.workOrderStatusTileColors = normalizeWorkOrderStatusTileColors(
+    merged.workOrderStatusTileColors,
+    merged.workOrderStatuses
+  );
+  merged.quickBooksEnabled = !!merged.quickBooksEnabled;
+  merged.quickBooksJobClosedStatuses = normalizeQuickBooksJobClosedStatuses(
+    merged.quickBooksJobClosedStatuses,
+    merged.workOrderStatuses
+  );
+  merged.quickBooksDefaultIncomeAccountId = String(
+    merged.quickBooksDefaultIncomeAccountId || ""
+  )
+    .trim()
+    .slice(0, 64);
+  merged.quickBooksDefaultExpenseAccountId = String(
+    merged.quickBooksDefaultExpenseAccountId || ""
+  )
+    .trim()
+    .slice(0, 64);
+  merged.poDueNotificationEnabled = merged.poDueNotificationEnabled !== false;
+  merged.poDueNotificationEmails = String(merged.poDueNotificationEmails || "")
+    .trim()
+    .slice(0, 1000);
+  const poDays = Number(merged.poDueNotificationDaysBefore);
+  merged.poDueNotificationDaysBefore =
+    Number.isFinite(poDays) && poDays >= 0 && poDays <= 30 ? Math.round(poDays) : 2;
+  merged.poDueNotificationIncludeOverdue = merged.poDueNotificationIncludeOverdue !== false;
+  merged.poDueNotificationAutoSend = merged.poDueNotificationAutoSend !== false;
+  merged.poDueNotificationLastAutoRunAt = String(merged.poDueNotificationLastAutoRunAt || "")
+    .trim()
+    .slice(0, 50);
+  merged.financialAccessRestrictionEnabled = merged.financialAccessRestrictionEnabled !== false;
+  merged.financialAllowedRoles = Array.isArray(merged.financialAllowedRoles)
+    ? merged.financialAllowedRoles.map((s) => String(s || "").trim()).filter(Boolean)
+    : ["Manager", "Office", "Supervisor"];
+  merged.simulateFinancialRestriction = !!merged.simulateFinancialRestriction;
+  merged.shopTimeZone = normalizeShopTimeZone(merged.shopTimeZone);
+  const smtp = normalizeWorkspaceSmtpFields(merged);
+  Object.assign(merged, smtp);
+  return merged;
+}
+
+/**
+ * @param {Record<string, unknown>} body
+ * @returns {Record<string, unknown>}
+ */
+export function sanitizeUserSettingsPatch(body) {
+  if (!body || typeof body !== "object") return {};
+  const out = {};
+  for (const key of USER_SETTINGS_ALLOWED_KEYS) {
+    if (body[key] === undefined) continue;
+    if (key === "tablePageSize") {
+      const n = Number(body[key]);
+      if (TABLE_PAGE_SIZES.has(n)) out[key] = n;
+      continue;
+    }
+    if (key === "weekStartDay" || key === "weekEndDay") {
+      const n = Number(body[key]);
+      if (Number.isInteger(n) && n >= 0 && n <= 6) out[key] = n;
+      continue;
+    }
+    if (key === "shopTimeZone") {
+      out.shopTimeZone = normalizeShopTimeZone(body[key]);
+      continue;
+    }
+    if (key === "currency") {
+      const c = String(body[key] ?? "").toUpperCase().trim();
+      if (isAllowedCurrency(c)) out[key] = c;
+      continue;
+    }
+    if (key === "zoomLevel") {
+      out.zoomLevel = normalizeZoomLevel(body[key]);
+      continue;
+    }
+    if (key === "fontSizeLevel") {
+      out.fontSizeLevel = normalizeFontSizeLevel(body[key]);
+      continue;
+    }
+    if (key === "logoDocumentScale") {
+      out.logoDocumentScale = normalizeLogoDocumentScale(body[key]);
+      continue;
+    }
+    if (key === "workOrderStatuses") {
+      const arr = Array.isArray(body[key]) ? body[key] : [];
+      const cleaned = arr
+        .map((s) => String(s ?? "").trim().slice(0, 80))
+        .filter(Boolean)
+        .slice(0, 25);
+      if (cleaned.length) out.workOrderStatuses = cleaned;
+      continue;
+    }
+    if (key === "shopFloorBoardOrder") {
+      const arr = Array.isArray(body[key]) ? body[key] : [];
+      out.shopFloorBoardOrder = arr
+        .map((s) => String(s ?? "").trim().slice(0, 80))
+        .filter(Boolean)
+        .slice(0, 25);
+      continue;
+    }
+    if (key === "shopFloorBoardDesign") {
+      out.shopFloorBoardDesign = normalizeShopFloorBoardDesign(body[key]);
+      continue;
+    }
+    if (key === "accountsBillingAddress" || key === "accountsShippingAddress") {
+      out[key] = String(body[key] ?? "")
+        .replace(/\r\n/g, "\n")
+        .slice(0, 2000);
+      continue;
+    }
+    if (key === "accountsPaymentTerms") {
+      const v = String(body[key] ?? "").toLowerCase().trim();
+      if (ACCOUNTS_PAYMENT_TERMS.has(v)) out[key] = v;
+      continue;
+    }
+    if (key === "invoicePaymentOptions") {
+      out[key] = String(body[key] ?? "")
+        .replace(/\r\n/g, "\n")
+        .slice(0, 4000);
+      continue;
+    }
+    if (key === "invoiceThankYouNote") {
+      out[key] = String(body[key] ?? "").replace(/\r\n/g, " ").slice(0, 500);
+      continue;
+    }
+    if (key === "inventoryLocations") {
+      out.inventoryLocations = normalizeInventoryLocations(body[key]);
+      continue;
+    }
+    if (key === "defaultInventoryMarkupPercent") {
+      const m = Number(body[key]);
+      out.defaultInventoryMarkupPercent =
+        Number.isFinite(m) && m >= 0 ? Math.min(1000, Math.round(m * 100) / 100) : 0;
+      continue;
+    }
+    if (key === "tableColumnVisibility") {
+      out.tableColumnVisibility = normalizeTableColumnVisibility(body[key]);
+      continue;
+    }
+    if (key === "productDropdowns") {
+      out.productDropdowns = sanitizeProductDropdownsPatch(body[key]);
+      continue;
+    }
+    if (key === "workOrderStatusTileColors") {
+      out.workOrderStatusTileColors = sanitizeWorkOrderStatusTileColorsPatch(body[key]);
+      continue;
+    }
+    if (key === "prefixRepairJob" || key === "prefixInvoice" || key === "prefixWorkOrder" || key === "prefixShopPo") {
+      out[key] = sanitizeDocumentNumberPrefix(body[key]);
+      continue;
+    }
+    if (key === "smtpEnabled" || key === "smtpSecure") {
+      if (typeof body[key] === "boolean") out[key] = body[key];
+      continue;
+    }
+    if (key === "smtpHost" || key === "smtpUser" || key === "smtpFromName") {
+      out[key] = String(body[key] ?? "").trim().slice(0, key === "smtpFromName" ? 120 : 255);
+      continue;
+    }
+    if (key === "smtpFromEmail") {
+      out[key] = String(body[key] ?? "").trim().slice(0, 255).toLowerCase();
+      continue;
+    }
+    if (key === "smtpPort") {
+      const portNum = Number(body[key]);
+      if (Number.isFinite(portNum) && portNum > 0 && portNum <= 65535) {
+        out[key] = Math.round(portNum);
+      }
+      continue;
+    }
+    if (key === "smtpPassword") {
+      const pw = String(body[key] ?? "").trim();
+      if (pw) out[key] = pw;
+      continue;
+    }
+    if (key === "portalUi") {
+      out.portalUi = normalizePortalUi(body[key]);
+      continue;
+    }
+    if (key === "quickBooksEnabled") {
+      if (typeof body[key] === "boolean") out.quickBooksEnabled = body[key];
+      continue;
+    }
+    if (key === "quickBooksJobClosedStatuses") {
+      const arr = Array.isArray(body[key]) ? body[key] : [];
+      out.quickBooksJobClosedStatuses = arr
+        .map((s) => String(s ?? "").trim().slice(0, 80))
+        .filter(Boolean)
+        .slice(0, 25);
+      continue;
+    }
+    if (key === "quickBooksDefaultIncomeAccountId" || key === "quickBooksDefaultExpenseAccountId") {
+      out[key] = String(body[key] ?? "")
+        .trim()
+        .slice(0, 64);
+      continue;
+    }
+    if (
+      key === "poDueNotificationEnabled" ||
+      key === "poDueNotificationIncludeOverdue" ||
+      key === "poDueNotificationAutoSend"
+    ) {
+      if (typeof body[key] === "boolean") out[key] = body[key];
+      continue;
+    }
+    if (key === "poDueNotificationEmails") {
+      out[key] = String(body[key] ?? "").slice(0, 1000);
+      continue;
+    }
+    if (key === "poDueNotificationDaysBefore") {
+      const n = Math.round(Number(body[key]));
+      if (Number.isFinite(n) && n >= 0 && n <= 30) out[key] = n;
+      continue;
+    }
+    if (key === "poDueNotificationLastAutoRunAt") {
+      out[key] = String(body[key] ?? "").slice(0, 50);
+      continue;
+    }
+    if (key === "financialAccessRestrictionEnabled" || key === "simulateFinancialRestriction") {
+      if (typeof body[key] === "boolean") out[key] = body[key];
+      continue;
+    }
+    if (key === "financialAllowedRoles") {
+      const arr = Array.isArray(body[key]) ? body[key] : [];
+      out.financialAllowedRoles = arr
+        .map((s) => String(s ?? "").trim().slice(0, 50))
+        .filter(Boolean)
+        .slice(0, 20);
+      continue;
+    }
+    if (key === "controlledDropdowns") {
+      const woLeg = normalizeWorkOrderStatusList(body.workOrderStatuses);
+      const tilesLeg =
+        body.workOrderStatusTileColors && typeof body.workOrderStatusTileColors === "object"
+          ? body.workOrderStatusTileColors
+          : {};
+      const boardLeg = Array.isArray(body.shopFloorBoardOrder) ? body.shopFloorBoardOrder : [];
+      const normalized = sanitizeControlledDropdownsPatch(
+        body.controlledDropdowns,
+        woLeg,
+        tilesLeg,
+        boardLeg
+      );
+      out.controlledDropdowns = normalized;
+      const derived = deriveWorkOrderFieldsFromControlledEntries(normalized.work_order_status.entries);
+      out.workOrderStatuses = derived.statuses;
+      out.workOrderStatusTileColors = derived.tileColors;
+      out.shopFloorBoardOrder = normalizeShopFloorBoardOrder(
+        derived.shopFloorBoardOrder,
+        derived.statuses
+      );
+      out.workOrderClosedStatuses = normalizeShopFloorBoardOrder(
+        derived.workOrderClosedStatuses,
+        derived.statuses
+      );
+      continue;
+    }
+    if (typeof body[key] === "boolean") {
+      out[key] = body[key];
+    }
+  }
+  if (out.weekStartDay !== undefined || out.weekEndDay !== undefined) {
+    const week = normalizeShopWeek(
+      out.weekStartDay !== undefined ? out.weekStartDay : body.weekStartDay,
+      out.weekEndDay !== undefined ? out.weekEndDay : body.weekEndDay
+    );
+    out.weekStartDay = week.weekStartDay;
+    out.weekEndDay = week.weekEndDay;
+  }
+  return out;
+}

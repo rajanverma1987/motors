@@ -1,0 +1,3200 @@
+"use client";
+
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import dynamic from "next/dynamic";
+import {
+  FiArrowLeft,
+  FiChevronDown,
+  FiChevronLeft,
+  FiChevronRight,
+  FiEye,
+  FiMail,
+  FiPlus,
+  FiPrinter,
+  FiSave,
+  FiX,
+} from "react-icons/fi";
+import Button from "@/components/ui/button";
+import Badge from "@/components/ui/badge";
+import Modal from "@/components/ui/modal";
+import SimpleSelect from "@/components/simple/simple-select";
+import { Form } from "@/components/ui/form-layout";
+import SimpleCustomerFormFields from "@/components/simple/simple-customer-form-fields";
+import SimpleDatasheetModal from "@/components/simple/simple-datasheet-modal";
+import SimpleSendDatasheetModal from "@/components/simple/simple-send-datasheet-modal";
+import SimpleServiceProposalAttachmentsModal from "@/components/simple/simple-service-proposal-attachments-modal";
+import SimpleServiceProposalPrintPreviewModal from "@/components/simple/simple-service-proposal-print-preview-modal";
+import SimpleSalesCommissionModal from "@/components/simple/simple-sales-commission-modal";
+import SimplePurchaseOrderFormModal from "@/components/simple/simple-purchase-order-form-modal";
+import SimpleDocumentFormTitle, {
+  DOCUMENT_FORM_TITLE_CLASS,
+} from "@/components/simple/simple-document-form-title";
+import SimpleInvoicePaymentModal from "@/components/simple/simple-invoice-payment-modal";
+
+/** Loaded on demand so this form and CustomerViewModal do not import each other at startup. */
+const CustomerViewModal = dynamic(() => import("@/components/dashboard/customer-view-modal"), {
+  ssr: false,
+});
+import SimpleMotorLogisticsModal, {
+  KIND_RECEIVING,
+  KIND_SHIPPING,
+} from "@/components/simple/simple-motor-logistics-modal";
+import SimpleAddFromInventoryModal from "@/components/simple/simple-add-from-inventory-modal";
+import SimpleProposalJobHours from "@/components/simple/simple-proposal-job-hours";
+import SimpleDoubleClickTextEditInput from "@/components/simple/simple-double-click-text-edit-input";
+import SimpleDoubleClickTextEditTextarea from "@/components/simple/simple-double-click-text-edit-textarea";
+import {
+  SIMPLE_BADGE_SM,
+  SIMPLE_CELL_INPUT,
+  SIMPLE_CELL_INPUT_MUTED,
+  SIMPLE_FIELD_INPUT,
+  SIMPLE_FIELD_LABEL,
+  SIMPLE_FIELD_TEXTAREA,
+  SIMPLE_LINE_CELL,
+  SIMPLE_LINE_HEAD,
+  SIMPLE_TABLE_HEAD,
+  SIMPLE_TABLE_TEXT,
+  SIMPLE_TOOLBAR_BTN,
+  SIMPLE_TOTAL_LABEL,
+  SIMPLE_TOTAL_INPUT,
+} from "@/lib/simple-typography";
+import { useAlert, useConfirm } from "@/components/confirm-provider";
+import { useAuth } from "@/contexts/auth-context";
+import { useUserSettings, useFormatDate } from "@/contexts/user-settings-context";
+import useMediaQuery from "@/hooks/use-media-query";
+import { fetchAllPaginatedDashboardItems } from "@/lib/fetch-all-paginated-dashboard-items";
+import {
+  buildCustomerPayload,
+  uploadCustomerDocumentFiles,
+  INITIAL_CUSTOMER_FORM,
+  listCustomerJobContacts,
+} from "@/lib/customer-record-form";
+import {
+  invoiceStatusSelectOptionsFromMerged,
+  quoteStatusSelectOptionsFromMerged,
+  buildCombinedQuoteInvoiceStatusOptions,
+  workOrderStatusSelectOptionsFromMerged,
+  resolveQuoteInvoiceStatusDisplayLabel,
+  resolveConfiguredStatusSlug,
+  quoteStatusTileColorForValue,
+  invoiceStatusTileColorForValue,
+} from "@/lib/dropdown-catalog";
+import {
+  buildEmployeeSelectOptions,
+  resolveEmployeeDisplayName,
+  resolveLoggedInEmployeeSelectValue,
+  withShopAdminEmployee,
+} from "@/lib/technician-select-options";
+import { mergeUserSettings } from "@/lib/user-settings";
+import {
+  resolveStatusTileProps,
+  resolveWorkOrderStatusTileProps,
+  presetIndexToHexColors,
+} from "@/lib/work-order-status-tiles";
+import { resolveOutboundFromPreview } from "@/lib/customer-facing-email-content";
+import { getWorkspaceSmtpDeliveryNotice } from "@/lib/workspace-smtp-fields";
+import {
+  buildSimpleServiceProposalPrintBundle,
+  PRINT_NOTES_CUSTOMER,
+  PRINT_NOTES_INTERNAL,
+} from "@/lib/simple-service-proposal-print";
+import {
+  createEmptyServiceProposalForm,
+  emptyOtherLine,
+  emptyScopeLine,
+  RECORD_TYPE_INVOICE,
+  RECORD_TYPE_JOB,
+  RECORD_TYPE_RFQ,
+  cloneServiceProposalAsNewRfq,
+  computeInvoicePaymentSummary,
+  PROPOSAL_TYPE_OPTIONS,
+  PROPOSAL_TYPE_SALES,
+  normalizeProposalType,
+  recordTypeDisplayTitle,
+  recordTypeDocumentLabel,
+  recordTypeJobNumberLabel,
+  resolveRecordTypeOnSave,
+  resolveSimpleInvoiceStatusFromPayments,
+  simpleServiceProposalDocToForm,
+  sumLinePrices,
+  sumOtherLinePrices,
+  sumTaxableOtherLinePrices,
+  lineExtendedPrice,
+  applyOtherLineMarkup,
+  applyOtherLineSellPrice,
+  applyOtherLineUnitCost,
+} from "@/lib/simple-service-proposal-form";
+import {
+  buildAcDatasheetFromProposal,
+  buildDcDatasheetFromProposal,
+  datasheetHasData,
+  syncDatasheetJobNumber,
+} from "@/lib/simple-datasheet-form";
+import {
+  buildGeneratorDatasheetFromProposal,
+  buildPumpDatasheetFromProposal,
+} from "@/lib/simple-datasheet-extra";
+import {
+  MACHINE_TYPES,
+  datasheetStorageKey,
+  proposalMotorFieldLabel,
+  resolveMachineType,
+} from "@/lib/machine-types";
+import { normalizeJobDiagrams } from "@/lib/diagram-templates-shared";
+import {
+  fetchSimpleServiceProposal,
+  listSimplePurchaseOrdersForJobApi,
+} from "@/lib/simple-portal-api";
+import { productDropdownSelectOptions } from "@/lib/product-dropdown-catalog";
+import {
+  getPoLineReceivingStatus,
+  isPoLineInactive,
+  normalizeReceivingStatus,
+  parsePoMoney,
+  poLineHasContent,
+  resolvePoStatus,
+  suggestReceivingStatus,
+  computePoFormTotals,
+  computePoPaymentSummary,
+  roundPoMoney,
+} from "@/lib/simple-purchase-order-form";
+import {
+  applyCustomerLogisticsChargeToOtherItems,
+  isLogisticsChargeOtherLine,
+  motorLogisticsFormToStored,
+} from "@/lib/simple-motor-logistics";
+
+const FORM_ID = "simple-service-proposal-form";
+const ADD_CUSTOMER_FORM_ID = "simple-sp-add-customer-form";
+
+const FIELD_INPUT = SIMPLE_FIELD_INPUT;
+const FIELD_TEXTAREA = SIMPLE_FIELD_TEXTAREA;
+const FIELD_LABEL = SIMPLE_FIELD_LABEL;
+const TOOLBAR_BTN = SIMPLE_TOOLBAR_BTN;
+const CELL_INPUT = SIMPLE_CELL_INPUT;
+const LINE_CELL = SIMPLE_LINE_CELL;
+const LINE_HEAD = SIMPLE_LINE_HEAD;
+const CELL_INPUT_MUTED = SIMPLE_CELL_INPUT_MUTED;
+
+const MOTOR_FIELDS = [
+  { key: "manufacturer", label: "Manufacturer" },
+  { key: "hpKw", label: "HP/KW" },
+  { key: "frameType", label: "Frame/Type" },
+  { key: "modelNumber", label: "Model#" },
+  { key: "volts", label: "Volts" },
+  { key: "amps", label: "AMPS" },
+  { key: "rpm", label: "RPM" },
+  { key: "sl", label: "Slots" },
+  { key: "cl", label: "Core Length" },
+  { key: "cd", label: "Core Diameter" },
+  { key: "bars", label: "Bars" },
+  { key: "motorPaint", label: "Motor Paint" },
+];
+
+const QUOTE_TYPE_OPTIONS = [
+  { value: "Phone", label: "Phone" },
+  { value: "Email", label: "Email" },
+  { value: "Walk-in", label: "Walk-in" },
+  { value: "Other", label: "Other" },
+]; // fallback; overridden from Settings → Dropdowns when available
+
+function poReceivingBadgeVariant(status) {
+  const s = String(status || "").trim().toLowerCase();
+  if (s === "cancelled" || s === "returned") return "danger";
+  if (s === "received") return "success";
+  if (s.includes("partial")) return "warning";
+  return "default";
+}
+
+function poPaymentStatusBadgeVariant(status) {
+  const s = String(status || "").trim().toLowerCase();
+  if (s === "paid") return "success";
+  if (s.includes("partial")) return "warning";
+  return "default";
+}
+
+const PROPOSAL_PO_HEADER_GRID =
+  "grid grid-cols-[1.75rem_minmax(4.25rem,0.9fr)_minmax(4.75rem,1fr)_minmax(3.75rem,0.7fr)_minmax(4.25rem,0.85fr)_minmax(4.25rem,0.85fr)] gap-x-2";
+
+/** Group job POs into parent rows (PO header) + child line rows. */
+function buildProposalPoTableGroups(purchaseOrders) {
+  const groups = [];
+  for (const po of Array.isArray(purchaseOrders) ? purchaseOrders : []) {
+    const poId = String(po?.id || "").trim();
+    const poNumber = String(po?.poNumber || "").trim() || "—";
+    const vendorName = String(po?.vendorName || "").trim() || "—";
+    const poStatus = resolvePoStatus(po?.lineItems);
+    const totals = computePoFormTotals(po?.lineItems, po?.shippingCharge);
+    const paySummary = computePoPaymentSummary(po?.payments, totals.grandTotal);
+    const poPaymentStatus =
+      paySummary.paymentStatus || String(po?.paymentStatus || "").trim() || "Unpaid";
+    const lines = (Array.isArray(po?.lineItems) ? po.lineItems : []).filter((line) =>
+      poLineHasContent(line)
+    );
+    const items = lines.map((line, index) => {
+      const inactive = isPoLineInactive(line);
+      const itemStatus = inactive
+        ? getPoLineReceivingStatus(line)
+        : normalizeReceivingStatus(
+            line.receivingStatus || suggestReceivingStatus(line.quantity, line.receivedQty)
+          );
+      return {
+        key: `${poId}-${line.id || index}`,
+        itemName: String(line.itemName || "").trim() || "—",
+        qty: String(line.quantity ?? "0"),
+        price: parsePoMoney(line.price),
+        itemStatus,
+        inactive,
+      };
+    });
+    if (!poId) continue;
+    const poDateRaw = String(po?.poCutDate || po?.createdAt || "").trim();
+    groups.push({ poId, poNumber, vendorName, poStatus, poPaymentStatus, poDateRaw, items });
+  }
+  return groups;
+}
+
+function jobContactOptionLabel(contact) {
+  if (contact.email) return `${contact.name} (${contact.email})`;
+  if (contact.phone) return `${contact.name} (${contact.phone})`;
+  return contact.name;
+}
+
+function FieldRow({
+  label,
+  labelWidth = "7.5rem",
+  children,
+  className = "",
+  controlClassName = "",
+  labelClassName = "",
+}) {
+  return (
+    <div
+      className={`simple-sp-field flex min-w-0 items-center gap-2.5 ${className}`}
+      data-label-width={labelWidth}
+    >
+      <label
+        className={`simple-sp-field-label ${FIELD_LABEL} ${labelClassName}`}
+        style={{ width: labelWidth, maxWidth: "100%" }}
+      >
+        {label}
+      </label>
+      <div className={`min-w-0 ${controlClassName || "flex-1"}`}>{children}</div>
+    </div>
+  );
+}
+
+function lineHasContent(line, { withUom = false, withQty = false } = {}) {
+  return Boolean(
+    String(line?.description ?? "").trim() ||
+      String(line?.price ?? "").trim() ||
+      (withUom && String(line?.uom ?? "").trim()) ||
+      (withQty && String(line?.qty ?? "").trim())
+  );
+}
+
+function LineItemsTable({
+  title,
+  lines,
+  onChange,
+  totalLabel,
+  formatMoney,
+  headerAction = null,
+  hidePrices = false,
+  showTaxColumn = false,
+}) {
+  const isOther = title.toLowerCase().includes("other");
+  const showLineTax = isOther && !hidePrices && showTaxColumn;
+  const total = isOther ? sumOtherLinePrices(lines) : sumLinePrices(lines);
+  const newEmptyLine = () => (isOther ? emptyOtherLine() : emptyScopeLine());
+  const lineContentOpts = { withUom: isOther, withQty: isOther };
+
+  const ensureTrailingEmpty = (rows) => {
+    const list = Array.isArray(rows) ? [...rows] : [];
+    let lastFilled = -1;
+    for (let i = 0; i < list.length; i++) {
+      if (lineHasContent(list[i], lineContentOpts)) lastFilled = i;
+    }
+    const kept = lastFilled >= 0 ? list.slice(0, lastFilled + 1) : [];
+    const keptIds = new Set(kept.map((row) => row.id));
+    const trailingEmpty = list
+      .slice(lastFilled + 1)
+      .find((row) => !lineHasContent(row, lineContentOpts) && !keptIds.has(row.id));
+    const emptyRow = trailingEmpty || newEmptyLine();
+    return [...kept, emptyRow];
+  };
+
+  const displayLines = useMemo(
+    () => ensureTrailingEmpty(Array.isArray(lines) ? lines : []),
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- ensureTrailingEmpty closes over isOther
+    [lines, isOther]
+  );
+
+  const updateLine = (id, patch) => {
+    const next = displayLines.map((line) => (line.id === id ? { ...line, ...patch } : line));
+    onChange(ensureTrailingEmpty(next));
+  };
+
+  const removeLine = (id) => {
+    const target = displayLines.find((line) => line.id === id);
+    if (
+      target &&
+      !lineHasContent(target, lineContentOpts) &&
+      displayLines.filter((l) => !lineHasContent(l, lineContentOpts)).length <= 1
+    ) {
+      return;
+    }
+    onChange(ensureTrailingEmpty(displayLines.filter((line) => line.id !== id)));
+  };
+
+  return (
+    <div className="flex min-h-[16rem] min-w-0 max-w-full flex-1 flex-col overflow-hidden bg-card">
+      <div className="mt-[10px] flex h-9 min-w-0 items-center justify-between gap-2 bg-transparent px-2">
+        <h4 className="min-w-0 truncate text-sm font-bold uppercase tracking-wide text-title dark:text-white">
+          {title}
+        </h4>
+        {headerAction ? <div className="shrink-0">{headerAction}</div> : null}
+      </div>
+      <div className="min-h-0 min-w-0 max-w-full flex-1 overflow-x-auto overflow-y-auto overscroll-x-contain">
+        <table className={`w-full min-w-[28rem] border-collapse border-spacing-0 ${SIMPLE_TABLE_TEXT} font-semibold`}>
+          <thead>
+            <tr className={`text-left ${SIMPLE_TABLE_HEAD}`}>
+              <th className={LINE_HEAD}>Description</th>
+              {isOther ? <th className={`w-16 ${LINE_HEAD}`}>Qty</th> : null}
+              {isOther ? <th className={`w-16 ${LINE_HEAD}`}>UOM</th> : null}
+              {showLineTax ? (
+                <th className={`w-16 text-center ${LINE_HEAD}`} title="Apply the proposal tax percent">
+                  Taxable?
+                </th>
+              ) : null}
+              {!hidePrices ? (
+                <>
+                  {isOther ? (
+                    <>
+                      <th className={`w-24 ${LINE_HEAD}`} title="Unit price before markup">
+                        Price
+                      </th>
+                      <th className={`w-20 ${LINE_HEAD}`}>Markup %</th>
+                      <th className={`w-24 ${LINE_HEAD}`} title="Unit price after markup">
+                        Markup Price
+                      </th>
+                      <th className={`w-28 ${LINE_HEAD}`}>Total</th>
+                    </>
+                  ) : (
+                    <th className={`w-24 ${LINE_HEAD}`}>Price</th>
+                  )}
+                </>
+              ) : (
+                <th className={`w-12 text-center ${LINE_HEAD}`}>Action</th>
+              )}
+            </tr>
+          </thead>
+          <tbody>
+            {displayLines.map((line, idx) => {
+              const isBlankTrail =
+                !lineHasContent(line, lineContentOpts) && idx === displayLines.length - 1;
+              return (
+                <tr key={line.id}>
+                  <td className={LINE_CELL}>
+                    <input
+                      type="text"
+                      value={line.description}
+                      onChange={(e) => updateLine(line.id, { description: e.target.value })}
+                      className={CELL_INPUT}
+                    />
+                  </td>
+                  {isOther ? (
+                    <td className={LINE_CELL}>
+                      <input
+                        type="text"
+                        inputMode="decimal"
+                        value={line.qty ?? ""}
+                        onChange={(e) => updateLine(line.id, { qty: e.target.value })}
+                        className={`${CELL_INPUT} text-right tabular-nums`}
+                        aria-label="Quantity"
+                      />
+                    </td>
+                  ) : null}
+                  {isOther ? (
+                    <td className={LINE_CELL}>
+                      <input
+                        type="text"
+                        value={line.uom ?? ""}
+                        onChange={(e) => updateLine(line.id, { uom: e.target.value })}
+                        className={CELL_INPUT}
+                        aria-label="UOM"
+                      />
+                    </td>
+                  ) : null}
+                  {showLineTax ? (
+                    <td className={`${LINE_CELL} text-center`}>
+                      <input
+                        type="checkbox"
+                        checked={line.taxable === true}
+                        disabled={isBlankTrail}
+                        onChange={(e) => updateLine(line.id, { taxable: e.target.checked })}
+                        className="h-4 w-4 accent-primary disabled:cursor-not-allowed"
+                        aria-label="Taxable"
+                        title="Tax this item at the same tax percent as the proposal breakdown"
+                      />
+                    </td>
+                  ) : null}
+                  {!hidePrices ? (
+                    <>
+                      {isOther ? (
+                        <>
+                          <td className={LINE_CELL}>
+                            {isLogisticsChargeOtherLine(line) ? (
+                              <span className="block h-8 px-1 text-right text-xs text-secondary">-</span>
+                            ) : (
+                              <input
+                                type="text"
+                                inputMode="decimal"
+                                value={
+                                  String(line.unitCost ?? "").trim() !== ""
+                                    ? String(line.unitCost)
+                                    : String(line.price ?? "")
+                                }
+                                onChange={(e) =>
+                                  updateLine(line.id, applyOtherLineUnitCost(line, e.target.value))
+                                }
+                                className={`${CELL_INPUT} min-w-0 flex-1 text-right tabular-nums`}
+                                aria-label="Price"
+                                title="Unit price before markup"
+                              />
+                            )}
+                          </td>
+                          <td className={LINE_CELL}>
+                            {isLogisticsChargeOtherLine(line) ? (
+                              <span className="block h-8 px-1 text-right text-xs text-secondary">-</span>
+                            ) : (
+                              <input
+                                type="text"
+                                inputMode="decimal"
+                                value={line.markupPercent ?? ""}
+                                onChange={(e) =>
+                                  updateLine(line.id, applyOtherLineMarkup(line, e.target.value))
+                                }
+                                className={`${CELL_INPUT} min-w-0 flex-1 text-right tabular-nums`}
+                                placeholder="0"
+                                aria-label="Markup percent"
+                                title="Markup for this proposal only. Not shown on customer print."
+                              />
+                            )}
+                          </td>
+                          <td className={LINE_CELL}>
+                            <input
+                              type="text"
+                              inputMode="decimal"
+                              value={line.price}
+                              onChange={(e) =>
+                                updateLine(line.id, applyOtherLineSellPrice(line, e.target.value))
+                              }
+                              className={`${CELL_INPUT} min-w-0 flex-1 text-right tabular-nums`}
+                              aria-label="Markup Price"
+                              title="Unit price after markup. Same as Price when markup is 0."
+                            />
+                          </td>
+                          <td className={LINE_CELL}>
+                            <div className="flex min-w-0 items-center">
+                              <input
+                                readOnly
+                                value={
+                                  lineHasContent(line, lineContentOpts)
+                                    ? formatMoney(lineExtendedPrice(line))
+                                    : ""
+                                }
+                                className={`${CELL_INPUT_MUTED} min-w-0 flex-1 text-right tabular-nums`}
+                                aria-label="Line total"
+                              />
+                              {!isBlankTrail ? (
+                                <button
+                                  type="button"
+                                  className="inline-flex h-8 w-8 shrink-0 items-center justify-center text-danger hover:bg-danger/10"
+                                  title="Remove line"
+                                  aria-label="Remove line"
+                                  onClick={() => removeLine(line.id)}
+                                >
+                                  <FiX className="h-4 w-4 shrink-0" aria-hidden />
+                                </button>
+                              ) : (
+                                <span className="inline-block h-8 w-8 shrink-0" aria-hidden />
+                              )}
+                            </div>
+                          </td>
+                        </>
+                      ) : (
+                        <td className={LINE_CELL}>
+                          <div className="flex min-w-0 items-center">
+                            <input
+                              type="text"
+                              inputMode="decimal"
+                              value={line.price}
+                              onChange={(e) => updateLine(line.id, { price: e.target.value })}
+                              className={`${CELL_INPUT} min-w-0 flex-1 text-right tabular-nums`}
+                              aria-label="Price"
+                            />
+                            {!isBlankTrail ? (
+                              <button
+                                type="button"
+                                className="inline-flex h-8 w-8 shrink-0 items-center justify-center text-danger hover:bg-danger/10"
+                                title="Remove line"
+                                aria-label="Remove line"
+                                onClick={() => removeLine(line.id)}
+                              >
+                                <FiX className="h-4 w-4 shrink-0" aria-hidden />
+                              </button>
+                            ) : (
+                              <span className="inline-block h-8 w-8 shrink-0" aria-hidden />
+                            )}
+                          </div>
+                        </td>
+                      )}
+                    </>
+                  ) : (
+                    <td className={`${LINE_CELL} text-center`}>
+                      {!isBlankTrail ? (
+                        <button
+                          type="button"
+                          className="inline-flex h-8 w-8 shrink-0 items-center justify-center text-danger hover:bg-danger/10"
+                          title="Remove line"
+                          aria-label="Remove line"
+                          onClick={() => removeLine(line.id)}
+                        >
+                          <FiX className="h-4 w-4 shrink-0" aria-hidden />
+                        </button>
+                      ) : (
+                        <span className="inline-block h-8 w-8 shrink-0" aria-hidden />
+                      )}
+                    </td>
+                  )}
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+      {!hidePrices ? (
+        <div className="flex items-center justify-end gap-2 border-t border-solid border-[hsl(var(--title)/0.35)] bg-muted/40 px-1 py-0.5 text-sm font-semibold dark:border-[hsl(var(--title)/0.4)]">
+          <span className="font-bold text-title">{totalLabel}</span>
+          <input
+            readOnly
+            value={formatMoney(total)}
+            className={`${CELL_INPUT_MUTED} !h-8 !w-32 text-right font-semibold tabular-nums`}
+          />
+        </div>
+      ) : (
+        <div className="flex items-center justify-end gap-2 border-t border-solid border-[hsl(var(--title)/0.35)] bg-muted/40 px-2 py-1 text-xs text-secondary dark:border-[hsl(var(--title)/0.4)]">
+          <span>Pricing hidden for employee role</span>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/**
+ * Create/edit Service Proposal modal — dense layout matching legacy screenshot.
+ */
+export default function ServiceProposalFormModal({
+  open,
+  onClose,
+  onSave,
+  onAttachmentsChange,
+  initialForm = null,
+  /** When opened from a search results list — show Previous / Next in modal header center. */
+  searchResultNavigation = null,
+  zIndex = 100,
+  /** `page` = full-screen editor (phone route). `modal` = desktop/tablet dialog. */
+  presentation = "modal",
+}) {
+  const isPage = presentation === "page";
+  /** PC-wide modal: status selects live in the header. Narrower tablets keep them in the body. */
+  const isPcModalWidth = useMediaQuery("(min-width: 1024px)");
+  const statusInModalHeader = !isPage && isPcModalWidth;
+  const alert = useAlert();
+  const confirm = useConfirm();
+  const { user, canViewFinancials } = useAuth();
+  const { settings } = useUserSettings();
+  const formatDate = useFormatDate();
+  const mergedSettings = useMemo(() => mergeUserSettings(settings), [settings]);
+
+  const quoteTypeOptions = useMemo(() => {
+    const fromSettings = productDropdownSelectOptions(mergedSettings, "quote_type", {
+      includeEmpty: false,
+    });
+    return fromSettings.length ? fromSettings : QUOTE_TYPE_OPTIONS;
+  }, [mergedSettings]);
+
+  const [form, setForm] = useState(() => createEmptyServiceProposalForm());
+  const [customers, setCustomers] = useState([]);
+  const [employees, setEmployees] = useState([]);
+  const [loadingCustomers, setLoadingCustomers] = useState(false);
+  const [loadingEmployees, setLoadingEmployees] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [copying, setCopying] = useState(false);
+  const [loadingRecord, setLoadingRecord] = useState(false);
+  /** In-flight fetch while paging records (disables nav, no overlay). */
+  const [pagingRecord, setPagingRecord] = useState(false);
+  const [attachmentsOpen, setAttachmentsOpen] = useState(false);
+  const [commissionOpen, setCommissionOpen] = useState(false);
+  const [commissionCount, setCommissionCount] = useState(0);
+  const [purchaseOrderOpen, setPurchaseOrderOpen] = useState(false);
+  const [purchaseOrderMode, setPurchaseOrderMode] = useState("create");
+  const [purchaseOrderInitialPoId, setPurchaseOrderInitialPoId] = useState("");
+  const [jobPurchaseOrders, setJobPurchaseOrders] = useState([]);
+  const [loadingJobPurchaseOrders, setLoadingJobPurchaseOrders] = useState(false);
+  const [logisticsOpen, setLogisticsOpen] = useState(false);
+  const [logisticsTab, setLogisticsTab] = useState(KIND_RECEIVING);
+  const [addFromInventoryOpen, setAddFromInventoryOpen] = useState(false);
+  const [salesMotorOpen, setSalesMotorOpen] = useState(false);
+  const [printOpen, setPrintOpen] = useState(false);
+  const [printChoiceOpen, setPrintChoiceOpen] = useState(false);
+  const [printStartSend, setPrintStartSend] = useState(false);
+  const [printBundle, setPrintBundle] = useState(null);
+  const [printSendMeta, setPrintSendMeta] = useState(null);
+  const [addCustomerOpen, setAddCustomerOpen] = useState(false);
+  const [newCustomerForm, setNewCustomerForm] = useState(INITIAL_CUSTOMER_FORM);
+  const [savingCustomer, setSavingCustomer] = useState(false);
+  const [datasheetOpen, setDatasheetOpen] = useState(false);
+  const [emailDatasheetOpen, setEmailDatasheetOpen] = useState(false);
+  const [paymentModalOpen, setPaymentModalOpen] = useState(false);
+  const [customerViewOpen, setCustomerViewOpen] = useState(false);
+  /** Skip one initialForm hydrate (Copy & Create New applies its own form snapshot). */
+  const skipHydrateFromInitialRef = useRef(false);
+  /** True after the first successful hydrate while the modal is open (keeps UI stable when paging records). */
+  const hasHydratedRecordRef = useRef(false);
+
+  const formatMoney = useCallback((n) => {
+    const value = Number.isFinite(n) ? n : 0;
+    return `$${value.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  }, []);
+
+  const jobStatusOptions = useMemo(
+    () => workOrderStatusSelectOptionsFromMerged(mergedSettings),
+    [mergedSettings]
+  );
+
+  const statusOptions = useMemo(
+    () => buildCombinedQuoteInvoiceStatusOptions(mergedSettings),
+    [mergedSettings]
+  );
+
+  const invoiceStatusValues = useMemo(() => {
+    return new Set(
+      invoiceStatusSelectOptionsFromMerged(mergedSettings).map((o) => String(o.value || "").trim().toLowerCase())
+    );
+  }, [mergedSettings]);
+
+  const quoteStatusValues = useMemo(() => {
+    return new Set(
+      quoteStatusSelectOptionsFromMerged(mergedSettings).map((o) => String(o.value || "").trim().toLowerCase())
+    );
+  }, [mergedSettings]);
+
+  const quoteStatusOpts = useMemo(
+    () => quoteStatusSelectOptionsFromMerged(mergedSettings),
+    [mergedSettings]
+  );
+  const invoiceStatusOpts = useMemo(
+    () => invoiceStatusSelectOptionsFromMerged(mergedSettings),
+    [mergedSettings]
+  );
+
+  const proposalStatusSelectChrome = useMemo(() => {
+    const raw = String(form.status || "").trim();
+    if (!raw) return { style: undefined, className: "" };
+    const bare = raw.toLowerCase().replace(/^invoice:/, "");
+    const isInvoiceOpt = raw.toLowerCase().startsWith("invoice:");
+    const quoteIdx = quoteStatusOpts.findIndex((o) => String(o.value).toLowerCase() === bare);
+    const invIdx = invoiceStatusOpts.findIndex((o) => String(o.value).toLowerCase() === bare);
+    const useInvoice = isInvoiceOpt || (invIdx >= 0 && quoteIdx < 0);
+    const fallbackIdx = useInvoice ? (invIdx >= 0 ? invIdx : 0) : quoteIdx >= 0 ? quoteIdx : 0;
+    const { tileColor, tileBgColor, tileTextColor, index } = useInvoice
+      ? invoiceStatusTileColorForValue(mergedSettings, bare, fallbackIdx)
+      : quoteStatusTileColorForValue(mergedSettings, bare, fallbackIdx);
+    const pill = resolveStatusTileProps(tileColor, index, { tileBgColor, tileTextColor, tileColor });
+    if (pill.style?.backgroundColor || pill.style?.color) {
+      return {
+        style: {
+          backgroundColor: pill.style.backgroundColor,
+          color: pill.style.color,
+        },
+        className: pill.className || "",
+      };
+    }
+    const hex = presetIndexToHexColors(index);
+    return {
+      style: { backgroundColor: hex.bg, color: hex.text },
+      className: "ring-1 ring-inset border border-border/70 shadow-sm dark:ring-white/15",
+    };
+  }, [form.status, mergedSettings, quoteStatusOpts, invoiceStatusOpts]);
+
+  const jobStatusSelectChrome = useMemo(() => {
+    const current = String(form.jobStatus || "").trim();
+    if (!current) return { style: undefined, className: "" };
+    const idx = jobStatusOptions.findIndex(
+      (o) => String(o.value).toLowerCase() === current.toLowerCase()
+    );
+    const fallbackIdx = idx >= 0 ? idx : 0;
+    const pill = resolveWorkOrderStatusTileProps(
+      current,
+      fallbackIdx,
+      mergedSettings.workOrderStatusTileColors || {}
+    );
+    if (pill.style?.backgroundColor || pill.style?.color) {
+      return {
+        style: {
+          backgroundColor: pill.style.backgroundColor,
+          color: pill.style.color,
+        },
+        className: pill.className || "",
+      };
+    }
+    const hex = presetIndexToHexColors(fallbackIdx);
+    return {
+      style: { backgroundColor: hex.bg, color: hex.text },
+      className: "ring-1 ring-inset border border-border/70 shadow-sm dark:ring-white/15",
+    };
+  }, [form.jobStatus, jobStatusOptions, mergedSettings.workOrderStatusTileColors]);
+
+  const customerOptions = useMemo(
+    () =>
+      customers.map((c) => ({
+        value: c.id,
+        label: c.companyName || c.primaryContactName || c.id,
+      })),
+    [customers]
+  );
+
+  const employeesWithAdmin = useMemo(
+    () => withShopAdminEmployee(employees, user),
+    [employees, user]
+  );
+
+  const preparedByOptions = useMemo(
+    () => buildEmployeeSelectOptions(employeesWithAdmin, form.preparedBy),
+    [employeesWithAdmin, form.preparedBy]
+  );
+
+  const employeeDisplayLabel = useCallback(
+    (raw) => {
+      const id = String(raw || "").trim();
+      if (!id) return "";
+      const fromOpts = preparedByOptions.find((o) => o.value === id);
+      if (fromOpts?.label && fromOpts.label !== "—" && fromOpts.label !== "Unknown employee") {
+        return fromOpts.label;
+      }
+      return resolveEmployeeDisplayName(employeesWithAdmin, id) || id;
+    },
+    [employeesWithAdmin, preparedByOptions]
+  );
+
+  const loadCustomers = useCallback(async () => {
+    setLoadingCustomers(true);
+    try {
+      const list = await fetchAllPaginatedDashboardItems("/api/dashboard/customers");
+      setCustomers(Array.isArray(list) ? list : []);
+    } catch {
+      void alert({ title: "Error", message: "Failed to load customers.", variant: "danger" });
+      setCustomers([]);
+    } finally {
+      setLoadingCustomers(false);
+    }
+  }, [alert]);
+
+  const loadEmployees = useCallback(async () => {
+    setLoadingEmployees(true);
+    try {
+      const list = await fetchAllPaginatedDashboardItems("/api/dashboard/employees");
+      setEmployees(Array.isArray(list) ? list : []);
+    } catch {
+      void alert({ title: "Error", message: "Failed to load employees.", variant: "danger" });
+      setEmployees([]);
+    } finally {
+      setLoadingEmployees(false);
+    }
+  }, [alert]);
+
+  useEffect(() => {
+    if (!open) return;
+    loadCustomers();
+    loadEmployees();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- load lists once per open, not on every record page
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) {
+      setLoadingRecord(false);
+      setPagingRecord(false);
+      hasHydratedRecordRef.current = false;
+      return;
+    }
+    let cancelled = false;
+    setAttachmentsOpen(false);
+    setCommissionOpen(false);
+    setDatasheetOpen(false);
+    setPaymentModalOpen(false);
+
+    if (skipHydrateFromInitialRef.current) {
+      skipHydrateFromInitialRef.current = false;
+      setLoadingRecord(false);
+      setPagingRecord(false);
+      hasHydratedRecordRef.current = true;
+      return;
+    }
+
+    const applyDoc = (doc) => {
+      const next = simpleServiceProposalDocToForm(doc || {});
+      next.status = resolveConfiguredStatusSlug(next.status, mergedSettings) || next.status;
+      next.jobStatus = String(next.jobStatus || "").trim();
+      setForm(next);
+      hasHydratedRecordRef.current = true;
+    };
+
+    (async () => {
+      const id = String(initialForm?.id || "").trim();
+      if (id) {
+        const keepPreviousUi = hasHydratedRecordRef.current;
+        if (!keepPreviousUi) {
+          setLoadingRecord(true);
+          setForm(createEmptyServiceProposalForm());
+        } else {
+          setPagingRecord(true);
+        }
+        try {
+          const item = await fetchSimpleServiceProposal(id);
+          if (!cancelled && item) {
+            applyDoc(item);
+            return;
+          }
+        } catch {
+          /* fall back to list row */
+        } finally {
+          if (!cancelled) {
+            setLoadingRecord(false);
+            setPagingRecord(false);
+          }
+        }
+        if (!cancelled) applyDoc(initialForm || {});
+        return;
+      }
+      if (!cancelled) {
+        setLoadingRecord(false);
+        setPagingRecord(false);
+        applyDoc(initialForm || {});
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+    // Only reset when opening / switching records. Do not depend on loadCustomers/loadEmployees —
+    // stable callbacks keep nested modals open (e.g. after attachment delete).
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional: key on open + record id
+  }, [open, initialForm?.id]);
+
+  /**
+   * Prepared By is free text. If empty, default to the logged-in user once.
+   * If a saved employee id is present, show the name. Never overwrite a typed value with another viewer id.
+   * If Proposal Approved By was stored as an id, show the name.
+   */
+  useEffect(() => {
+    if (!open || !employeesWithAdmin.length) return;
+    setForm((f) => {
+      const existingPreparedBy = String(f.preparedBy || "").trim();
+      const loggedInId = resolveLoggedInEmployeeSelectValue(user, employeesWithAdmin);
+      const loggedInName =
+        resolveEmployeeDisplayName(employeesWithAdmin, loggedInId) ||
+        String(user?.contactName || "").trim() ||
+        String(user?.shopName || "").trim();
+      const preparedBy = existingPreparedBy
+        ? resolveEmployeeDisplayName(employeesWithAdmin, existingPreparedBy) || existingPreparedBy
+        : loggedInName;
+      const approvedRaw = String(f.proposalApprovedBy || "").trim();
+      let proposalApprovedBy = approvedRaw;
+      if (approvedRaw) {
+        const byId = employeesWithAdmin.find(
+          (e) => String(e.id ?? e._id ?? "").trim() === approvedRaw
+        );
+        if (byId) {
+          const name =
+            String(byId.name || "").trim() || String(byId.email || "").trim();
+          if (name) proposalApprovedBy = name;
+        }
+      }
+      if (preparedBy === f.preparedBy && proposalApprovedBy === f.proposalApprovedBy) return f;
+      return { ...f, preparedBy, proposalApprovedBy };
+    });
+  }, [open, employeesWithAdmin, user]);
+
+  /** §14.5 - linked-record context for proposals converted from an 3PhaseTrack RFQ. */
+  const trackLink = useMemo(() => {
+    if (String(form.sourceSystem || "") !== "3PhaseTrack") return null;
+    const version = Number(form.trackProposalVersion) || 0;
+    return {
+      serialNumber: String(form.trackSerialNumber || "").trim(),
+      facilityName: String(form.trackFacilityName || form.companyName || "").trim(),
+      datasheetPrefilled: Boolean(form.trackDatasheetPrefilled),
+      provenance: String(form.trackDatasheetProvenance || "").trim(),
+      powerConflict: Boolean(form.trackDatasheetPowerConflict),
+      sharedPowerType: String(form.trackDatasheetSharedPowerType || "").trim(),
+      machineType: String(form.motorPower || "").trim(),
+      sentLabel: version
+        ? `Proposal sent to the plant (version ${version})`
+        : "Not sent to the plant yet",
+    };
+  }, [
+    form.sourceSystem,
+    form.trackSerialNumber,
+    form.trackFacilityName,
+    form.companyName,
+    form.trackDatasheetPrefilled,
+    form.trackDatasheetProvenance,
+    form.trackDatasheetPowerConflict,
+    form.trackProposalVersion,
+  ]);
+
+  const patch = (key, value) => setForm((f) => ({ ...f, [key]: value }));
+
+  const handleMotorTypeChange = async (nextType) => {
+    const next = resolveMachineType(nextType);
+    if (resolveMachineType(form.motorPower) === next) return;
+    const cleared = {};
+    const holding = [];
+    for (const type of MACHINE_TYPES) {
+      if (type === next) continue;
+      const key = datasheetStorageKey(type);
+      if (datasheetHasData(form[key], type)) {
+        holding.push(type);
+        cleared[key] = null;
+      }
+    }
+    if (holding.length) {
+      const names = holding.join(" and ");
+      const ok = await confirm({
+        title: `Switch to ${next}?`,
+        message: `This will delete the ${names} datasheet data for this job. Do you want to continue?`,
+        confirmLabel: "Continue",
+        variant: "danger",
+      });
+      if (!ok) return;
+      setForm((f) => ({ ...f, motorPower: next, ...cleared }));
+      return;
+    }
+    patch("motorPower", next);
+  };
+
+  const buildActiveDatasheet = (source, meta) => {
+    const type = resolveMachineType(source?.motorPower);
+    if (type === "DC") return buildDcDatasheetFromProposal(source, meta);
+    if (type === "Pump") return buildPumpDatasheetFromProposal(source, meta);
+    if (type === "Generator") return buildGeneratorDatasheetFromProposal(source, meta);
+    return buildAcDatasheetFromProposal(source, meta);
+  };
+
+  const openDatasheet = () => {
+    const companyName =
+      selectedCustomer?.companyName || selectedCustomer?.primaryContactName || "";
+    const meta = {
+      companyName,
+      technicianValue: String(form.preparedBy || "").trim(),
+      technicianLabel: employeeDisplayLabel(form.preparedBy) || "",
+    };
+    const type = resolveMachineType(form.motorPower);
+    const sheet = buildActiveDatasheet(form, meta);
+    setForm((f) => ({
+      ...f,
+      [datasheetStorageKey(type)]: sheet,
+    }));
+    setDatasheetOpen(true);
+  };
+
+  const handleDatasheetSave = async (sheet) => {
+    const type = resolveMachineType(form.motorPower);
+    const nextForm = {
+      ...form,
+      [datasheetStorageKey(type)]: { ...sheet },
+    };
+    setForm(nextForm);
+    // Persist like Receiving / Shipping: keep datasheet modal open after save.
+    const saved = await saveForm(nextForm, {
+      successMessage: "Datasheet saved.",
+    });
+    if (!saved) {
+      throw new Error("Failed to save datasheet");
+    }
+  };
+
+  const applyCustomerContact = (customer, contactKey) => {
+    const contacts = listCustomerJobContacts(customer);
+    const contact = contacts.find((row) => row.key === contactKey) || contacts[0] || null;
+    return {
+      jobContactKey: contact?.key || "",
+      customerEmail: contact?.email || "",
+      customerPhone: contact?.phone || "",
+    };
+  };
+
+  const handleCustomerChange = (customerId) => {
+    const c = customers.find((row) => String(row.id || row._id || "") === String(customerId || "").trim());
+    const taxExempt = c?.taxExempt !== false;
+    const contactFields = applyCustomerContact(c, "primary");
+    setForm((f) => ({
+      ...f,
+      customerId,
+      companyName: String(c?.companyName || c?.primaryContactName || "").trim(),
+      ...contactFields,
+      customerTaxExempt: taxExempt,
+      taxPercent: taxExempt ? "" : String(c?.taxPercent ?? ""),
+    }));
+  };
+
+  const handleJobContactChange = (contactKey) => {
+    const customer = customers.find(
+      (row) => String(row.id || row._id || "") === String(form.customerId || "").trim()
+    );
+    const contactFields = applyCustomerContact(customer, contactKey);
+    setForm((f) => ({
+      ...f,
+      ...contactFields,
+    }));
+  };
+
+  const openAddCustomer = () => {
+    setNewCustomerForm({ ...INITIAL_CUSTOMER_FORM });
+    setAddCustomerOpen(true);
+  };
+
+  const handleAddCustomerSubmit = async (e) => {
+    e.preventDefault();
+    if (!newCustomerForm.companyName?.trim()) {
+      await alert({ title: "Error", message: "Customer is required.", variant: "danger" });
+      return;
+    }
+    setSavingCustomer(true);
+    try {
+      const pendingDocuments = Array.isArray(newCustomerForm.documents) ? newCustomerForm.documents : [];
+      const res = await fetch("/api/dashboard/customers", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify(buildCustomerPayload(newCustomerForm)),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || "Failed to create customer");
+      const saved = data.customer;
+      const id = saved?.id;
+      if (!id) throw new Error("Invalid response");
+      try {
+        await uploadCustomerDocumentFiles(id, pendingDocuments);
+      } catch (uploadErr) {
+        await loadCustomers();
+        setForm((f) => ({
+          ...f,
+          customerId: id,
+          companyName: String(saved.companyName || newCustomerForm.companyName || "").trim(),
+          customerEmail: saved.email || "",
+          customerPhone: saved.phone || "",
+          jobContactKey: "primary",
+          customerTaxExempt: saved.taxExempt !== false,
+          taxPercent: saved.taxExempt !== false ? "" : String(saved.taxPercent ?? ""),
+        }));
+        setAddCustomerOpen(false);
+        setNewCustomerForm({ ...INITIAL_CUSTOMER_FORM });
+        await alert({
+          title: "Customer created",
+          message: `Customer was saved, but document upload failed: ${uploadErr.message || "Upload failed"}`,
+          variant: "danger",
+        });
+        return;
+      }
+      await loadCustomers();
+      setForm((f) => ({
+        ...f,
+        customerId: id,
+        companyName: String(saved.companyName || newCustomerForm.companyName || "").trim(),
+        customerEmail: saved.email || "",
+        customerPhone: saved.phone || "",
+        jobContactKey: "primary",
+        customerTaxExempt: saved.taxExempt !== false,
+        taxPercent: saved.taxExempt !== false ? "" : String(saved.taxPercent ?? ""),
+      }));
+      setAddCustomerOpen(false);
+      setNewCustomerForm({ ...INITIAL_CUSTOMER_FORM });
+      await alert({ title: "Success", message: "Customer added and selected." });
+    } catch (err) {
+      await alert({ title: "Error", message: err.message || "Failed to create customer", variant: "danger" });
+    } finally {
+      setSavingCustomer(false);
+    }
+  };
+
+  const recordId = String(form.id || "").trim();
+  const jobNumber = String(form.documentNumber || "").trim();
+  const canAttach = Boolean(recordId);
+  const canAddCommission = Boolean(recordId);
+  const canCreatePurchaseOrder = Boolean(recordId && jobNumber);
+
+  const refreshJobPurchaseOrders = useCallback(async ({ silent = false } = {}) => {
+    if (!recordId && !jobNumber) {
+      setJobPurchaseOrders([]);
+      return;
+    }
+    if (!silent) setLoadingJobPurchaseOrders(true);
+    try {
+      const items = await listSimplePurchaseOrdersForJobApi(recordId, jobNumber);
+      setJobPurchaseOrders(Array.isArray(items) ? items : []);
+    } catch {
+      setJobPurchaseOrders([]);
+    } finally {
+      if (!silent) setLoadingJobPurchaseOrders(false);
+    }
+  }, [recordId, jobNumber]);
+
+  useEffect(() => {
+    if (!open) {
+      setJobPurchaseOrders([]);
+      setLoadingJobPurchaseOrders(false);
+      return;
+    }
+    // Keep previous PO rows visible while the next record loads (avoids list flicker when paging).
+    void refreshJobPurchaseOrders({ silent: true });
+  }, [open, refreshJobPurchaseOrders]);
+
+  const loadCommissionCount = useCallback(async () => {
+    if (!recordId || !canViewFinancials) {
+      setCommissionCount(0);
+      return;
+    }
+    try {
+      const res = await fetch(
+        `/api/dashboard/sales-commissions?quoteId=${encodeURIComponent(recordId)}`,
+        { credentials: "include", cache: "no-store" }
+      );
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setCommissionCount(0);
+        return;
+      }
+      setCommissionCount(Array.isArray(data.commissions) ? data.commissions.length : 0);
+    } catch {
+      setCommissionCount(0);
+    }
+  }, [recordId, canViewFinancials]);
+
+  useEffect(() => {
+    if (!open) {
+      setCommissionCount(0);
+      return;
+    }
+    void loadCommissionCount();
+  }, [open, loadCommissionCount]);
+
+  const proposalPoTableGroups = useMemo(
+    () => buildProposalPoTableGroups(jobPurchaseOrders),
+    [jobPurchaseOrders]
+  );
+
+  const jobPurchaseOrdersTotal = useMemo(() => {
+    let sum = 0;
+    for (const po of Array.isArray(jobPurchaseOrders) ? jobPurchaseOrders : []) {
+      const totals = computePoFormTotals(po?.lineItems, po?.shippingCharge);
+      sum = roundPoMoney(sum + totals.grandTotal);
+    }
+    return sum;
+  }, [jobPurchaseOrders]);
+
+  const [expandedPoIds, setExpandedPoIds] = useState(() => new Set());
+
+  useEffect(() => {
+    // Keep POs collapsed by default; only drop ids that no longer exist.
+    setExpandedPoIds((prev) => {
+      const valid = new Set(proposalPoTableGroups.map((g) => g.poId));
+      const next = new Set();
+      for (const id of prev) {
+        if (valid.has(id)) next.add(id);
+      }
+      return next;
+    });
+  }, [proposalPoTableGroups]);
+
+  const togglePoExpanded = useCallback((poId) => {
+    const id = String(poId || "").trim();
+    if (!id) return;
+    setExpandedPoIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }, []);
+
+  const openPurchaseOrderCreate = () => {
+    setPurchaseOrderInitialPoId("");
+    setPurchaseOrderMode("create");
+    setPurchaseOrderOpen(true);
+  };
+
+  const openPurchaseOrderView = (poId) => {
+    const id = String(poId || "").trim();
+    if (!id) return;
+    setPurchaseOrderInitialPoId(id);
+    setPurchaseOrderMode("view");
+    setPurchaseOrderOpen(true);
+  };
+
+  const selectedCustomer = useMemo(
+    () => customers.find((c) => c.id === form.customerId) || null,
+    [customers, form.customerId]
+  );
+
+  const jobContacts = useMemo(() => listCustomerJobContacts(selectedCustomer), [selectedCustomer]);
+
+  const jobContactValue = useMemo(() => {
+    if (!jobContacts.length) return "";
+    const saved = String(form.jobContactKey || "").trim();
+    if (jobContacts.some((row) => row.key === saved)) return saved;
+    const email = String(form.customerEmail || "").trim().toLowerCase();
+    const phone = String(form.customerPhone || "").trim();
+    const match = jobContacts.find(
+      (row) => row.email.toLowerCase() === email && row.phone === phone
+    );
+    return match?.key || "";
+  }, [jobContacts, form.jobContactKey, form.customerEmail, form.customerPhone]);
+
+  const datasheetInitial = useMemo(() => {
+    const companyName =
+      selectedCustomer?.companyName || selectedCustomer?.primaryContactName || "";
+    const meta = {
+      companyName,
+      technicianValue: String(form.preparedBy || "").trim(),
+      technicianLabel: employeeDisplayLabel(form.preparedBy) || "",
+    };
+    const type = resolveMachineType(form.motorPower);
+    if (type === "DC") return buildDcDatasheetFromProposal(form, meta);
+    if (type === "Pump") return buildPumpDatasheetFromProposal(form, meta);
+    if (type === "Generator") return buildGeneratorDatasheetFromProposal(form, meta);
+    return buildAcDatasheetFromProposal(form, meta);
+  }, [form, selectedCustomer, employeeDisplayLabel]);
+
+  const datasheetPrintContext = useMemo(
+    () => ({
+      customerName:
+        selectedCustomer?.companyName ||
+        form.companyName ||
+        "",
+      contactName:
+        selectedCustomer?.primaryContactName ||
+        "",
+      companyName:
+        selectedCustomer?.companyName ||
+        form.companyName ||
+        "",
+      customerPhone: String(form.customerPhone || selectedCustomer?.phone || "").trim(),
+      customerEmail: String(form.customerEmail || selectedCustomer?.email || "").trim(),
+      customerPo: String(form.customerPo || "").trim(),
+      documentNumber: String(form.documentNumber || "").trim(),
+      documentLabel: recordTypeJobNumberLabel(form.recordType),
+      jobStatus: form.jobStatus,
+      jobStatusLabel: form.jobStatus,
+    }),
+    [
+      selectedCustomer?.companyName,
+      selectedCustomer?.primaryContactName,
+      selectedCustomer?.phone,
+      selectedCustomer?.email,
+      form.companyName,
+      form.customerPhone,
+      form.customerEmail,
+      form.customerPo,
+      form.documentNumber,
+      form.recordType,
+      form.jobStatus,
+    ]
+  );
+
+  const commissionPreset = useMemo(() => {
+    if (!recordId) return null;
+    const rfqNumber = String(form.documentNumber || "").trim() || recordId;
+    const statusValue = String(form.status || form.jobStatus || "").trim();
+    return {
+      quoteId: recordId,
+      rfqNumber,
+      customerName:
+        selectedCustomer?.companyName ||
+        selectedCustomer?.primaryContactName ||
+        "—",
+      jobStatus: statusValue || "—",
+      statusLabel: resolveQuoteInvoiceStatusDisplayLabel(statusValue, mergedSettings),
+    };
+  }, [
+    recordId,
+    form.documentNumber,
+    form.status,
+    form.jobStatus,
+    selectedCustomer,
+    mergedSettings,
+  ]);
+
+  const saveForm = async (nextForm, { successMessage, silent = false } = {}) => {
+    const payload = nextForm || form;
+    if (!payload.customerId) {
+      await alert({ title: "Error", message: "Select a customer.", variant: "danger" });
+      return null;
+    }
+    setSaving(true);
+    try {
+      const recordType = resolveRecordTypeOnSave(
+        payload.recordType,
+        payload.status,
+        invoiceStatusValues,
+        quoteStatusValues
+      );
+      const withType = { ...payload, recordType };
+      const saved = await onSave?.(withType);
+      const savedId = String(saved?.id || withType.id || "").trim();
+      const merged = {
+        ...withType,
+        id: savedId || withType.id || "",
+        documentNumber: saved?.documentNumber ?? withType.documentNumber,
+        attachments: Array.isArray(saved?.attachments)
+          ? saved.attachments
+          : Array.isArray(withType.attachments)
+            ? withType.attachments
+            : [],
+      };
+      setForm((f) => ({
+        ...f,
+        ...merged,
+        attachments: Array.isArray(saved?.attachments)
+          ? saved.attachments
+          : Array.isArray(f.attachments)
+            ? f.attachments
+            : merged.attachments,
+      }));
+      const message =
+        successMessage ||
+        (recordType === RECORD_TYPE_INVOICE ? "Invoice saved." : "Service proposal saved.");
+      if (!silent) {
+        await alert({ title: "Saved", message });
+      }
+      return merged;
+    } catch (err) {
+      await alert({ title: "Error", message: err?.message || "Failed to save service proposal", variant: "danger" });
+      return null;
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    await saveForm(form);
+  };
+
+  const handleConvertRecordType = async (nextType) => {
+    if (saving || copying) return;
+    const next = String(nextType || "").toUpperCase();
+    if (next !== RECORD_TYPE_JOB && next !== RECORD_TYPE_RFQ) return;
+    if (form.recordType === next) return;
+    await saveForm(
+      { ...form, recordType: next },
+      {
+        successMessage:
+          next === RECORD_TYPE_JOB
+            ? "Converted to Job and saved."
+            : "Converted to RFQ and saved.",
+      }
+    );
+  };
+
+  const handleAttached = (attachment, nextAttachments) => {
+    setForm((f) => ({ ...f, attachments: nextAttachments }));
+    if (recordId) onAttachmentsChange?.(recordId, nextAttachments);
+  };
+
+  const handleDiagramsChange = (nextDiagrams) => {
+    setForm((f) => ({
+      ...f,
+      jobDiagrams: Array.isArray(nextDiagrams) ? nextDiagrams : [],
+    }));
+  };
+
+  const handleSaveCmCalculation = async (snapshot) => {
+    const nextForm = { ...form, cmCalculation: snapshot };
+    setForm(nextForm);
+    const saved = await saveForm(nextForm, {
+      successMessage: "Circular mills result saved to this job.",
+    });
+    return Boolean(saved);
+  };
+
+  const handleCopyCreateNew = async () => {
+    if (!form.customerId) {
+      await alert({ title: "Error", message: "Select a customer before copying.", variant: "danger" });
+      return;
+    }
+    const ok = await confirm({
+      title: "Copy & create new?",
+      message:
+        "This creates a new RFQ from the current record (new document number). Datasheet data and diagrams are copied to the new job. Attachments are not copied. Continue?",
+      confirmLabel: "Copy & Create New",
+      cancelLabel: "Cancel",
+    });
+    if (!ok) return;
+
+    setCopying(true);
+    // Never leave Send/Print pointing at the previous job.
+    setPrintOpen(false);
+    setPrintStartSend(false);
+    setPrintBundle(null);
+    setPrintSendMeta(null);
+    setDatasheetOpen(false);
+    skipHydrateFromInitialRef.current = true;
+
+    const sourceDiagrams = normalizeJobDiagrams(form.jobDiagrams, form.jobDiagram);
+
+    try {
+      const cloned = cloneServiceProposalAsNewRfq(form);
+      const saved = await onSave?.(cloned, { forceNew: true });
+      const savedId = String(saved?.id || "").trim();
+      if (!savedId) throw new Error("Failed to create copied record");
+
+      const newDocNumber = String(saved.documentNumber || saved.quote || "").trim();
+      let nextAc = syncDatasheetJobNumber(cloned.acDatasheet, newDocNumber);
+      let nextDc = syncDatasheetJobNumber(cloned.dcDatasheet, newDocNumber);
+      let nextPump = syncDatasheetJobNumber(cloned.pumpDatasheet, newDocNumber);
+      let nextGenerator = syncDatasheetJobNumber(cloned.generatorDatasheet, newDocNumber);
+      let nextDiagrams = [];
+
+      if (sourceDiagrams.length) {
+        try {
+          for (const sourceDiagram of sourceDiagrams) {
+            if (!sourceDiagram?.url) continue;
+            const imgRes = await fetch(sourceDiagram.url, { credentials: "include", cache: "no-store" });
+            if (!imgRes.ok) throw new Error("Could not read source diagram");
+            const blob = await imgRes.blob();
+            const fd = new FormData();
+            fd.append("file", blob, "job-diagram.png");
+            fd.append("documentName", sourceDiagram.name || "Job diagram");
+            fd.append("templateId", sourceDiagram.templateId || "");
+            fd.append("templateName", sourceDiagram.templateName || "");
+            const up = await fetch(`/api/dashboard/simple-service-proposals/${savedId}/diagrams`, {
+              method: "POST",
+              credentials: "include",
+              body: fd,
+            });
+            const upData = await up.json().catch(() => ({}));
+            if (!up.ok) throw new Error(upData.error || "Failed to copy diagram");
+            nextDiagrams = normalizeJobDiagrams(upData.jobDiagrams, upData.jobDiagram);
+          }
+        } catch (diagramErr) {
+          console.error("Copy diagram failed:", diagramErr);
+          await alert({
+            title: "Diagram not copied",
+            message: diagramErr?.message || "The new RFQ was created, but diagrams could not be copied.",
+            variant: "danger",
+          });
+        }
+      }
+
+      const syncedForm = {
+        ...cloned,
+        id: savedId,
+        documentNumber: newDocNumber,
+        quote: newDocNumber,
+        recordType: RECORD_TYPE_RFQ,
+        attachments: [],
+        jobDiagrams: nextDiagrams,
+        acDatasheet: nextAc,
+        dcDatasheet: nextDc,
+        pumpDatasheet: nextPump,
+        generatorDatasheet: nextGenerator,
+      };
+
+      let applied = syncedForm;
+      // Persist datasheet job # via parent save so the list row stays in sync.
+      try {
+        const persisted = await onSave?.(syncedForm, { forceNew: false });
+        if (persisted?.id) {
+          const persistedNum = String(persisted.documentNumber || persisted.quote || newDocNumber).trim();
+          applied = {
+            ...syncedForm,
+            ...persisted,
+            id: savedId,
+            documentNumber: persistedNum,
+            quote: persistedNum,
+            acDatasheet: syncDatasheetJobNumber(persisted.acDatasheet || nextAc, persistedNum),
+            dcDatasheet: syncDatasheetJobNumber(persisted.dcDatasheet || nextDc, persistedNum),
+            pumpDatasheet: syncDatasheetJobNumber(persisted.pumpDatasheet || nextPump, persistedNum),
+            generatorDatasheet: syncDatasheetJobNumber(
+              persisted.generatorDatasheet || nextGenerator,
+              persistedNum
+            ),
+            jobDiagrams: normalizeJobDiagrams(persisted.jobDiagrams, persisted.jobDiagram).length
+              ? normalizeJobDiagrams(persisted.jobDiagrams, persisted.jobDiagram)
+              : nextDiagrams,
+          };
+        }
+      } catch (persistErr) {
+        console.error("Copy persist datasheet job# failed:", persistErr);
+      }
+
+      try {
+        const fresh = await fetchSimpleServiceProposal(savedId);
+        if (fresh) {
+          const freshNum = String(fresh.documentNumber || fresh.quote || newDocNumber).trim();
+          applied = {
+            ...simpleServiceProposalDocToForm(fresh),
+            acDatasheet: syncDatasheetJobNumber(fresh.acDatasheet || nextAc, freshNum),
+            dcDatasheet: syncDatasheetJobNumber(fresh.dcDatasheet || nextDc, freshNum),
+            pumpDatasheet: syncDatasheetJobNumber(fresh.pumpDatasheet || nextPump, freshNum),
+            generatorDatasheet: syncDatasheetJobNumber(
+              fresh.generatorDatasheet || nextGenerator,
+              freshNum
+            ),
+            jobDiagrams: normalizeJobDiagrams(fresh.jobDiagrams, fresh.jobDiagram).length
+              ? normalizeJobDiagrams(fresh.jobDiagrams, fresh.jobDiagram)
+              : nextDiagrams,
+          };
+        }
+      } catch {
+        /* keep applied */
+      }
+
+      setForm(applied);
+      setPrintOpen(false);
+      setPrintStartSend(false);
+      setPrintBundle(null);
+      setPrintSendMeta(null);
+      setAttachmentsOpen(false);
+      await alert({
+        title: "Copied",
+        message: `Copied as new RFQ${newDocNumber ? ` ${newDocNumber}` : ""}. Datasheet and diagrams are on this new job.`,
+      });
+    } catch (err) {
+      await alert({ title: "Error", message: err?.message || "Failed to copy record", variant: "danger" });
+    } finally {
+      setCopying(false);
+    }
+  };
+
+  const openPrintPreview = async (notesMode, { send = false } = {}) => {
+    if (!canViewFinancials) {
+      setPrintStartSend(false);
+      await alert({
+        title: "Access Restricted",
+        message: "Printing proposals and invoices is restricted for your employee role.",
+        variant: "danger",
+      });
+      return;
+    }
+    if (!form.customerId) {
+      setPrintStartSend(false);
+      await alert({ title: "Error", message: "Select a customer before printing.", variant: "danger" });
+      return;
+    }
+    setPrintStartSend(send);
+    // Always rebuild from the live form so Send/Print never reuse a prior job snapshot.
+    setPrintBundle(null);
+    setPrintSendMeta(null);
+    let customer = customers.find((c) => c.id === form.customerId) || null;
+    try {
+      const res = await fetch(`/api/dashboard/customers/${encodeURIComponent(form.customerId)}`, {
+        credentials: "include",
+        cache: "no-store",
+      });
+      const data = await res.json();
+      if (res.ok && data && typeof data === "object") {
+        customer = { ...(customer || {}), ...data, id: data.id || form.customerId };
+      }
+    } catch {
+      // Keep the list snapshot if the full customer record cannot be loaded.
+    }
+    const bundle = buildSimpleServiceProposalPrintBundle({
+      form,
+      customer,
+      employees: employeesWithAdmin,
+      accountSettings: mergedSettings,
+      user,
+      notesMode,
+    });
+    const toEmail = String(customer?.email || form.customerEmail || "").trim();
+    const toName = String(customer?.primaryContactName || customer?.companyName || "").trim();
+    setPrintBundle(bundle);
+    setPrintSendMeta({
+      toEmail,
+      toName,
+      from: resolveOutboundFromPreview(mergedSettings, user?.shopName || ""),
+      documentLabel: bundle.documentLabel,
+      smtp: getWorkspaceSmtpDeliveryNotice(mergedSettings),
+    });
+    setPrintOpen(true);
+  };
+
+  const scopeTotal = sumLinePrices(form.scopeDetails);
+  const otherTotal = sumOtherLinePrices(form.otherItems);
+  const taxableOtherTotal = sumTaxableOtherLinePrices(form.otherItems);
+  const totalAmount = scopeTotal + otherTotal;
+  const showTax = form.customerTaxExempt === false;
+  const taxPct = showTax
+    ? Number.parseFloat(String(form.taxPercent ?? "").replace(/[^0-9.-]/g, ""))
+    : 0;
+  const taxAmount =
+    showTax && Number.isFinite(taxPct) ? ((scopeTotal + taxableOtherTotal) * taxPct) / 100 : 0;
+  const billingTotal = totalAmount + taxAmount;
+  const invoicePaymentSummary = useMemo(
+    () => computeInvoicePaymentSummary(form.payments, billingTotal),
+    [form.payments, billingTotal]
+  );
+  const displayTitle = recordTypeDisplayTitle(form.recordType, form.proposalType);
+  const docLabel = recordTypeDocumentLabel(form.recordType);
+  const isSalesProposal = normalizeProposalType(form.proposalType) === PROPOSAL_TYPE_SALES;
+
+  const docNumber = String(form.documentNumber || "").trim();
+  const canOpenLogistics = Boolean(form.id && docNumber);
+
+  const openLogistics = (tab = KIND_RECEIVING) => {
+    if (!canOpenLogistics) {
+      void alert({
+        title: "Save required",
+        message: "Save the record with a document number (RFQ# / JOB# / Invoice#) before logging receiving or shipping.",
+        variant: "danger",
+      });
+      return;
+    }
+    setLogisticsTab(tab === KIND_SHIPPING ? KIND_SHIPPING : KIND_RECEIVING);
+    setLogisticsOpen(true);
+  };
+
+  const handleLogisticsSave = async ({ kind, form: logisticsForm }) => {
+    const isReceiving = kind === KIND_RECEIVING;
+    const motorKey = isReceiving ? "motorReceiving" : "motorShipping";
+    const stored = motorLogisticsFormToStored(logisticsForm, kind);
+    const nextOtherItems = applyCustomerLogisticsChargeToOtherItems(form.otherItems, {
+      kind,
+      charges: stored.charges,
+      paidBy: stored.paidBy,
+      chargeBackToClient: stored.chargeBackToClient,
+    });
+    const nextForm = {
+      ...form,
+      [motorKey]: stored,
+      otherItems: nextOtherItems,
+      ...(isReceiving ? {} : { shippingPo: stored.shippingPo || form.shippingPo || "" }),
+    };
+    const saved = await saveForm(nextForm, {
+      successMessage: isReceiving ? "Motor receiving saved." : "Motor shipping saved.",
+    });
+    if (!saved) {
+      throw new Error("Failed to save service proposal");
+    }
+  };
+
+  const handleInvoicePaymentsChange = async (applied) => {
+    const nextStatus = resolveSimpleInvoiceStatusFromPayments({
+      payments: applied.payments,
+      grandTotal: billingTotal,
+      currentStatus: form.status,
+      mergedSettings,
+    });
+    const nextForm = {
+      ...form,
+      payments: applied.payments,
+      invoicePaidDate: applied.invoicePaidDate,
+      status: nextStatus,
+    };
+    setForm(nextForm);
+    if (String(form.id || "").trim() && form.customerId) {
+      await saveForm(nextForm, { silent: true });
+    }
+  };
+
+  const searchNav = searchResultNavigation;
+  const navBusy = saving || copying || loadingRecord || pagingRecord;
+  const showSearchNav = Boolean(searchNav && Number(searchNav.total) > 1);
+  const headerStatusSelects = (
+    <div
+      className={`grid min-w-0 ${
+        statusInModalHeader
+          ? "mr-auto w-2/3 max-w-full grid-cols-[10.25rem_minmax(0,1fr)_minmax(0,2fr)_minmax(0,1fr)] gap-2 sm:gap-3"
+          : "w-full grid-cols-1 gap-3 sm:grid-cols-3"
+      }`}
+    >
+      <div className={statusInModalHeader ? "w-[10.25rem] shrink-0" : "min-w-0"}>
+        <label className={`${FIELD_LABEL} mb-0.5 block w-full !text-left`} htmlFor="sp-date-created">
+          Date
+        </label>
+        <input
+          id="sp-date-created"
+          type="date"
+          value={form.dateCreated}
+          onChange={(e) => patch("dateCreated", e.target.value)}
+          className={`${FIELD_INPUT}${statusInModalHeader ? " !w-[10.25rem] !min-w-0 !max-w-[10.25rem]" : ""}`}
+          aria-label="Date"
+        />
+      </div>
+      <div className="min-w-0">
+        <label className={`${FIELD_LABEL} mb-0.5 block w-full !text-left`} htmlFor="sp-proposal-type">
+          Proposal Type
+        </label>
+        <SimpleSelect
+          id="sp-proposal-type"
+          options={PROPOSAL_TYPE_OPTIONS}
+          value={normalizeProposalType(form.proposalType)}
+          onChange={(e) => {
+            const nextType = e.target.value;
+            patch("proposalType", nextType);
+            if (nextType === PROPOSAL_TYPE_SALES) setSalesMotorOpen(false);
+          }}
+          placeholder="Select…"
+          aria-label="Proposal Type"
+        />
+      </div>
+      <div className="min-w-0">
+        <label className={`${FIELD_LABEL} mb-0.5 block w-full !text-left`} htmlFor="sp-proposal-status">
+          {form.recordType === RECORD_TYPE_INVOICE ? "Invoice Status" : "Proposal Status"}
+        </label>
+        <div
+          className={`min-w-0 rounded-none border border-border ${
+            proposalStatusSelectChrome.className || "bg-primary/[0.04] dark:bg-primary/10"
+          }`.trim()}
+          style={proposalStatusSelectChrome.style}
+        >
+          <SimpleSelect
+            id="sp-proposal-status"
+            options={statusOptions}
+            value={form.status}
+            onChange={(e) => {
+              const nextStatus = e.target.value;
+              setForm((f) => {
+                const nextType = resolveRecordTypeOnSave(
+                  f.recordType,
+                  nextStatus,
+                  invoiceStatusValues,
+                  quoteStatusValues
+                );
+                return { ...f, status: nextStatus, recordType: nextType };
+              });
+            }}
+            placeholder="Select…"
+            searchable
+            triggerClassName="w-full border-0 bg-transparent shadow-none ring-0 dark:bg-transparent !text-[inherit] [&>span]:!text-[inherit] [&>svg]:!text-[inherit]"
+            aria-label={
+              form.recordType === RECORD_TYPE_INVOICE ? "Invoice Status" : "Proposal Status"
+            }
+          />
+        </div>
+      </div>
+      <div className="min-w-0">
+        <label className={`${FIELD_LABEL} mb-0.5 block w-full !text-left`} htmlFor="sp-job-status">
+          Job Status
+        </label>
+        <div
+          className={`min-w-0 rounded-none border border-border ${
+            jobStatusSelectChrome.className || "bg-primary/[0.04] dark:bg-primary/10"
+          }`.trim()}
+          style={jobStatusSelectChrome.style}
+        >
+          <SimpleSelect
+            id="sp-job-status"
+            options={jobStatusOptions}
+            value={form.jobStatus}
+            onChange={(e) => patch("jobStatus", e.target.value)}
+            placeholder="Select…"
+            searchable
+            triggerClassName="w-full border-0 bg-transparent shadow-none ring-0 dark:bg-transparent !text-[inherit] [&>span]:!text-[inherit] [&>svg]:!text-[inherit]"
+            aria-label="Job Status"
+          />
+        </div>
+      </div>
+    </div>
+  );
+  const headerRecordNav =
+    !isPage && showSearchNav ? (
+      <div
+        className="inline-flex shrink-0 items-center rounded-full border border-border bg-bg p-1 shadow-sm dark:bg-card"
+        role="navigation"
+        aria-label={searchNav.label || "Records"}
+      >
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="!h-8 !min-h-0 !w-8 !rounded-full !border-0 !bg-transparent !p-0 text-title hover:!bg-primary/10 hover:!text-primary"
+          disabled={navBusy || !searchNav.canPrevious}
+          onClick={() => searchNav.onPrevious?.()}
+          title="Previous"
+          aria-label="Previous"
+        >
+          <FiChevronLeft className="h-4 w-4 shrink-0" aria-hidden />
+        </Button>
+        <span className="min-w-[4.75rem] select-none px-1.5 text-center text-sm font-semibold tabular-nums tracking-wide text-title">
+          <span className="text-primary">{Number(searchNav.currentIndex) + 1}</span>
+          <span className="mx-1 font-normal text-secondary">of</span>
+          <span className="text-secondary">{Number(searchNav.total)}</span>
+        </span>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="!h-8 !min-h-0 !w-8 !rounded-full !border-0 !bg-transparent !p-0 text-title hover:!bg-primary/10 hover:!text-primary"
+          disabled={navBusy || !searchNav.canNext}
+          onClick={() => searchNav.onNext?.()}
+          title="Next"
+          aria-label="Next"
+        >
+          <FiChevronRight className="h-4 w-4 shrink-0" aria-hidden />
+        </Button>
+      </div>
+    ) : null;
+  const headerActions = (
+    <>
+      {headerRecordNav ? <div className="mr-5 shrink-0">{headerRecordNav}</div> : null}
+      {canViewFinancials ? (
+        <>
+          <Button
+            type="button"
+            variant="primary"
+            size="sm"
+            className="text-xs"
+            disabled={saving || copying}
+            title="Send By Email"
+            aria-label="Send By Email"
+            onClick={() => void openPrintPreview(PRINT_NOTES_CUSTOMER, { send: true })}
+          >
+            <FiMail className="h-4 w-4 shrink-0" aria-hidden />
+            Send By Email
+          </Button>
+          <Button
+            type="button"
+            variant="primary"
+            size="sm"
+            className="text-xs"
+            disabled={saving || copying}
+            title="Print"
+            aria-label="Print"
+            onClick={() => setPrintChoiceOpen(true)}
+          >
+            <FiPrinter className="h-4 w-4 shrink-0" aria-hidden />
+            Print
+          </Button>
+        </>
+      ) : null}
+      <Button
+        type="submit"
+        form={FORM_ID}
+        variant="primary"
+        size="sm"
+        className="text-xs"
+        disabled={saving || copying || loadingRecord || pagingRecord}
+      >
+        <FiSave className="h-4 w-4 shrink-0" aria-hidden />
+        {saving ? "Saving…" : "Save"}
+      </Button>
+    </>
+  );
+
+  const formScrollBody = (
+        <div
+          className={`relative min-h-[12rem] min-w-0 max-w-full ${
+            isPage ? "simple-sp-form-page overflow-x-hidden px-4 py-4" : ""
+          }`}
+        >
+          {loadingRecord || copying ? (
+            <div
+              className="absolute inset-0 z-20 bg-card/80 backdrop-blur-[1px]"
+              aria-busy="true"
+              aria-live="polite"
+            >
+              <div className="sticky top-[30%] flex flex-col items-center justify-center gap-2 py-8">
+                <span
+                  className="inline-block h-8 w-8 shrink-0 animate-spin rounded-full border-2 border-border border-t-primary"
+                  aria-hidden
+                />
+                <span className="text-sm font-medium text-title">
+                  {copying ? "Copying…" : "Loading…"}
+                </span>
+              </div>
+            </div>
+          ) : null}
+          <Form
+            id={FORM_ID}
+            onSubmit={handleSubmit}
+            className={`min-w-0 max-w-full !space-y-0 !border-0 !bg-transparent !p-0 !shadow-none${
+              isPage
+                ? " overflow-x-hidden [&_.simple-sp-field]:flex-col [&_.simple-sp-field]:items-stretch"
+                : ""
+            }`}
+            aria-hidden={loadingRecord || copying || undefined}
+          >
+          {!statusInModalHeader ? (
+            <div
+              className={`simple-sp-page-status border-b border-border ${
+                isPage ? "" : "mb-2 pb-2"
+              }`}
+            >
+              {headerStatusSelects}
+            </div>
+          ) : null}
+          {/* Toolbar buttons (status dropdowns are in modal header on PC, or above on phone/tablet) */}
+          <div
+            className={`mb-2 flex flex-wrap gap-1.5 border-b border-border py-1.5 ${
+              isPage
+                ? "simple-sp-page-toolbar items-stretch justify-start"
+                : "items-end justify-start"
+            }`}
+          >
+              {!isPage ? (
+                <div className="flex min-w-0 flex-1 flex-wrap items-end gap-2">
+                  <div className="flex min-w-[16rem] max-w-sm flex-1 flex-col gap-0.5">
+                    <span className="text-left text-xs font-bold text-title">Customer</span>
+                    <div className="flex min-w-0 items-center gap-1">
+                      <button
+                        type="button"
+                        className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded text-primary hover:bg-primary/10 focus:outline-none focus:ring-2 focus:ring-primary disabled:cursor-not-allowed disabled:opacity-40"
+                        title="Open customer"
+                        aria-label="Open customer"
+                        disabled={!String(form.customerId || "").trim()}
+                        onClick={() => setCustomerViewOpen(true)}
+                      >
+                        <FiEye className="h-4 w-4" aria-hidden />
+                      </button>
+                      <div className="min-w-0 flex-1">
+                        <SimpleSelect
+                          options={customerOptions}
+                          value={form.customerId}
+                          onChange={(e) => handleCustomerChange(e.target.value)}
+                          placeholder={loadingCustomers ? "Loading…" : "Select…"}
+                          disabled={loadingCustomers}
+                          searchable
+                          triggerClassName="!h-9"
+                          aria-label="Customer"
+                        />
+                      </div>
+                      <button
+                        type="button"
+                        className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-none border border-border bg-primary text-white hover:opacity-90"
+                        title="Add new customer"
+                        aria-label="Add new customer"
+                        onClick={openAddCustomer}
+                      >
+                        <FiPlus className="h-3.5 w-3.5" aria-hidden />
+                      </button>
+                    </div>
+                  </div>
+                  <label className="flex w-[8.5rem] flex-col gap-0.5">
+                    <span className="text-left text-xs font-bold text-title">
+                      {recordTypeJobNumberLabel(form.recordType)}
+                    </span>
+                    <input
+                      type="text"
+                      value={form.documentNumber}
+                      onChange={(e) => patch("documentNumber", e.target.value)}
+                      className={`${FIELD_INPUT} !h-9 border-primary/40 bg-primary/15 font-semibold text-primary focus:border-primary dark:bg-primary/25 dark:text-primary`}
+                      placeholder="Assigned on save"
+                      aria-label={recordTypeJobNumberLabel(form.recordType)}
+                    />
+                  </label>
+                  <label className="flex w-[11rem] flex-col gap-0.5">
+                    <span className="text-left text-xs font-bold text-title">Customer PO#</span>
+                    <input
+                      type="text"
+                      value={form.customerPo}
+                      onChange={(e) => patch("customerPo", e.target.value)}
+                      className={`${FIELD_INPUT} !h-9`}
+                      aria-label="Customer PO#"
+                    />
+                  </label>
+                  <Button
+                    type="button"
+                    variant="primary"
+                    size="sm"
+                    className={TOOLBAR_BTN}
+                    disabled={
+                      (form.recordType !== RECORD_TYPE_RFQ && form.recordType !== RECORD_TYPE_JOB) ||
+                      saving ||
+                      copying
+                    }
+                    title={
+                      form.recordType === RECORD_TYPE_JOB
+                        ? "Convert this job back to an RFQ"
+                        : "Convert this RFQ to a job"
+                    }
+                    onClick={() =>
+                      handleConvertRecordType(
+                        form.recordType === RECORD_TYPE_JOB ? RECORD_TYPE_RFQ : RECORD_TYPE_JOB
+                      )
+                    }
+                  >
+                    {form.recordType === RECORD_TYPE_JOB ? "Convert Job To RFQ" : "Convert RFQ To Job"}
+                  </Button>
+                </div>
+              ) : null}
+              <Button
+                type="button"
+                variant="primary"
+                size="sm"
+                className={`${TOOLBAR_BTN}${isPage ? " min-w-0 flex-1 basis-[calc(50%-0.25rem)]" : ""}`}
+                disabled={saving || copying}
+                onClick={handleCopyCreateNew}
+              >
+                {copying ? (
+                  <span className="inline-flex items-center gap-1.5">
+                    <span
+                      className="inline-block h-3.5 w-3.5 shrink-0 animate-spin rounded-full border-2 border-white/30 border-t-white"
+                      aria-hidden
+                    />
+                    Copying…
+                  </span>
+                ) : isPage ? (
+                  "Copy new"
+                ) : (
+                  "Copy & Create New"
+                )}
+              </Button>
+              <Button
+                type="button"
+                variant="primary"
+                size="sm"
+                className={`${TOOLBAR_BTN}${isPage ? " min-w-0 flex-1 basis-[calc(50%-0.25rem)]" : ""}`}
+                disabled={!canOpenLogistics || saving || copying}
+                title={
+                  canOpenLogistics
+                    ? "Motor receiving and shipping"
+                    : "Save the record with a document number before receiving / shipping"
+                }
+                onClick={() => openLogistics(KIND_RECEIVING)}
+              >
+                {isPage ? "Ship / Recv" : "Receiving / Shipping"}
+              </Button>
+              <Button
+                type="button"
+                variant="primary"
+                size="sm"
+                className={`${TOOLBAR_BTN}${isPage ? " min-w-0 flex-1 basis-[calc(50%-0.25rem)]" : ""}`}
+                disabled={!canAttach}
+                title={canAttach ? "Add attachments" : "Save the record before adding attachments"}
+                onClick={() => setAttachmentsOpen(true)}
+              >
+                {Array.isArray(form.attachments) && form.attachments.length > 0
+                  ? isPage
+                    ? `Files (${form.attachments.length})`
+                    : `Add Attachments (${form.attachments.length})`
+                  : isPage
+                    ? "Files"
+                    : "Add Attachments"}
+              </Button>
+          </div>
+
+          {trackLink ? (
+            <div className="mb-2 rounded-md border border-primary/30 bg-primary/5 p-2.5">
+              <div className="flex flex-wrap items-center gap-1.5">
+                <Badge variant="primary" className="rounded-full px-2.5 py-0.5 text-xs">
+                  Linked to 3PhaseTrack
+                </Badge>
+                {trackLink.serialNumber ? (
+                  <Badge variant="default" className="rounded-full px-2.5 py-0.5 text-xs">
+                    Serial {trackLink.serialNumber}
+                  </Badge>
+                ) : null}
+                {trackLink.datasheetPrefilled ? (
+                  <Badge variant="success" className="rounded-full px-2.5 py-0.5 text-xs">
+                    Datasheet pre-filled{trackLink.provenance ? ` from ${trackLink.provenance}` : ""}
+                  </Badge>
+                ) : null}
+                {trackLink.powerConflict ? (
+                  <Badge variant="warning" className="rounded-full px-2.5 py-0.5 text-xs">
+                    Shared datasheet is {trackLink.sharedPowerType || "another machine type"}, this machine is {trackLink.machineType || "AC"}. Datasheet was not prefilled.
+                  </Badge>
+                ) : null}
+                {trackLink.sentLabel ? (
+                  <Badge variant="default" className="rounded-full px-2.5 py-0.5 text-xs">
+                    {trackLink.sentLabel}
+                  </Badge>
+                ) : null}
+              </div>
+              <p className="mt-1.5 text-xs text-secondary">
+                Saving keeps this proposal private. Use Customers → Leads to send it to{" "}
+                {trackLink.facilityName || "the plant"}. The serial number belongs to the plant record and
+                cannot be edited here.
+              </p>
+            </div>
+          ) : null}
+
+          {/* Columns: customer/motor | meta | notes + PO lines.
+              Tablet portrait (md): two side-by-side, third full-width below.
+              Desktop (lg+): 25 / 25 / 50 so the PO table has more room. */}
+          <div
+            className={`mb-2 grid min-w-0 max-w-full grid-cols-1 items-start gap-4 pt-3 md:grid-cols-2 md:items-stretch lg:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)_minmax(0,1.75fr)] lg:min-h-[min(28rem,42vh)]${
+              isPage ? " simple-sp-page-columns" : ""
+            }`}
+          >
+            {/* Column 1 */}
+            <div className="flex min-w-0 flex-col gap-2">
+              {isPage ? (
+              <FieldRow
+                label={
+                  <span className="inline-flex items-center justify-end gap-1">
+                    <button
+                      type="button"
+                      className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded text-primary hover:bg-primary/10 focus:outline-none focus:ring-2 focus:ring-primary disabled:cursor-not-allowed disabled:opacity-40"
+                      title="Open customer"
+                      aria-label="Open customer"
+                      disabled={!String(form.customerId || "").trim()}
+                      onClick={() => setCustomerViewOpen(true)}
+                    >
+                      <FiEye className="h-5 w-5" aria-hidden />
+                    </button>
+                    Customer
+                  </span>
+                }
+                labelWidth="7.75rem"
+                controlClassName="min-w-0 flex-1"
+              >
+                <div className="flex min-w-0 items-center gap-1.5">
+                  <div className="min-w-0 flex-1">
+                    <SimpleSelect
+                      options={customerOptions}
+                      value={form.customerId}
+                      onChange={(e) => handleCustomerChange(e.target.value)}
+                      placeholder={loadingCustomers ? "Loading…" : "Select…"}
+                      disabled={loadingCustomers}
+                      searchable
+                      aria-label="Customer"
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-none border border-border bg-primary text-white hover:opacity-90"
+                    title="Add new customer"
+                    aria-label="Add new customer"
+                    onClick={openAddCustomer}
+                  >
+                    <FiPlus className="h-3.5 w-3.5" aria-hidden />
+                  </button>
+                </div>
+              </FieldRow>
+              ) : null}
+              {jobContacts.length > 0 ? (
+                <FieldRow label="Contact" labelWidth="7.75rem" controlClassName="min-w-0 flex-1">
+                  <SimpleSelect
+                    options={jobContacts.map((contact) => ({
+                      value: contact.key,
+                      label: jobContactOptionLabel(contact),
+                    }))}
+                    value={jobContactValue}
+                    onChange={(e) => handleJobContactChange(e.target.value)}
+                    placeholder="Select contact"
+                    searchable
+                    aria-label="Job contact"
+                  />
+                </FieldRow>
+              ) : null}
+              <FieldRow label="Email" labelWidth="7.75rem" controlClassName="min-w-0 flex-1">
+                <input
+                  type="email"
+                  value={form.customerEmail}
+                  onChange={(e) => patch("customerEmail", e.target.value)}
+                  className={FIELD_INPUT}
+                />
+              </FieldRow>
+              <FieldRow label="Phone" labelWidth="7.75rem" controlClassName="min-w-0 flex-1">
+                <input
+                  type="tel"
+                  value={form.customerPhone}
+                  onChange={(e) => patch("customerPhone", e.target.value)}
+                  className={FIELD_INPUT}
+                />
+              </FieldRow>
+              {isSalesProposal ? (
+                <div className="border border-border bg-card">
+                  <button
+                    type="button"
+                    className="flex w-full items-center justify-between px-2 py-1.5 text-left text-xs font-bold text-title hover:bg-primary/5"
+                    aria-expanded={salesMotorOpen}
+                    onClick={() => setSalesMotorOpen((v) => !v)}
+                  >
+                    <span>Motor / machine details (optional)</span>
+                    <span className="text-secondary">{salesMotorOpen ? "Hide" : "Show"}</span>
+                  </button>
+                  {salesMotorOpen ? (
+                    <div className="flex flex-col gap-2 border-t border-border px-2 py-2">
+                      <FieldRow label="Machine Type" labelWidth="7.75rem" controlClassName="min-w-0 flex-1">
+                        <div className="flex flex-wrap items-center gap-x-3 gap-y-1" role="radiogroup" aria-label="Machine type">
+                          {MACHINE_TYPES.map((opt) => (
+                            <label key={opt} className="inline-flex shrink-0 cursor-pointer items-center gap-1.5 text-xs font-bold text-title">
+                              <input
+                                type="radio"
+                                name="motorPower"
+                                value={opt}
+                                checked={resolveMachineType(form.motorPower) === opt}
+                                onChange={() => handleMotorTypeChange(opt)}
+                                className="h-3.5 w-3.5 accent-primary"
+                              />
+                              {opt}
+                            </label>
+                          ))}
+                        </div>
+                      </FieldRow>
+                      <FieldRow label="Datasheet" labelWidth="7.75rem" controlClassName="min-w-0 flex-1">
+                        <div className="flex gap-1.5">
+                          <Button
+                            type="button"
+                            variant="primary"
+                            size="sm"
+                            className={`${TOOLBAR_BTN} flex-1 justify-center !px-3`}
+                            title={`View ${resolveMachineType(form.motorPower)} datasheet`}
+                            onClick={openDatasheet}
+                          >
+                            View Datasheet
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className={`${TOOLBAR_BTN} justify-center !px-3`}
+                            disabled={saving || copying}
+                            title={`Email ${resolveMachineType(form.motorPower)} report to customer`}
+                            onClick={() => setEmailDatasheetOpen(true)}
+                          >
+                            Email Report
+                          </Button>
+                        </div>
+                      </FieldRow>
+                      <FieldRow label="Mfg Name Plate" labelWidth="7.75rem" controlClassName="min-w-0 flex-1">
+                        <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5" role="radiogroup" aria-label="Name plate">
+                          {["Original", "EOM"].map((opt) => (
+                            <label key={opt} className="inline-flex cursor-pointer items-center gap-1.5 text-xs font-bold text-title">
+                              <input
+                                type="radio"
+                                name="namePlate"
+                                value={opt}
+                                checked={form.namePlate === opt}
+                                onChange={() => patch("namePlate", opt)}
+                                className="h-3.5 w-3.5 accent-primary"
+                              />
+                              {opt}
+                            </label>
+                          ))}
+                        </div>
+                      </FieldRow>
+                      {MOTOR_FIELDS.map((field) => (
+                        <FieldRow
+                          key={field.key}
+                          label={proposalMotorFieldLabel(form.motorPower, field.key, field.label)}
+                          labelWidth="7.75rem"
+                          controlClassName="min-w-0 flex-1"
+                        >
+                          <SimpleDoubleClickTextEditInput
+                            label={field.label}
+                            value={form[field.key]}
+                            onChange={(next) => patch(field.key, next)}
+                            className={FIELD_INPUT}
+                            zIndex={160}
+                          />
+                        </FieldRow>
+                      ))}
+                    </div>
+                  ) : null}
+                </div>
+              ) : (
+                <>
+                  <FieldRow label="Machine Type" labelWidth="7.75rem" controlClassName="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1" role="radiogroup" aria-label="Machine type">
+                      {MACHINE_TYPES.map((opt) => (
+                        <label key={opt} className="inline-flex shrink-0 cursor-pointer items-center gap-1.5 text-xs font-bold text-title">
+                          <input
+                            type="radio"
+                            name="motorPower"
+                            value={opt}
+                            checked={resolveMachineType(form.motorPower) === opt}
+                            onChange={() => handleMotorTypeChange(opt)}
+                            className="h-3.5 w-3.5 accent-primary"
+                          />
+                          {opt}
+                        </label>
+                      ))}
+                    </div>
+                  </FieldRow>
+                  <FieldRow label="Datasheet" labelWidth="7.75rem" controlClassName="min-w-0 flex-1">
+                    <div className="flex gap-1.5">
+                      <Button
+                        type="button"
+                        variant="primary"
+                        size="sm"
+                        className={`${TOOLBAR_BTN} flex-1 justify-center !px-3`}
+                        title={`View ${resolveMachineType(form.motorPower)} datasheet`}
+                        onClick={openDatasheet}
+                      >
+                        View Datasheet
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className={`${TOOLBAR_BTN} justify-center !px-3`}
+                        disabled={saving || copying}
+                        title={`Email ${resolveMachineType(form.motorPower)} report to customer`}
+                        onClick={() => setEmailDatasheetOpen(true)}
+                      >
+                        Email Report
+                      </Button>
+                    </div>
+                  </FieldRow>
+                  <FieldRow label="Mfg Name Plate" labelWidth="7.75rem" controlClassName="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5" role="radiogroup" aria-label="Name plate">
+                      {["Original", "EOM"].map((opt) => (
+                        <label key={opt} className="inline-flex cursor-pointer items-center gap-1.5 text-xs font-bold text-title">
+                          <input
+                            type="radio"
+                            name="namePlate"
+                            value={opt}
+                            checked={form.namePlate === opt}
+                            onChange={() => patch("namePlate", opt)}
+                            className="h-3.5 w-3.5 accent-primary"
+                          />
+                          {opt}
+                        </label>
+                      ))}
+                    </div>
+                  </FieldRow>
+                  {MOTOR_FIELDS.map((field) => (
+                    <FieldRow
+                      key={field.key}
+                      label={proposalMotorFieldLabel(form.motorPower, field.key, field.label)}
+                      labelWidth="7.75rem"
+                      controlClassName="min-w-0 flex-1"
+                    >
+                      <SimpleDoubleClickTextEditInput
+                        label={field.label}
+                        value={form[field.key]}
+                        onChange={(next) => patch(field.key, next)}
+                        className={FIELD_INPUT}
+                        zIndex={160}
+                      />
+                    </FieldRow>
+                  ))}
+                </>
+              )}
+            </div>
+
+            {/* Column 2 — meta */}
+            <div className="flex h-full min-w-0 flex-col gap-2">
+              {isPage ? (
+                <>
+              <div className="flex flex-wrap justify-end gap-1 py-1.5">
+                <Button
+                  type="button"
+                  variant="primary"
+                  size="sm"
+                  className={TOOLBAR_BTN}
+                  disabled={
+                    (form.recordType !== RECORD_TYPE_RFQ && form.recordType !== RECORD_TYPE_JOB) ||
+                    saving ||
+                    copying
+                  }
+                  onClick={() =>
+                    handleConvertRecordType(
+                      form.recordType === RECORD_TYPE_JOB ? RECORD_TYPE_RFQ : RECORD_TYPE_JOB
+                    )
+                  }
+                >
+                  {form.recordType === RECORD_TYPE_JOB ? "Convert Job To RFQ" : "Convert RFQ To Job"}
+                </Button>
+              </div>
+              <FieldRow label={docLabel} labelWidth="9.5rem" controlClassName="min-w-0 flex-1">
+                <input
+                  type="text"
+                  value={form.documentNumber}
+                  onChange={(e) => patch("documentNumber", e.target.value)}
+                  className={`${FIELD_INPUT} border-primary/40 bg-primary/15 font-semibold text-primary focus:border-primary dark:bg-primary/25 dark:text-primary`}
+                  placeholder="Assigned on save"
+                />
+              </FieldRow>
+              <FieldRow label="Customer PO#" labelWidth="9.5rem" controlClassName="min-w-0 flex-1">
+                <input
+                  type="text"
+                  value={form.customerPo}
+                  onChange={(e) => patch("customerPo", e.target.value)}
+                  className={FIELD_INPUT}
+                />
+              </FieldRow>
+                </>
+              ) : null}
+              {form.recordType === RECORD_TYPE_INVOICE ? (
+                <FieldRow label="Terms" labelWidth="9.5rem" controlClassName="min-w-0 flex-1">
+                  <input
+                    type="text"
+                    readOnly
+                    value={canViewFinancials ? (String(selectedCustomer?.paymentTerms || "").trim() || "-") : "Restricted"}
+                    className={`${FIELD_INPUT} !bg-muted/40`}
+                    aria-label="Customer payment terms"
+                    title={canViewFinancials ? "From customer record" : "Restricted for employee role"}
+                  />
+                </FieldRow>
+              ) : null}
+              <FieldRow label="Prepared By" labelWidth="9.5rem" controlClassName="min-w-0 flex-1">
+                <input
+                  type="text"
+                  value={form.preparedBy}
+                  onChange={(e) => patch("preparedBy", e.target.value)}
+                  className={FIELD_INPUT}
+                  placeholder="Name…"
+                  aria-label="Prepared By"
+                />
+              </FieldRow>
+              <FieldRow label="Proposal Approved By" labelWidth="9.5rem" controlClassName="min-w-0 flex-1">
+                <input
+                  type="text"
+                  value={form.proposalApprovedBy}
+                  onChange={(e) => patch("proposalApprovedBy", e.target.value)}
+                  className={FIELD_INPUT}
+                  placeholder="Name…"
+                  aria-label="Proposal Approved By"
+                />
+              </FieldRow>
+              <FieldRow label="Lead source" labelWidth="9.5rem" controlClassName="min-w-0 flex-1">
+                <SimpleSelect
+                  options={quoteTypeOptions}
+                  value={form.quoteType}
+                  onChange={(e) => patch("quoteType", e.target.value)}
+                  placeholder="Select…"
+                  aria-label="Lead source"
+                />
+              </FieldRow>
+              <FieldRow label="Proposal Submit Date" labelWidth="9.5rem" controlClassName="min-w-0 flex-1">
+                <input
+                  type="date"
+                  value={form.proposalSubmitDate}
+                  onChange={(e) => patch("proposalSubmitDate", e.target.value)}
+                  className={FIELD_INPUT}
+                />
+              </FieldRow>
+              <FieldRow label="Proposal Accepted Date" labelWidth="9.5rem" controlClassName="min-w-0 flex-1">
+                <input
+                  type="date"
+                  value={form.proposalAcceptedDate}
+                  onChange={(e) => patch("proposalAcceptedDate", e.target.value)}
+                  className={FIELD_INPUT}
+                />
+              </FieldRow>
+              <FieldRow label="Due Date" labelWidth="9.5rem" controlClassName="min-w-0 flex-1">
+                <input
+                  type="date"
+                  value={form.dueDate}
+                  onChange={(e) => patch("dueDate", e.target.value)}
+                  className={FIELD_INPUT}
+                />
+              </FieldRow>
+              {form.recordType === RECORD_TYPE_INVOICE ? (
+                <>
+                  <FieldRow label="Invoice Submit Date" labelWidth="9.5rem" controlClassName="min-w-0 flex-1">
+                    <input
+                      type="date"
+                      value={form.invoiceSubmitDate}
+                      onChange={(e) => patch("invoiceSubmitDate", e.target.value)}
+                      className={FIELD_INPUT}
+                    />
+                  </FieldRow>
+                  {canViewFinancials ? (
+                    <button
+                      type="button"
+                      className="w-full border border-border bg-bg px-3 py-2 text-left text-sm font-semibold text-primary hover:bg-primary/10 disabled:cursor-not-allowed disabled:opacity-60"
+                      onClick={() => setPaymentModalOpen(true)}
+                      disabled={saving || copying}
+                    >
+                      <span className="block">View / Edit Payment Record</span>
+                      <span className="mt-1 block text-base font-bold tabular-nums text-title">
+                        Paid {formatMoney(invoicePaymentSummary.amountPaid)}, balance{" "}
+                        {formatMoney(invoicePaymentSummary.balance)}
+                      </span>
+                    </button>
+                  ) : null}
+                </>
+              ) : null}
+              {recordId ? (
+                <SimpleProposalJobHours recordId={recordId} employees={employeesWithAdmin} />
+              ) : null}
+            </div>
+
+            {/* Column 3 — notes + purchase orders (full width under the first two on tablet) */}
+            <div className="flex min-h-0 min-w-0 flex-col gap-2 md:col-span-2 lg:col-span-1">
+              <div className="flex min-w-0 flex-col gap-1">
+                <span className="text-xs font-bold text-title">Internal Notes</span>
+                <SimpleDoubleClickTextEditTextarea
+                  label="Internal Notes"
+                  rows={2}
+                  value={form.internalNotes}
+                  onChange={(next) => patch("internalNotes", next)}
+                  className={`${FIELD_TEXTAREA} !min-h-[3.25rem] !resize-y`}
+                  aria-label="Internal notes"
+                  zIndex={160}
+                />
+              </div>
+              <div className="flex min-w-0 flex-col gap-1">
+                <span className="text-xs font-bold text-title">Customer Notes</span>
+                <SimpleDoubleClickTextEditTextarea
+                  label="Customer Notes"
+                  rows={2}
+                  value={form.customerNotes}
+                  onChange={(next) => patch("customerNotes", next)}
+                  className={`${FIELD_TEXTAREA} !min-h-[3.25rem] !resize-y`}
+                  aria-label="Customer notes"
+                  zIndex={160}
+                />
+              </div>
+              <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-1.5 border-t border-border pt-2">
+                <div className="flex shrink-0 flex-wrap items-center justify-between gap-2">
+                  <div className="flex min-w-0 flex-wrap items-baseline gap-x-2 gap-y-0.5">
+                    <span className="text-xs font-bold uppercase tracking-wide text-secondary">
+                      Purchase orders
+                    </span>
+                    {canViewFinancials && proposalPoTableGroups.length > 0 ? (
+                      <Badge
+                        variant="primary"
+                        className="rounded-full px-2.5 py-0.5 text-xs font-semibold tabular-nums"
+                        title="Sum of purchase order totals for this job"
+                      >
+                        {formatMoney(jobPurchaseOrdersTotal)}
+                      </Badge>
+                    ) : null}
+                  </div>
+                  <Button
+                    type="button"
+                    variant="primary"
+                    size="sm"
+                    className={TOOLBAR_BTN}
+                    disabled={!canCreatePurchaseOrder || saving || copying}
+                    title={
+                      canCreatePurchaseOrder
+                        ? "Create a new purchase order for this job"
+                        : "Save the record (with JOB# / RFQ#) before creating purchase orders"
+                    }
+                    onClick={openPurchaseOrderCreate}
+                  >
+                    Create New PO
+                  </Button>
+                </div>
+                {loadingJobPurchaseOrders ? (
+                  <p className="flex min-h-[8rem] flex-1 items-center justify-center py-3 text-center text-xs text-secondary">
+                    Loading purchase orders…
+                  </p>
+                ) : proposalPoTableGroups.length === 0 ? (
+                  <p className="flex min-h-[8rem] flex-1 items-center justify-center rounded-sm border border-dashed border-border px-3 py-4 text-center text-xs text-secondary">
+                    {canCreatePurchaseOrder
+                      ? "No purchase orders for this job yet."
+                      : "Save the record with a document number to see purchase orders."}
+                  </p>
+                ) : (
+                  <div className="min-h-0 min-w-0 max-w-full flex-1 overflow-x-auto overflow-y-auto overscroll-x-contain border border-border">
+                    <div
+                      className={`sticky top-0 z-[1] ${canViewFinancials ? PROPOSAL_PO_HEADER_GRID : "grid grid-cols-[1.75rem_minmax(4.25rem,0.9fr)_minmax(4.75rem,1fr)_minmax(3.75rem,0.7fr)_minmax(4.25rem,0.85fr)] gap-x-2"} border-b border-border bg-form-bg px-2 py-1 dark:bg-form-bg ${SIMPLE_TABLE_HEAD}`}
+                    >
+                      <span aria-hidden />
+                      <span>PO#</span>
+                      <span>Vendor</span>
+                      <span>PO Date</span>
+                      <span>PO Status</span>
+                      {canViewFinancials ? <span>PO Payment</span> : null}
+                    </div>
+                    {proposalPoTableGroups.map((group) => {
+                      const poExpanded = expandedPoIds.has(group.poId);
+                      return (
+                      <div
+                        key={group.poId}
+                        className="border-b border-border last:border-b-0"
+                      >
+                        <div
+                          className={`${canViewFinancials ? PROPOSAL_PO_HEADER_GRID : "grid grid-cols-[1.75rem_minmax(4.25rem,0.9fr)_minmax(4.75rem,1fr)_minmax(3.75rem,0.7fr)_minmax(4.25rem,0.85fr)] gap-x-2"} items-center gap-y-1 border-b border-border border-l-[3px] border-l-primary/50 bg-form-bg px-2 py-1.5 dark:border-l-primary/60 dark:bg-form-bg ${SIMPLE_TABLE_TEXT}`}
+                        >
+                          <button
+                            type="button"
+                            className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-none text-secondary hover:bg-primary/10 hover:text-title"
+                            onClick={() => togglePoExpanded(group.poId)}
+                            aria-expanded={poExpanded}
+                            aria-label={
+                              poExpanded
+                                ? `Collapse PO ${group.poNumber}`
+                                : `Expand PO ${group.poNumber}`
+                            }
+                          >
+                            {poExpanded ? (
+                              <FiChevronDown className="h-4 w-4 shrink-0" aria-hidden />
+                            ) : (
+                              <FiChevronRight className="h-4 w-4 shrink-0" aria-hidden />
+                            )}
+                          </button>
+                          <div className="min-w-0">
+                            <button
+                              type="button"
+                              className="block max-w-full truncate text-left font-semibold text-primary hover:underline"
+                              onClick={() => openPurchaseOrderView(group.poId)}
+                              title={`View PO ${group.poNumber}`}
+                            >
+                              {group.poNumber}
+                            </button>
+                          </div>
+                          <div
+                            className="min-w-0 truncate font-semibold text-title"
+                            title={group.vendorName}
+                          >
+                            {group.vendorName}
+                          </div>
+                          <div className="min-w-0 whitespace-nowrap tabular-nums text-title">
+                            {group.poDateRaw
+                              ? formatDate(group.poDateRaw)
+                              : "-"}
+                          </div>
+                          <div className="min-w-0">
+                            <Badge
+                              variant={poReceivingBadgeVariant(group.poStatus)}
+                              className="max-w-full truncate rounded-full px-2 py-0.5 text-[10px]"
+                              title={group.poStatus}
+                            >
+                              {group.poStatus}
+                            </Badge>
+                          </div>
+                          {canViewFinancials ? (
+                            <div className="min-w-0">
+                              <Badge
+                                variant={poPaymentStatusBadgeVariant(group.poPaymentStatus)}
+                                className="max-w-full truncate rounded-full px-2 py-0.5 text-[10px]"
+                                title={group.poPaymentStatus}
+                              >
+                                {group.poPaymentStatus}
+                              </Badge>
+                            </div>
+                          ) : null}
+                        </div>
+                        {poExpanded ? (
+                        group.items.length === 0 ? (
+                          <p className="py-2 pl-4 text-xs text-secondary">No line items</p>
+                        ) : (
+                          <div className="w-full min-w-0 border-l-2 border-border/50 pl-3 pr-1">
+                          <table className={`w-full table-fixed border-collapse ${SIMPLE_TABLE_TEXT}`}>
+                            <colgroup>
+                              {canViewFinancials ? (
+                                <>
+                                  <col className="w-auto" style={{ width: "52%" }} />
+                                  <col style={{ width: "10%" }} />
+                                  <col style={{ width: "16%" }} />
+                                  <col style={{ width: "22%" }} />
+                                </>
+                              ) : (
+                                <>
+                                  <col className="w-auto" style={{ width: "65%" }} />
+                                  <col style={{ width: "15%" }} />
+                                  <col style={{ width: "20%" }} />
+                                </>
+                              )}
+                            </colgroup>
+                            <thead>
+                              <tr className="border-b border-border bg-primary/[0.04] dark:bg-primary/10">
+                                <th className={`border-r border-border px-2 py-1 text-left ${SIMPLE_TABLE_HEAD}`}>
+                                  Item name
+                                </th>
+                                <th className={`border-r border-border px-2 py-1 text-right ${SIMPLE_TABLE_HEAD}`}>
+                                  Qty
+                                </th>
+                                {canViewFinancials ? (
+                                  <th className={`border-r border-border px-2 py-1 text-right ${SIMPLE_TABLE_HEAD}`}>
+                                    Price
+                                  </th>
+                                ) : null}
+                                <th className={`px-2 py-1 text-left ${SIMPLE_TABLE_HEAD}`}>
+                                  Item Status
+                                </th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {group.items.map((row) => (
+                                <tr
+                                  key={row.key}
+                                  className={
+                                    row.inactive
+                                      ? "border-b border-border bg-danger/10 line-through text-secondary last:border-b-0"
+                                      : "border-b border-border bg-card last:border-b-0"
+                                  }
+                                >
+                                  <td
+                                    className="max-w-0 truncate border-r border-border px-2 py-1 text-title"
+                                    title={row.itemName}
+                                  >
+                                    {row.itemName}
+                                  </td>
+                                  <td className="whitespace-nowrap border-r border-border px-2 py-1 text-right tabular-nums text-title">
+                                    {row.qty}
+                                  </td>
+                                  {canViewFinancials ? (
+                                    <td className="whitespace-nowrap border-r border-border px-2 py-1 text-right tabular-nums text-title">
+                                      {row.price == null ? "-" : formatMoney(row.price)}
+                                    </td>
+                                  ) : null}
+                                  <td className="whitespace-nowrap px-2 py-1">
+                                    {row.itemStatus === "—" || row.itemStatus === "-" ? (
+                                      "-"
+                                    ) : (
+                                      <Badge
+                                        variant={poReceivingBadgeVariant(row.itemStatus)}
+                                        className={SIMPLE_BADGE_SM}
+                                      >
+                                        {row.itemStatus}
+                                      </Badge>
+                                    )}
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                          </div>
+                        )
+                        ) : null}
+                      </div>
+                    );
+                    })}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Tables + totals */}
+          <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
+            <LineItemsTable
+              title="PROPOSAL BREAKDOWN (Taxed, if applicable)"
+              lines={form.scopeDetails}
+              onChange={(scopeDetails) => patch("scopeDetails", scopeDetails)}
+              totalLabel="Total For Proposal:"
+              formatMoney={formatMoney}
+              hidePrices={!canViewFinancials}
+              headerAction={
+                canViewFinancials ? (
+                  <Button
+                    type="button"
+                    variant="primary"
+                    size="sm"
+                    className="h-7 !rounded-none px-2 text-[11px]"
+                    disabled={!canAddCommission || saving || copying}
+                    title={
+                      canAddCommission
+                        ? "Add sales commission"
+                        : "Save the record before adding commission"
+                    }
+                    onClick={() => setCommissionOpen(true)}
+                  >
+                    {commissionCount > 0
+                      ? `Add Commission (${commissionCount})`
+                      : "Add Commission"}
+                  </Button>
+                ) : null
+              }
+            />
+            <div className="flex min-w-0 flex-col gap-2">
+              <LineItemsTable
+                title="OTHER ITEMS (NON TAXABLE)"
+                lines={form.otherItems}
+                onChange={(otherItems) => patch("otherItems", otherItems)}
+                totalLabel="Total:"
+                formatMoney={formatMoney}
+                hidePrices={!canViewFinancials}
+                showTaxColumn={showTax}
+                headerAction={
+                  <Button
+                    type="button"
+                    variant="primary"
+                    size="sm"
+                    className="h-7 !rounded-none px-2 text-[11px]"
+                    onClick={() => setAddFromInventoryOpen(true)}
+                  >
+                    <FiPlus className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                    Add From Inventory
+                  </Button>
+                }
+              />
+              {canViewFinancials ? (
+                <div className="ml-auto w-full max-w-xs space-y-1 border border-border bg-card p-2">
+                  <FieldRow
+                    label="Total Amount"
+                    labelWidth="9rem"
+                    labelClassName={SIMPLE_TOTAL_LABEL}
+                  >
+                    <input
+                      readOnly
+                      value={formatMoney(totalAmount)}
+                      className={`${FIELD_INPUT} !h-8 text-right ${SIMPLE_TOTAL_INPUT}`}
+                    />
+                  </FieldRow>
+                  {showTax ? (
+                    <>
+                      <FieldRow
+                        label="Tax%"
+                        labelWidth="9rem"
+                        labelClassName={SIMPLE_TOTAL_LABEL}
+                      >
+                        <input
+                          type="text"
+                          inputMode="decimal"
+                          value={form.taxPercent}
+                          onChange={(e) => patch("taxPercent", e.target.value)}
+                          className={`${FIELD_INPUT} !h-8 text-right ${SIMPLE_TOTAL_INPUT}`}
+                        />
+                      </FieldRow>
+                      <FieldRow
+                        label="Tax Amount"
+                        labelWidth="9rem"
+                        labelClassName={SIMPLE_TOTAL_LABEL}
+                      >
+                        <input
+                          readOnly
+                          value={formatMoney(taxAmount)}
+                          className={`${FIELD_INPUT} !h-8 text-right ${SIMPLE_TOTAL_INPUT}`}
+                        />
+                      </FieldRow>
+                    </>
+                  ) : null}
+                  <FieldRow
+                    label="Total For Billing"
+                    labelWidth="9rem"
+                    labelClassName={SIMPLE_TOTAL_LABEL}
+                  >
+                    <input
+                      readOnly
+                      value={formatMoney(billingTotal)}
+                      className={`${FIELD_INPUT} !h-8 !bg-muted text-right ${SIMPLE_TOTAL_INPUT} dark:!bg-card`}
+                    />
+                  </FieldRow>
+                </div>
+              ) : (
+                <div className="ml-auto flex w-full max-w-xs flex-col items-center justify-center gap-1 border border-border bg-card p-4 text-center">
+                  <Badge variant="warning" className="rounded-full px-2.5 py-0.5 text-xs font-semibold">
+                    Financial Totals Restricted
+                  </Badge>
+                  <p className="text-xs text-secondary">
+                    Pricing, taxes, and billing totals are hidden for this employee role.
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+        </Form>
+        </div>
+  );
+
+  return (
+    <>
+      {isPage ? (
+        <div className="flex h-full min-h-0 w-full min-w-0 max-w-full flex-col overflow-x-hidden overflow-y-hidden bg-bg">
+          <header className="flex min-w-0 shrink-0 items-center gap-2 border-b border-border bg-card px-3 py-2.5">
+            <button
+              type="button"
+              onClick={() => !saving && !copying && onClose?.()}
+              disabled={saving || copying || loadingRecord}
+              className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-none border border-border bg-card text-title hover:bg-primary/10 disabled:opacity-50"
+              aria-label="Back"
+            >
+              <FiArrowLeft className="h-5 w-5" aria-hidden />
+            </button>
+            <h1 className="min-w-0 flex-1">
+              <SimpleDocumentFormTitle>{displayTitle}</SimpleDocumentFormTitle>
+            </h1>
+            <div className="shrink-0 [&_button]:!h-11 [&_button]:!min-h-[2.75rem] [&_button]:!px-4 [&_button]:!text-sm [&_button]:!font-semibold">
+              {headerActions}
+            </div>
+          </header>
+          <div className="min-h-0 min-w-0 max-w-full flex-1 overflow-x-hidden overflow-y-auto overscroll-y-contain pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+            {formScrollBody}
+          </div>
+        </div>
+      ) : (
+        <Modal
+          open={open}
+          onClose={() => !saving && !copying && onClose?.()}
+          title={<SimpleDocumentFormTitle>{displayTitle}</SimpleDocumentFormTitle>}
+          titleClassName={DOCUMENT_FORM_TITLE_CLASS}
+          size="7xl"
+          width="95vw"
+          height="min(94vh, 920px)"
+          zIndex={zIndex}
+          showClose={!saving && !copying}
+          closeOnOutsideClick={false}
+          headerLeading={statusInModalHeader ? headerStatusSelects : undefined}
+          actions={headerActions}
+        >
+          {formScrollBody}
+        </Modal>
+      )}
+
+      <SimpleSalesCommissionModal
+        open={commissionOpen && !!commissionPreset?.quoteId}
+        onClose={() => setCommissionOpen(false)}
+        presetQuote={commissionPreset}
+        onChanged={loadCommissionCount}
+      />
+
+      <SimplePurchaseOrderFormModal
+        open={purchaseOrderOpen}
+        onClose={() => {
+          setPurchaseOrderOpen(false);
+          setPurchaseOrderInitialPoId("");
+        }}
+        serviceProposalId={recordId}
+        jobNumber={jobNumber}
+        mode={purchaseOrderMode}
+        initialPoId={purchaseOrderInitialPoId}
+        hideViewJobButton
+        onSaved={() => {
+          refreshJobPurchaseOrders();
+        }}
+      />
+
+      <SimpleMotorLogisticsModal
+        open={logisticsOpen}
+        onClose={() => setLogisticsOpen(false)}
+        initialTab={logisticsTab}
+        serviceProposalId={recordId}
+        defaultJobNumber={docNumber}
+        defaultReceivingPo={form.motorReceiving?.receivingPo || form.customerPo || ""}
+        defaultInvoiceNumber={docNumber}
+        defaultShippingPo={form.shippingPo || form.customerPo || ""}
+        initialReceiving={form.motorReceiving}
+        initialShipping={form.motorShipping}
+        onSave={handleLogisticsSave}
+        onAttachmentsChange={({ kind, attachments }) => {
+          const motorKey = kind === KIND_SHIPPING ? "motorShipping" : "motorReceiving";
+          setForm((prev) => {
+            const current = prev[motorKey] && typeof prev[motorKey] === "object" ? prev[motorKey] : {};
+            return {
+              ...prev,
+              [motorKey]: { ...current, attachments: Array.isArray(attachments) ? attachments : [] },
+            };
+          });
+        }}
+        customerName={
+          selectedCustomer?.companyName ||
+          selectedCustomer?.primaryContactName ||
+          ""
+        }
+        companyName={user?.shopName || ""}
+        customerEmail={String(form.customerEmail || selectedCustomer?.email || "").trim()}
+        customerPhone={String(form.customerPhone || selectedCustomer?.phone || "").trim()}
+        zIndex={130}
+      />
+
+      <SimpleAddFromInventoryModal
+        open={addFromInventoryOpen}
+        onClose={() => setAddFromInventoryOpen(false)}
+        zIndex={140}
+        showPricing={canViewFinancials}
+        hint="Enter quantity for each part. Price and markup come from inventory and can be edited. Sell price is cost times (1 + markup%)."
+        onAddLines={(newLines) => {
+          const existing = Array.isArray(form.otherItems) ? form.otherItems : [];
+          const filled = existing.filter((line) =>
+            lineHasContent(line, { withUom: true, withQty: true })
+          );
+          const next = [...filled, ...newLines, emptyOtherLine()];
+          patch("otherItems", next);
+        }}
+      />
+
+      <SimpleServiceProposalAttachmentsModal
+        open={attachmentsOpen}
+        onClose={() => setAttachmentsOpen(false)}
+        recordId={recordId || null}
+        attachments={Array.isArray(form.attachments) ? form.attachments : []}
+        onAttached={handleAttached}
+      />
+
+      <Modal
+        open={printChoiceOpen}
+        onClose={() => setPrintChoiceOpen(false)}
+        title="Print"
+        size="md"
+        zIndex={zIndex + 20}
+        bodyClassName="!p-4"
+      >
+        <p className="mb-3 text-sm text-secondary">Choose which version to print.</p>
+        <div className="flex flex-col gap-2">
+          <button
+            type="button"
+            disabled={saving || copying}
+            className="flex w-full items-center gap-3 rounded-md border border-border bg-card px-3 py-3 text-left transition-colors hover:border-primary hover:bg-primary/5 focus:outline-none focus:ring-2 focus:ring-primary disabled:cursor-not-allowed disabled:opacity-50"
+            onClick={() => {
+              setPrintChoiceOpen(false);
+              void openPrintPreview(PRINT_NOTES_INTERNAL);
+            }}
+          >
+            <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
+              <FiPrinter className="h-5 w-5" aria-hidden />
+            </span>
+            <span className="min-w-0">
+              <span className="block text-sm font-semibold text-title">Service Proposal Office View Only</span>
+              <span className="mt-0.5 block text-xs text-secondary">Internal notes and shop details. Not for the customer.</span>
+            </span>
+          </button>
+          <button
+            type="button"
+            disabled={saving || copying}
+            className="flex w-full items-center gap-3 rounded-md border border-border bg-card px-3 py-3 text-left transition-colors hover:border-primary hover:bg-primary/5 focus:outline-none focus:ring-2 focus:ring-primary disabled:cursor-not-allowed disabled:opacity-50"
+            onClick={() => {
+              setPrintChoiceOpen(false);
+              void openPrintPreview(PRINT_NOTES_CUSTOMER);
+            }}
+          >
+            <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
+              <FiEye className="h-5 w-5" aria-hidden />
+            </span>
+            <span className="min-w-0">
+              <span className="block text-sm font-semibold text-title">Service Proposal Customer View</span>
+              <span className="mt-0.5 block text-xs text-secondary">The version the customer receives.</span>
+            </span>
+          </button>
+        </div>
+      </Modal>
+
+      <SimpleServiceProposalPrintPreviewModal
+        open={printOpen}
+        onClose={() => {
+          setPrintOpen(false);
+          setPrintStartSend(false);
+          setPrintBundle(null);
+          setPrintSendMeta(null);
+        }}
+        bundle={printBundle}
+        sendMeta={printSendMeta}
+        startOnSend={printStartSend}
+        title={
+          printBundle?.printNotesMode === PRINT_NOTES_INTERNAL
+            ? "Internal print preview"
+            : "Customer print preview"
+        }
+      />
+
+      <Modal
+        open={addCustomerOpen}
+        onClose={() => !savingCustomer && setAddCustomerOpen(false)}
+        title="Add new customer"
+        size="6xl"
+        width="min(1100px, 96vw)"
+        height="min(84.6vh, 828px)"
+        showClose={!savingCustomer}
+        closeOnOutsideClick={false}
+        actions={
+          <Button
+            type="submit"
+            form={ADD_CUSTOMER_FORM_ID}
+            variant="primary"
+            size="sm"
+            disabled={savingCustomer}
+          >
+            {savingCustomer ? "Saving…" : "Save"}
+          </Button>
+        }
+      >
+        <Form
+          id={ADD_CUSTOMER_FORM_ID}
+          onSubmit={handleAddCustomerSubmit}
+          className="flex min-h-0 flex-col gap-4 !space-y-0 !border-0 !bg-transparent !p-0 !shadow-none"
+        >
+          <SimpleCustomerFormFields form={newCustomerForm} setForm={setNewCustomerForm} />
+        </Form>
+      </Modal>
+
+      <SimpleDatasheetModal
+        open={datasheetOpen}
+        onClose={() => setDatasheetOpen(false)}
+        onSave={handleDatasheetSave}
+        motorType={resolveMachineType(form.motorPower)}
+        initialDatasheet={datasheetInitial}
+        technicianOptions={preparedByOptions}
+        defaultTechnicianValue={String(form.preparedBy || "").trim()}
+        recordId={recordId || null}
+        recordType={form.recordType}
+        attachments={Array.isArray(form.attachments) ? form.attachments : []}
+        onAttached={handleAttached}
+        jobDiagrams={normalizeJobDiagrams(form.jobDiagrams, form.jobDiagram)}
+        onDiagramsChange={handleDiagramsChange}
+        jobStatusOptions={jobStatusOptions}
+        jobStatus={form.jobStatus}
+        onJobStatusChange={(next) => patch("jobStatus", next)}
+        cmCalculation={form.cmCalculation}
+        onSaveCmCalculation={handleSaveCmCalculation}
+        printContext={{
+          customerName:
+            selectedCustomer?.companyName ||
+            form.companyName ||
+            "",
+          contactName:
+            selectedCustomer?.primaryContactName ||
+            "",
+          companyName:
+            selectedCustomer?.companyName ||
+            form.companyName ||
+            "",
+          customerPhone: String(form.customerPhone || selectedCustomer?.phone || "").trim(),
+          customerEmail: String(form.customerEmail || selectedCustomer?.email || "").trim(),
+          customerPo: String(form.customerPo || "").trim(),
+          documentNumber: String(form.documentNumber || "").trim(),
+          documentLabel: recordTypeJobNumberLabel(form.recordType),
+          jobStatus: form.jobStatus,
+        }}
+      />
+
+      {customerViewOpen && String(form.customerId || "").trim() ? (
+      <CustomerViewModal
+        open
+        customerId={String(form.customerId || "").trim()}
+        onClose={() => setCustomerViewOpen(false)}
+        portal="simple"
+        onCustomerUpdated={(customer) => {
+          const cid = String(customer?.id || customer?._id || form.customerId || "").trim();
+          if (!cid) return;
+          setCustomers((prev) => {
+            const idx = prev.findIndex((row) => String(row.id || row._id || "") === cid);
+            if (idx < 0) return [...prev, { ...customer, id: cid }];
+            const next = [...prev];
+            next[idx] = { ...next[idx], ...customer, id: cid };
+            return next;
+          });
+          setForm((current) => {
+            if (String(current.customerId || "") !== cid) return current;
+            const contacts = listCustomerJobContacts({ ...customer, id: cid });
+            const chosen = contacts.find((row) => row.key === String(current.jobContactKey || "").trim());
+            return {
+              ...current,
+              companyName: String(
+                customer?.companyName || customer?.primaryContactName || current.companyName || ""
+              ).trim(),
+              customerEmail: chosen ? chosen.email : (customer?.email ?? current.customerEmail),
+              customerPhone: chosen ? chosen.phone : (customer?.phone ?? current.customerPhone),
+            };
+          });
+        }}
+      />
+      ) : null}
+
+      <SimpleInvoicePaymentModal
+        open={paymentModalOpen && form.recordType === RECORD_TYPE_INVOICE}
+        onClose={() => setPaymentModalOpen(false)}
+        payments={form.payments}
+        grandTotal={billingTotal}
+        customer={selectedCustomer}
+        invoiceNumber={String(form.documentNumber || "").trim()}
+        onChange={(applied) => {
+          void handleInvoicePaymentsChange(applied);
+        }}
+      />
+
+      <SimpleSendDatasheetModal
+        open={emailDatasheetOpen}
+        onClose={() => setEmailDatasheetOpen(false)}
+        motorType={resolveMachineType(form.motorPower)}
+        datasheet={datasheetInitial}
+        printContext={datasheetPrintContext}
+        technicianLabel={employeeDisplayLabel(form.preparedBy) || ""}
+        jobDiagrams={normalizeJobDiagrams(form.jobDiagrams, form.jobDiagram)}
+        attachments={Array.isArray(form.attachments) ? form.attachments : []}
+      />
+    </>
+  );
+}

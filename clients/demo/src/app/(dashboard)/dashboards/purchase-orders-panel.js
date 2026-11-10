@@ -1,0 +1,918 @@
+"use client";
+
+import { useCallback, useEffect, useMemo, useState, useRef } from "react";
+import { useRouter } from "next/navigation";
+import {
+  FiBell,
+  FiCheckCircle,
+  FiClipboard,
+  FiLayers,
+  FiPlus,
+  FiX,
+} from "react-icons/fi";
+import Table from "@/components/ui/table";
+import Badge from "@/components/ui/badge";
+import Button from "@/components/ui/button";
+import StatusFilterPillButton from "@/components/dashboard/status-filter-pill-button";
+import SimplePurchaseOrderFormModal from "@/components/simple/simple-purchase-order-form-modal";
+import SimplePoDueNotificationsModal from "@/components/simple/simple-po-due-notifications-modal";
+import SimpleVendorFormModal from "@/components/simple/simple-vendor-form-modal";
+import { SimpleExpensesModal } from "@/components/simple/simple-expenses-panel";
+import CustomerViewModal from "@/components/dashboard/customer-view-modal";
+import { useSimpleJobView } from "@/components/simple/simple-job-view-context";
+import { useConfirm, useAlert } from "@/components/confirm-provider";
+import { useFinancialAccess } from "@/hooks/use-financial-access";
+import { useFormatDate, usePreferredTablePageSize } from "@/contexts/user-settings-context";
+import { useIsPhone, useIsPhoneForm } from "@/hooks/use-media-query";
+import {
+  SIMPLE_SCREEN_FILTERS_CLASS,
+  SIMPLE_SCREEN_PANEL_CLASS,
+  SIMPLE_SCREEN_TABLE_WRAP_CLASS,
+} from "@/lib/simple-screen-ui";
+import { fetchAllPaginatedDashboardItems } from "@/lib/fetch-all-paginated-dashboard-items";
+import { resolveStatusTileProps } from "@/lib/work-order-status-tiles";
+import { formatSimpleMoney } from "@/lib/simple-service-proposal-form";
+import {
+  hideSimpleRecord,
+  fetchSimplePurchaseOrder,
+  fetchSimplePurchaseOrdersPage,
+} from "@/lib/simple-portal-api";
+import {
+  computePoPaymentSummary,
+  resolvePoStatus,
+  resolveSimplePoType,
+  SIMPLE_PO_TYPE_JOB,
+  SIMPLE_PO_TYPE_SHOP,
+} from "@/lib/simple-purchase-order-form";
+import {
+  normalizePoPaymentStatusKey,
+  poPaymentStatusTileColorForValue,
+  otherStatusTileColorForValue,
+  OTHER_STATUS_ALL,
+} from "@/lib/dropdown-catalog";
+import { useUserSettings } from "@/contexts/user-settings-context";
+import { useSimpleOpenParam } from "@/hooks/use-simple-open-param";
+import { simplePurchaseOrderFormHref } from "@/lib/simple-portal-tabs";
+
+const FILTER_ALL = "";
+const FILTER_PAID = "Paid";
+const FILTER_UNPAID = "Unpaid";
+const FILTER_PARTIAL_PAID = "Partial Paid";
+
+function normalizePaymentStatus(status) {
+  return normalizePoPaymentStatusKey(status);
+}
+
+function paymentStatusBadgeVariant(status) {
+  const s = String(status || "").trim().toLowerCase();
+  if (s === "paid") return "success";
+  if (s.includes("partial")) return "warning";
+  return "default";
+}
+
+function poStatusBadgeVariant(status) {
+  const s = String(status || "").trim().toLowerCase();
+  if (s === "cancelled" || s === "returned") return "danger";
+  if (s === "received") return "success";
+  if (s.includes("partial")) return "warning";
+  return "default";
+}
+
+function paymentFilterIcon(label) {
+  const l = String(label || "").toLowerCase();
+  if (!l || l === "all") return FiLayers;
+  if (l === "paid") return FiCheckCircle;
+  return FiClipboard;
+}
+
+export default function PurchaseOrdersPanel({ createNonce = 0 }) {
+  const alert = useAlert();
+  const confirm = useConfirm();
+  const router = useRouter();
+  const isPhone = useIsPhone();
+  const isPhoneForm = useIsPhoneForm();
+  const { canViewFinancials } = useFinancialAccess();
+  const formatDate = useFormatDate();
+  const { settings: mergedSettings } = useUserSettings();
+  const jobView = useSimpleJobView();
+
+  const [poTypeTab, setPoTypeTab] = useState(SIMPLE_PO_TYPE_JOB);
+  const isJobTab = poTypeTab === SIMPLE_PO_TYPE_JOB;
+  /** Phone: no Job/Shop filter; list every purchase order. */
+  const listPoType = isPhone ? "" : poTypeTab;
+  const showJobColumns = isPhone || isJobTab;
+
+  const [rows, setRows] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [vendorById, setVendorById] = useState({});
+  const [searchQuery, setSearchQuery] = useState("");
+  const [paymentFilter, setPaymentFilter] = useState(FILTER_ALL);
+  const [tableSort, setTableSort] = useState({ key: "poCutDate", direction: "desc" });
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = usePreferredTablePageSize();
+  const [totalCount, setTotalCount] = useState(0);
+  const [paymentBuckets, setPaymentBuckets] = useState([]);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [modalMode, setModalMode] = useState("view");
+  const [editingPo, setEditingPo] = useState(null);
+  const [openVendorId, setOpenVendorId] = useState(null);
+  const [openCustomerId, setOpenCustomerId] = useState(null);
+  const [dueNotificationData, setDueNotificationData] = useState(null);
+  const [dueNotificationLoading, setDueNotificationLoading] = useState(false);
+  const [dueNotificationModalOpen, setDueNotificationModalOpen] = useState(false);
+  const [expensesModalOpen, setExpensesModalOpen] = useState(false);
+  const lastHandledCreateNonceRef = useRef(createNonce);
+  const listRequestRef = useRef(0);
+
+  const fetchDueNotifications = useCallback(async (autoCheck = false) => {
+    try {
+      setDueNotificationLoading(true);
+      const res = await fetch(
+        `/api/dashboard/simple-purchase-orders/due-notifications${autoCheck ? "?autoCheck=1" : ""}`
+      );
+      const data = await res.json();
+      if (data?.ok) {
+        setDueNotificationData(data);
+      }
+    } catch (e) {
+      console.warn("Failed to check due notifications:", e);
+    } finally {
+      setDueNotificationLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    void fetchDueNotifications(true);
+  }, [fetchDueNotifications]);
+
+  const reload = useCallback(async () => {
+    const seq = ++listRequestRef.current;
+    setLoading(true);
+    try {
+      const pageData = await fetchSimplePurchaseOrdersPage({
+        page,
+        pageSize,
+        q: searchQuery,
+        sortBy: tableSort?.key || "poCutDate",
+        sortDir: tableSort?.direction || "desc",
+        paymentStatus: paymentFilter || "",
+        poType: listPoType,
+      });
+      if (seq !== listRequestRef.current) return;
+      setRows(Array.isArray(pageData.items) ? pageData.items : []);
+      setTotalCount(Number(pageData.totalCount) || 0);
+      setPaymentBuckets(Array.isArray(pageData.paymentBuckets) ? pageData.paymentBuckets : []);
+    } catch {
+      if (seq !== listRequestRef.current) return;
+      setRows([]);
+      setTotalCount(0);
+      setPaymentBuckets([]);
+    } finally {
+      if (seq === listRequestRef.current) setLoading(false);
+    }
+  }, [page, pageSize, searchQuery, tableSort, paymentFilter, listPoType]);
+
+  useEffect(() => {
+    void reload();
+  }, [reload]);
+
+  useEffect(() => {
+    setPage(1);
+    setPaymentFilter(FILTER_ALL);
+    setSearchQuery("");
+  }, [poTypeTab]);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const vend = await fetchAllPaginatedDashboardItems("/api/dashboard/vendors");
+        if (cancelled) return;
+        const map = {};
+        for (const v of Array.isArray(vend) ? vend : []) {
+          const id = String(v?.id || "").trim();
+          if (!id) continue;
+          map[id] = {
+            name: String(v.name || v.companyName || "").trim(),
+            phone: String(v.phone || "").trim(),
+          };
+        }
+        setVendorById(map);
+      } catch {
+        if (!cancelled) setVendorById({});
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const phoneFormHref = useCallback(
+    (id = "", type = poTypeTab) => {
+      const base = simplePurchaseOrderFormHref(id);
+      if (!id || id === "new") {
+        const t = type === SIMPLE_PO_TYPE_SHOP ? "shop" : "job";
+        return `${base}?type=${t}`;
+      }
+      return base;
+    },
+    [poTypeTab]
+  );
+
+  const openCreate = useCallback(() => {
+    if (isPhoneForm) {
+      router.push(phoneFormHref("new"));
+      return;
+    }
+    setEditingPo(null);
+    setModalMode("create");
+    setModalOpen(true);
+  }, [isPhoneForm, phoneFormHref, router]);
+
+  useEffect(() => {
+    if (!createNonce) return;
+    if (createNonce === lastHandledCreateNonceRef.current) return;
+    lastHandledCreateNonceRef.current = createNonce;
+    openCreate();
+  }, [createNonce, openCreate]);
+
+  const enrichedRows = useMemo(
+    () =>
+      rows.map((row) => {
+        const vendor = vendorById[String(row.vendorId || "").trim()];
+        const paySummary = computePoPaymentSummary(row.payments, row.grandTotal);
+        const lastPaymentDate =
+          paySummary.paymentStatus === "Unpaid"
+            ? ""
+            : paySummary.latestPaymentDate || String(row.poPaidDate || "").trim().slice(0, 10);
+        return {
+          ...row,
+          vendorName: String(row.vendorName || "").trim() || vendor?.name || "",
+          vendorPhone: String(row.vendorPhone || "").trim() || vendor?.phone || "",
+          poStatus: resolvePoStatus(row.lineItems),
+          lastPaymentDate,
+          paidAmount: paySummary.amountPaid,
+          unpaidAmount: paySummary.balance,
+          paymentStatus: paySummary.paymentStatus || row.paymentStatus || "Unpaid",
+        };
+      }),
+    [rows, vendorById]
+  );
+
+  const paymentSummaryCards = useMemo(() => {
+    const bucketMap = new Map();
+    for (const b of paymentBuckets) {
+      const key = normalizePaymentStatus(b.paymentStatus);
+      const prev = bucketMap.get(key) || { count: 0, amount: 0 };
+      bucketMap.set(key, {
+        count: prev.count + (Number(b.count) || 0),
+        amount: prev.amount + (Number(b.amount) || 0),
+      });
+    }
+    const allCount = [...bucketMap.values()].reduce((s, b) => s + b.count, 0);
+    const allAmount = [...bucketMap.values()].reduce((s, b) => s + b.amount, 0);
+    const statusCards = [FILTER_PAID, FILTER_UNPAID, FILTER_PARTIAL_PAID].map((key) => {
+      const hit = bucketMap.get(key) || { count: 0, amount: 0 };
+      const { tileColor, tileBgColor, tileTextColor, index, label } = poPaymentStatusTileColorForValue(
+        mergedSettings,
+        key
+      );
+      return {
+        key,
+        label: label || key,
+        count: hit.count,
+        amount: hit.amount,
+        tileAppearance: resolveStatusTileProps(tileColor, index, {
+          tileBgColor,
+          tileTextColor,
+          tileColor,
+        }),
+        icon: paymentFilterIcon(key),
+      };
+    });
+    const allTile = otherStatusTileColorForValue(mergedSettings, OTHER_STATUS_ALL, 0);
+    return [
+      {
+        key: FILTER_ALL,
+        label: allTile.label || "All",
+        count: allCount,
+        amount: allAmount,
+        tileAppearance: resolveStatusTileProps(allTile.tileColor, allTile.index, {
+          tileBgColor: allTile.tileBgColor,
+          tileTextColor: allTile.tileTextColor,
+          tileColor: allTile.tileColor,
+        }),
+        icon: paymentFilterIcon(allTile.label || "All"),
+      },
+      ...statusCards,
+    ];
+  }, [paymentBuckets, mergedSettings]);
+
+  const displayRows = enrichedRows;
+
+  const openEdit = useCallback(
+    (row) => {
+      if (!row) return;
+      if (isPhoneForm) {
+        const id = String(row.id || "").trim();
+        if (!id) return;
+        router.push(phoneFormHref(id));
+        return;
+      }
+      setPoTypeTab(resolveSimplePoType(row));
+      setEditingPo(row);
+      setModalMode("edit");
+      setModalOpen(true);
+    },
+    [isPhoneForm, phoneFormHref, router]
+  );
+
+  useSimpleOpenParam({
+    ready: !loading,
+    onOpen: useCallback(
+      async (openId) => {
+        if (isPhoneForm) {
+          router.push(phoneFormHref(openId));
+          return true;
+        }
+        const row = rows.find((r) => String(r.id) === openId);
+        if (row) {
+          openEdit(row);
+          return true;
+        }
+        try {
+          const item = await fetchSimplePurchaseOrder(openId);
+          if (item) {
+            openEdit(item);
+            return true;
+          }
+        } catch {
+          /* ignore */
+        }
+        return true;
+      },
+      [isPhoneForm, openEdit, phoneFormHref, router, rows]
+    ),
+  });
+
+  useSimpleOpenParam({
+    ready: true,
+    paramKey: "openVendor",
+    onOpen: useCallback((vendorId) => {
+      if (vendorId) setOpenVendorId(vendorId);
+      return true;
+    }, []),
+  });
+
+  const closeModal = () => {
+    setModalOpen(false);
+    setEditingPo(null);
+    setModalMode("view");
+    void reload();
+  };
+
+  const handleDelete = useCallback(
+    async (row) => {
+      const ok = await confirm({
+        title: "Remove purchase order",
+        message: `Remove ${row.poNumber || "this purchase order"} from the list? You can open it again in Settings: Deleted.`,
+        confirmLabel: "Remove",
+        variant: "danger",
+      });
+      if (!ok) return;
+      try {
+        await hideSimpleRecord("purchaseOrder", row.id);
+        setRows((prev) => prev.filter((p) => p.id !== row.id));
+        await alert({
+          title: "Removed",
+          message: "Removed from the list. Open Settings: Deleted to view or restore it.",
+        });
+      } catch (err) {
+        await alert({
+          title: "Error",
+          message: err?.message || "Failed to delete purchase order.",
+          variant: "danger",
+        });
+      }
+    },
+    [confirm, alert]
+  );
+
+  const columns = useMemo(
+    () => [
+      {
+        key: "actions",
+        label: "",
+        sortable: false,
+        className: "w-10",
+        render: (_, row) => (
+          <button
+            type="button"
+            className="rounded p-0.5 text-danger hover:bg-danger/10"
+            title="Remove from list"
+            aria-label="Remove from list"
+            onClick={(e) => {
+              e.stopPropagation();
+              handleDelete(row);
+            }}
+          >
+            <FiX className="h-3.5 w-3.5" aria-hidden />
+          </button>
+        ),
+      },
+      {
+        key: "poNumber",
+        label: "PO#",
+        sortable: true,
+        render: (v, row) => (
+          <button
+            type="button"
+            className="font-medium text-primary hover:underline"
+            onClick={() => openEdit(row)}
+          >
+            {v || "-"}
+          </button>
+        ),
+      },
+      ...(showJobColumns
+        ? [
+            {
+              key: "customerName",
+              label: "Customer",
+              sortable: false,
+              phoneHidden: true,
+              render: (v, row) => {
+                const customerId = String(row.customerId || "").trim();
+                const name = String(v || "").trim() || "-";
+                if (!customerId || name === "-") return name;
+                return (
+                  <button
+                    type="button"
+                    className="rounded text-left font-medium text-primary hover:underline focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setOpenCustomerId(customerId);
+                    }}
+                    title="Open customer"
+                  >
+                    {name}
+                  </button>
+                );
+              },
+            },
+            {
+              key: "jobNumber",
+              label: "Job#",
+              sortable: true,
+              render: (v, row) => {
+                const jobLabel = String(v || "").trim() || "-";
+                const proposalId = String(row.serviceProposalId || "").trim();
+                if (!proposalId || jobLabel === "-") return jobLabel;
+                return (
+                  <button
+                    type="button"
+                    className="rounded font-medium text-primary hover:underline focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      jobView?.openJob?.(proposalId);
+                    }}
+                    title="Open service proposal"
+                  >
+                    {jobLabel}
+                  </button>
+                );
+              },
+            },
+          ]
+        : []),
+      {
+        key: "vendorName",
+        label: "Vendor",
+        sortable: true,
+        render: (v, row) => {
+          const vendorId = String(row.vendorId || "").trim();
+          const name = String(v || "").trim() || "-";
+          if (!vendorId || name === "-") return name;
+          return (
+            <button
+              type="button"
+              className="rounded text-left font-medium text-primary hover:underline focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1"
+              onClick={(e) => {
+                e.stopPropagation();
+                setOpenVendorId(vendorId);
+              }}
+              title="Open vendor"
+            >
+              {name}
+            </button>
+          );
+        },
+      },
+      {
+        key: "vendorPhone",
+        label: "Phone",
+        sortable: true,
+        phoneHidden: true,
+        render: (v) => v || "-",
+      },
+      {
+        key: "poCutDate",
+        label: "PO Date",
+        sortable: true,
+        phoneHidden: true,
+        render: (v) => {
+          const text = formatDate(v);
+          return text && text !== "-" ? text : "-";
+        },
+      },
+      {
+        key: "dueDate",
+        label: "Due",
+        sortable: true,
+        render: (v) => {
+          const text = formatDate(v);
+          return text && text !== "-" ? text : "-";
+        },
+      },
+      {
+        key: "poStatus",
+        label: "PO Status",
+        sortable: true,
+        render: (v) => {
+          const label = String(v || "").trim() || "-";
+          if (label === "-") return label;
+          return (
+            <Badge
+              variant={poStatusBadgeVariant(label)}
+              className="rounded-full px-2.5 py-0.5 text-xs"
+            >
+              {label}
+            </Badge>
+          );
+        },
+      },
+      {
+        key: "paymentStatus",
+        label: "Payment",
+        sortable: true,
+        render: (v) => {
+          const raw = String(v || "").trim() || "-";
+          if (raw === "-") return raw;
+          const { tileColor, tileBgColor, tileTextColor, index, label } = poPaymentStatusTileColorForValue(
+            mergedSettings,
+            raw
+          );
+          const pill = resolveStatusTileProps(tileColor, index, {
+            tileBgColor,
+            tileTextColor,
+            tileColor,
+          });
+          const hasCustom = Boolean(tileBgColor || tileTextColor || tileColor);
+          if (hasCustom) {
+            return (
+              <span
+                className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${pill.className}`}
+                style={pill.style}
+              >
+                {label || raw}
+              </span>
+            );
+          }
+          return (
+            <Badge
+              variant={paymentStatusBadgeVariant(raw)}
+              className="rounded-full px-2.5 py-0.5 text-xs"
+            >
+              {label || raw}
+            </Badge>
+          );
+        },
+      },
+      ...(canViewFinancials
+        ? [
+            {
+              key: "grandTotal",
+              label: "Total",
+              sortable: true,
+              align: "right",
+              render: (v) => formatSimpleMoney(Number(v) || 0),
+            },
+            {
+              key: "paidAmount",
+              label: "Paid Amount",
+              sortable: true,
+              align: "right",
+              phoneHidden: true,
+              render: (v) => formatSimpleMoney(Number(v) || 0),
+            },
+            {
+              key: "unpaidAmount",
+              label: "Unpaid Amount",
+              sortable: true,
+              align: "right",
+              phoneHidden: true,
+              render: (v) => formatSimpleMoney(Number(v) || 0),
+            },
+            {
+              key: "lastPaymentDate",
+              label: "Last Payment Date",
+              sortable: true,
+              phoneHidden: true,
+              render: (v) => {
+                const text = formatDate(v);
+                return text && text !== "-" ? text : "-";
+              },
+            },
+          ]
+        : []),
+    ],
+    [canViewFinancials, formatDate, handleDelete, showJobColumns, jobView, mergedSettings]
+  );
+
+  const isCreate = modalMode === "create";
+
+  const emptyMessage =
+    totalCount === 0
+      ? searchQuery.trim()
+        ? isPhone
+          ? "No purchase orders match your search."
+          : `No ${isJobTab ? "job" : "shop"} purchase orders match your search.`
+        : paymentFilter
+          ? isPhone
+            ? `No ${paymentFilter.toLowerCase()} purchase orders.`
+            : `No ${paymentFilter.toLowerCase()} ${isJobTab ? "job" : "shop"} purchase orders.`
+          : isPhone
+            ? "No purchase orders yet. Click Add New to create one."
+            : isJobTab
+              ? "No job purchase orders yet. Create one from a service proposal, or click Add New."
+              : "No shop purchase orders yet. Click Add New to create one."
+      : isPhone
+        ? "No purchase orders yet."
+        : `No ${isJobTab ? "job" : "shop"} purchase orders yet.`;
+
+  const poToolbar = (
+    <div className="simple-po-toolbar flex min-w-0 flex-nowrap items-center gap-1 md:gap-2">
+      <Button
+        type="button"
+        variant="primary"
+        size="sm"
+        className="!h-7 !min-h-0 shrink-0 !rounded-none !px-2 !text-[11px] font-semibold md:!h-9 md:!px-2.5 md:!text-sm"
+        onClick={openCreate}
+      >
+        <FiPlus className="h-3.5 w-3.5 shrink-0 md:h-4 md:w-4" aria-hidden />
+        Add New
+      </Button>
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        className="inline-flex !h-7 !min-h-0 shrink-0 items-center gap-1 !rounded-none !px-2 !text-[11px] font-semibold md:!h-9 md:gap-1.5 md:!px-2.5 md:!text-sm"
+        onClick={() => {
+          setDueNotificationModalOpen(true);
+          void fetchDueNotifications(false);
+        }}
+        title="Purchase order expected delivery due notifications"
+      >
+        <FiBell className="h-3.5 w-3.5 shrink-0 text-secondary md:h-4 md:w-4" aria-hidden />
+        <span className="whitespace-nowrap">Due Alerts</span>
+        {dueNotificationData?.totalCount > 0 ? (
+          <Badge
+            variant={dueNotificationData?.overdueCount > 0 ? "danger" : "warning"}
+            className="ml-0.5 rounded-full px-1 py-0 text-[9px] font-bold md:px-1.5 md:text-[10px]"
+          >
+            {dueNotificationData.totalCount}
+          </Badge>
+        ) : null}
+      </Button>
+    </div>
+  );
+
+  /** Desktop/tablet only. Phone uses the dedicated Expenses bottom-nav tab. */
+  const expensesToolbar =
+    canViewFinancials && !isPhone ? (
+      <Button
+        type="button"
+        variant="primary"
+        size="sm"
+        className="!h-7 !min-h-0 shrink-0 !rounded-none !px-2 !text-[11px] font-semibold md:!h-9 md:!px-2.5 md:!text-sm"
+        onClick={() => setExpensesModalOpen(true)}
+      >
+        Record Expenses
+      </Button>
+    ) : null;
+
+  const listPanel = (
+    <>
+      <div className={`${SIMPLE_SCREEN_FILTERS_CLASS} shrink-0`}>
+        {paymentSummaryCards.map((card) => (
+          <StatusFilterPillButton
+            key={card.key || "__all__"}
+            card={card}
+            active={(paymentFilter || "") === (card.key || "")}
+            onClick={() => {
+              setPage(1);
+              setPaymentFilter(card.key || FILTER_ALL);
+            }}
+            formatAmount={
+              canViewFinancials
+                ? (n) =>
+                    `$${(Number.isFinite(n) ? n : 0).toLocaleString("en-US", {
+                      maximumFractionDigits: 0,
+                    })}`
+                : () => ""
+            }
+          />
+        ))}
+      </div>
+
+      <div className={SIMPLE_SCREEN_TABLE_WRAP_CLASS}>
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+          <Table
+            columns={columns}
+            data={displayRows}
+            rowKey="id"
+            loading={loading}
+            searchable
+            onSearch={(q) => {
+              setPage(1);
+              setSearchQuery(q);
+            }}
+            searchPlaceholder={
+              isPhone
+                ? "Search purchase orders…"
+                : isJobTab
+                  ? "Search job purchase orders…"
+                  : "Search shop purchase orders…"
+            }
+            sortState={tableSort}
+            onSort={(key, direction) => {
+              setPage(1);
+              setTableSort({ key, direction });
+            }}
+            onRefresh={reload}
+            columnSettingsKey={
+              isPhone
+                ? "simple-purchase-orders-all"
+                : isJobTab
+                  ? "simple-purchase-orders-job"
+                  : "simple-purchase-orders-shop"
+            }
+            toolbarBeforeSearch={poToolbar}
+            toolbarBeforeRefresh={expensesToolbar}
+            emptyMessage={emptyMessage}
+            fillHeight
+            responsive
+            dense
+            textSize="xs"
+            stickyColumns
+            paginateClientSide={false}
+            pagination={{ page, pageSize, totalCount }}
+            onPageChange={(nextPage, nextPageSize) => {
+              setPage(nextPage);
+              setPageSize(nextPageSize);
+            }}
+          />
+        </div>
+      </div>
+    </>
+  );
+
+  const typeSwitchBtn =
+    "inline-flex h-7 min-w-0 flex-1 items-center justify-center border-0 px-2 text-[11px] font-bold leading-none tracking-wide transition-colors md:h-8 md:text-xs";
+
+  return (
+    <div className={SIMPLE_SCREEN_PANEL_CLASS}>
+      {!isPhone ? (
+        <div
+          className="mx-auto grid h-7 w-full max-w-[12.5rem] shrink-0 grid-cols-2 overflow-hidden border border-border bg-[hsl(var(--form-bg))] md:mx-0 md:h-8 md:max-w-[14rem]"
+          role="tablist"
+          aria-label="Purchase order type"
+        >
+          <button
+            type="button"
+            role="tab"
+            aria-selected={isJobTab}
+            className={`${typeSwitchBtn} ${
+              isJobTab
+                ? "bg-primary text-white"
+                : "bg-transparent text-secondary hover:bg-primary/10 hover:text-primary"
+            }`}
+            onClick={() => {
+              if (poTypeTab === SIMPLE_PO_TYPE_JOB) return;
+              setPoTypeTab(SIMPLE_PO_TYPE_JOB);
+              setPage(1);
+            }}
+          >
+            Job PO
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={!isJobTab}
+            className={`${typeSwitchBtn} border-l border-border ${
+              !isJobTab
+                ? "bg-primary text-white"
+                : "bg-transparent text-secondary hover:bg-primary/10 hover:text-primary"
+            }`}
+            onClick={() => {
+              if (poTypeTab === SIMPLE_PO_TYPE_SHOP) return;
+              setPoTypeTab(SIMPLE_PO_TYPE_SHOP);
+              setPage(1);
+            }}
+          >
+            Shop PO
+          </button>
+        </div>
+      ) : null}
+
+      <div
+        className={`flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden ${
+          isPhone ? "pt-0" : "pt-2 md:pt-3"
+        }`}
+      >
+        {listPanel}
+      </div>
+
+      <SimplePurchaseOrderFormModal
+        open={modalOpen && (isCreate || !!editingPo)}
+        onClose={closeModal}
+        serviceProposalId={String(editingPo?.serviceProposalId || "").trim()}
+        jobNumber={String(editingPo?.jobNumber || "").trim()}
+        mode={isCreate ? "create" : "edit"}
+        initialPoId={String(editingPo?.id || "").trim()}
+        defaultPoType={isCreate ? poTypeTab : resolveSimplePoType(editingPo)}
+        allowPoTypeChange={false}
+        onSaved={() => reload()}
+      />
+
+      <SimpleVendorFormModal
+        open={!!openVendorId}
+        vendorId={openVendorId}
+        onClose={() => setOpenVendorId(null)}
+        relatedPos={enrichedRows}
+        zIndex={120}
+        onVendorUpdated={(vendor) => {
+          const vid = String(vendor?.id || openVendorId || "").trim();
+          if (!vid) return;
+          setVendorById((prev) => ({
+            ...prev,
+            [vid]: { ...(prev[vid] || {}), ...vendor, id: vid },
+          }));
+          const nextName = String(vendor?.name || "").trim();
+          const nextPhone = String(vendor?.phone || "").trim();
+          if (!nextName && !nextPhone) return;
+          setRows((prev) =>
+            prev.map((r) => {
+              if (String(r.vendorId || "") !== vid) return r;
+              return {
+                ...r,
+                ...(nextName ? { vendorName: nextName } : {}),
+                ...(nextPhone ? { vendorPhone: nextPhone } : {}),
+              };
+            })
+          );
+        }}
+        onPoSaved={() => reload()}
+      />
+
+      <CustomerViewModal
+        open={!!openCustomerId}
+        customerId={openCustomerId}
+        onClose={() => setOpenCustomerId(null)}
+        zIndex={120}
+        portal="simple"
+        onCustomerUpdated={(customer) => {
+          const cid = String(customer?.id || openCustomerId || "").trim();
+          if (!cid) return;
+          const nextName =
+            String(customer?.companyName || "").trim() ||
+            String(customer?.primaryContactName || "").trim();
+          if (!nextName) return;
+          setRows((prev) =>
+            prev.map((r) => {
+              if (String(r.customerId || "") !== cid) return r;
+              return { ...r, customerName: nextName };
+            })
+          );
+        }}
+      />
+
+      <SimpleExpensesModal
+        open={expensesModalOpen}
+        onClose={() => setExpensesModalOpen(false)}
+      />
+
+      <SimplePoDueNotificationsModal
+        open={dueNotificationModalOpen}
+        onClose={() => setDueNotificationModalOpen(false)}
+        data={dueNotificationData}
+        loading={dueNotificationLoading}
+        onRefresh={() => fetchDueNotifications(false)}
+        onOpenPo={(po) => {
+          const found = rows.find((r) => String(r.id) === String(po.id));
+          openEdit(found || po);
+        }}
+      />
+    </div>
+  );
+}

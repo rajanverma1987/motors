@@ -1,0 +1,183 @@
+/** Client-safe SMTP field normalization (no nodemailer). */
+
+export const WORKSPACE_SMTP_DEFAULTS = {
+  smtpEnabled: false,
+  smtpHost: "",
+  smtpPort: 587,
+  smtpSecure: false,
+  smtpUser: "",
+  smtpPassword: "",
+  smtpFromEmail: "",
+  smtpFromName: "",
+};
+
+/** @param {number} port @param {boolean} smtpSecure */
+export function resolveWorkspaceSmtpSecure(port, smtpSecure) {
+  const p = Number(port) || 587;
+  if (p === 465) return true;
+  if (p === 587 || p === 25 || p === 2525) return false;
+  return smtpSecure === true;
+}
+
+/** @param {string} host */
+export function validateWorkspaceSmtpHost(host) {
+  const h = String(host || "").trim();
+  if (!h) return "SMTP host is required.";
+  if (h.includes("@")) {
+    return "SMTP host must be a server name (e.g. smtp.gmail.com or mail.yourshop.com), not an email address. Put your email in SMTP username and From email.";
+  }
+  if (/\s/.test(h)) {
+    return "SMTP host cannot contain spaces.";
+  }
+  return null;
+}
+
+/** @param {unknown} err */
+export function humanizeSmtpConnectionError(err) {
+  const msg = String(err?.message || err || "").trim();
+  if (!msg) return "SMTP connection failed.";
+  if (msg.includes("ENOTFOUND") || msg.includes("getaddrinfo")) {
+    return "Could not find the SMTP server. SMTP host must be a server name like smtp.gmail.com or mail.yourshop.com — not your email address.";
+  }
+  if (msg.includes("wrong version number") || msg.includes("0A00010B")) {
+    return "SSL/TLS settings do not match the port. Use port 587 with “Use SSL/TLS” off (STARTTLS), or port 465 with it on.";
+  }
+  if (msg.includes("ECONNREFUSED")) {
+    return "Could not connect to the SMTP server. Check the host and port.";
+  }
+  if (msg.includes("Invalid login") || msg.includes("authentication failed") || msg.includes("535")) {
+    return "SMTP login failed. Check username and password (use an app password if your provider requires it).";
+  }
+  return msg.length > 220 ? `${msg.slice(0, 220)}…` : msg;
+}
+
+/** @param {unknown} raw */
+export function normalizeWorkspaceSmtpFields(raw) {
+  const s = raw && typeof raw === "object" && !Array.isArray(raw) ? raw : {};
+  const portNum = Number(s.smtpPort);
+  const port = Number.isFinite(portNum) && portNum > 0 && portNum <= 65535 ? Math.round(portNum) : 587;
+  const smtpSecure = resolveWorkspaceSmtpSecure(port, s.smtpSecure === true);
+  const smtpPassword = String(s.smtpPassword ?? "");
+  return {
+    smtpEnabled: s.smtpEnabled === true,
+    smtpHost: String(s.smtpHost ?? "").trim().slice(0, 255),
+    smtpPort: port,
+    smtpSecure,
+    smtpUser: String(s.smtpUser ?? "").trim().slice(0, 255),
+    smtpPassword,
+    smtpFromEmail: String(s.smtpFromEmail ?? "").trim().slice(0, 255).toLowerCase(),
+    smtpFromName: String(s.smtpFromName ?? "").trim().slice(0, 120),
+    smtpPasswordConfigured:
+      Boolean(String(smtpPassword || "").trim()) || s.smtpPasswordConfigured === true,
+  };
+}
+
+function workspaceSmtpHasPassword(cfg) {
+  return Boolean(String(cfg?.smtpPassword || "").trim()) || cfg?.smtpPasswordConfigured === true;
+}
+
+/** True when transport can be created (needs the actual password secret). */
+export function workspaceSmtpIsComplete(cfg) {
+  if (!cfg?.smtpEnabled) return false;
+  if (!cfg.smtpHost || !cfg.smtpUser || !cfg.smtpFromEmail) return false;
+  if (!String(cfg.smtpPassword || "").trim()) return false;
+  return true;
+}
+
+/**
+ * True when send UI can treat SMTP as ready. Client settings strip smtpPassword
+ * and only expose smtpPasswordConfigured.
+ */
+export function workspaceSmtpIsReadyForSendUi(cfg) {
+  if (!cfg?.smtpEnabled) return false;
+  if (!cfg.smtpHost || !cfg.smtpUser || !cfg.smtpFromEmail) return false;
+  return workspaceSmtpHasPassword(cfg);
+}
+
+/**
+ * SMTP delivery status for customer/vendor email preview and send UI.
+ * @param {object} mergedSettings
+ * @returns {{ status: "ready" | "not_configured" | "incomplete", message: string | null, canSend: boolean }}
+ */
+export function getWorkspaceSmtpDeliveryNotice(mergedSettings) {
+  const smtp = normalizeWorkspaceSmtpFields(mergedSettings);
+  if (workspaceSmtpIsReadyForSendUi(smtp)) {
+    return { status: "ready", message: null, canSend: true };
+  }
+  if (smtp.smtpEnabled) {
+    return {
+      status: "incomplete",
+      message:
+        "Workspace SMTP is enabled but incomplete. Open Settings → Email Settings and save host, username, password, and from email before sending.",
+      canSend: false,
+    };
+  }
+  return {
+    status: "not_configured",
+    message:
+      "Workspace SMTP is not set up. This email will be sent from 3PhaseFlow. Go to Settings → Email Settings to send from your shop address.",
+    canSend: true,
+  };
+}
+
+/**
+ * Merge request body over stored settings for test/save.
+ * @param {object} body
+ * @param {object} stored merged settings including password
+ */
+export function mergeWorkspaceSmtpPatch(body, stored) {
+  const base = normalizeWorkspaceSmtpFields(stored);
+  const patch = normalizeWorkspaceSmtpFields(body);
+  const passwordIncoming = body?.smtpPassword;
+  const keepPassword =
+    passwordIncoming === undefined ||
+    passwordIncoming === null ||
+    String(passwordIncoming).trim() === "";
+  const smtpPassword = keepPassword ? base.smtpPassword : String(passwordIncoming);
+  return {
+    ...base,
+    ...patch,
+    smtpPassword,
+    smtpPasswordConfigured: Boolean(String(smtpPassword || "").trim()),
+  };
+}
+
+/** Strip password before sending settings to the browser. */
+export function userSettingsForClient(stored) {
+  const s = stored && typeof stored === "object" && !Array.isArray(stored) ? stored : {};
+  const smtp = normalizeWorkspaceSmtpFields(s);
+  return {
+    ...s,
+    ...WORKSPACE_SMTP_DEFAULTS,
+    ...smtp,
+    smtpPassword: "",
+    smtpPasswordConfigured: Boolean(String(smtp.smtpPassword || "").trim()),
+  };
+}
+
+/** @param {Record<string, unknown>} body */
+export function sanitizeWorkspaceSmtpPatch(body) {
+  if (!body || typeof body !== "object") return {};
+  const out = {};
+  if (typeof body.smtpEnabled === "boolean") out.smtpEnabled = body.smtpEnabled;
+  if (body.smtpHost !== undefined) out.smtpHost = String(body.smtpHost ?? "").trim().slice(0, 255);
+  if (body.smtpPort !== undefined) {
+    const portNum = Number(body.smtpPort);
+    if (Number.isFinite(portNum) && portNum > 0 && portNum <= 65535) {
+      out.smtpPort = Math.round(portNum);
+    }
+  }
+  if (typeof body.smtpSecure === "boolean") out.smtpSecure = body.smtpSecure;
+  if (body.smtpUser !== undefined) out.smtpUser = String(body.smtpUser ?? "").trim().slice(0, 255);
+  if (body.smtpFromEmail !== undefined) {
+    out.smtpFromEmail = String(body.smtpFromEmail ?? "").trim().slice(0, 255).toLowerCase();
+  }
+  if (body.smtpFromName !== undefined) {
+    out.smtpFromName = String(body.smtpFromName ?? "").trim().slice(0, 120);
+  }
+  const pw = body.smtpPassword;
+  if (pw !== undefined && pw !== null && String(pw).trim() !== "") {
+    out.smtpPassword = String(pw);
+  }
+  return out;
+}

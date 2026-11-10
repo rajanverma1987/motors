@@ -1,0 +1,113 @@
+import { NextResponse } from "next/server";
+import { connectDB } from "@/lib/db";
+import DemoRequest from "@/models/DemoRequest";
+import { sendDemoRequestToAdmin, sendDemoRequestThankYou } from "@/lib/email";
+import { checkRateLimit } from "@/lib/rate-limit";
+import { isValidEmail, LIMITS, clampString } from "@/lib/validation";
+
+export async function POST(request) {
+  const { allowed } = await checkRateLimit(request, "pricing-contact", 10);
+  if (!allowed) {
+    return NextResponse.json(
+      { success: false, message: "Too many requests. Try again later." },
+      { status: 429 }
+    );
+  }
+
+  try {
+    const body = await request.json();
+    const name = clampString(body?.name, LIMITS.name.max);
+    const email = (body?.email ?? "").trim().toLowerCase().slice(0, LIMITS.email.max);
+    const phone = clampString(body?.phone, 30);
+    const businessName = clampString(body?.businessName, 200);
+    const message = clampString(body?.message, 2000);
+    const requestType = body?.requestType === "founder" ? "founder" : "general";
+
+    if (!name) {
+      return NextResponse.json(
+        { success: false, message: "Name is required." },
+        { status: 400 }
+      );
+    }
+    if (!email || !isValidEmail(email)) {
+      return NextResponse.json(
+        { success: false, message: "A valid email is required." },
+        { status: 400 }
+      );
+    }
+    if (!businessName) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "Shop name is required so we can verify your motor repair shop.",
+        },
+        { status: 400 }
+      );
+    }
+
+    const sourcePage =
+      requestType === "founder" ? "/pricing (founder pricing request)" : "/pricing (general inquiry)";
+
+    // Same lead stream as /api/contact-demo (identical notification path), so it is
+    // persisted the same way — otherwise pricing inquiries would be missing from admin.
+    let record = null;
+    try {
+      await connectDB();
+      record = await DemoRequest.create({
+        formType: requestType === "founder" ? "pricing_founder" : "pricing_general",
+        name,
+        email,
+        phone,
+        businessName,
+        mainProblem: message,
+        sourcePage,
+      });
+    } catch (dbErr) {
+      console.error("Pricing contact save failed:", dbErr);
+    }
+
+    const adminResult = await sendDemoRequestToAdmin({
+      name,
+      email,
+      phone,
+      businessName,
+      mainProblem: message,
+      sourcePage,
+    });
+
+    if (!adminResult.ok) {
+      console.error("Pricing contact admin email failed:", adminResult.error);
+    }
+
+    const thankYouResult = await sendDemoRequestThankYou(name, email, {});
+    if (!thankYouResult.ok) {
+      console.warn("Pricing contact thank-you email failed:", thankYouResult.error);
+    }
+
+    if (record) {
+      try {
+        record.notifyEmailStatus = adminResult.ok ? "sent" : "failed";
+        record.notifyEmailError = adminResult.ok ? "" : String(adminResult.error || "").slice(0, 500);
+        record.thankYouEmailStatus = thankYouResult.ok ? "sent" : "failed";
+        await record.save();
+      } catch (statusErr) {
+        console.error("Pricing contact email-status update failed:", statusErr);
+      }
+    }
+
+    if (!record && !adminResult.ok) {
+      return NextResponse.json(
+        { success: false, message: "Unable to process. Please try again." },
+        { status: 502 }
+      );
+    }
+
+    return NextResponse.json({ success: true });
+  } catch (err) {
+    console.error("Pricing contact error:", err);
+    return NextResponse.json(
+      { success: false, message: "Server error. Please try again." },
+      { status: 500 }
+    );
+  }
+}

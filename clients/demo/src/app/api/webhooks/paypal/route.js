@@ -1,0 +1,208 @@
+import { NextResponse } from "next/server";
+import { connectDB } from "@/lib/db";
+import PaypalWebhookEvent from "@/models/PaypalWebhookEvent";
+import { verifyPaypalWebhookSignature } from "@/lib/paypal-api";
+import {
+  applyPaymentSaleCompleted,
+  applyPaymentSaleDenied,
+  applySubscriptionActivated,
+  applySubscriptionCancelled,
+} from "@/lib/subscription-service";
+import {
+  applyCalculatorSubscriptionActivated,
+  applyCalculatorSubscriptionCancelled,
+} from "@/lib/calculator-access";
+import CalculatorEntitlement from "@/models/CalculatorEntitlement";
+import {
+  applyMobileAppSubscriptionActivated,
+  applyMobileAppSubscriptionCancelled,
+  applyMobileAppPaymentDenied,
+  findMobileAppAccountForPaypalEvent,
+} from "@/lib/mobile-app-subscription";
+import {
+  applyTrackSubscriptionActivated,
+  applyTrackSubscriptionCancelled,
+  applyTrackPaymentDenied,
+  findTrackFacilityForPaypalEvent,
+} from "@/lib/track-subscription";
+
+export const dynamic = "force-dynamic";
+
+function getHeader(request, name) {
+  return request.headers.get(name) || "";
+}
+
+function subscriberEmailFromEvent(event) {
+  return String(event?.resource?.subscriber?.email_address || "").trim().toLowerCase();
+}
+
+/**
+ * Extract PayPal subscription id from webhook payload.
+ */
+function subscriptionIdFromEvent(event) {
+  const type = event?.event_type || "";
+  const res = event?.resource || {};
+  if (type.startsWith("BILLING.SUBSCRIPTION.")) {
+    return res.id || "";
+  }
+  if (type.startsWith("PAYMENT.SALE.")) {
+    return res.billing_agreement_id || "";
+  }
+  return "";
+}
+
+export async function POST(request) {
+  try {
+    const rawBody = await request.text();
+    let event;
+    try {
+      event = JSON.parse(rawBody);
+    } catch {
+      return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
+    }
+
+    const eventId = event.id || "";
+    if (!eventId) {
+      return NextResponse.json({ error: "Missing event id" }, { status: 400 });
+    }
+
+    const transmissionId = getHeader(request, "paypal-transmission-id");
+    const transmissionTime = getHeader(request, "paypal-transmission-time");
+    const certUrl = getHeader(request, "paypal-cert-url");
+    const authAlgo = getHeader(request, "paypal-auth-algo");
+    const transmissionSig = getHeader(request, "paypal-transmission-sig");
+
+    const verified = await verifyPaypalWebhookSignature({
+      transmissionId,
+      transmissionTime,
+      certUrl,
+      authAlgo,
+      transmissionSig,
+      webhookId: process.env.PAYPAL_WEBHOOK_ID,
+      webhookEventBody: event,
+    });
+
+    if (!verified) {
+      return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
+    }
+
+    await connectDB();
+    const existing = await PaypalWebhookEvent.findOne({ eventId }).lean();
+    if (existing?.processedOk) {
+      return NextResponse.json({ ok: true, duplicate: true });
+    }
+
+    const eventType = event.event_type || "";
+    const subId = subscriptionIdFromEvent(event);
+
+    let errMsg = "";
+    try {
+      let isCalculatorSub = false;
+      let isMobileAppSub = false;
+      let isTrackSub = false;
+      if (subId) {
+        await connectDB();
+        isCalculatorSub = !!(await CalculatorEntitlement.findOne({ paypalSubscriptionId: subId })
+          .select("_id")
+          .lean());
+        if (!isCalculatorSub) {
+          const mobileAccount = await findMobileAppAccountForPaypalEvent({
+            paypalSubscriptionId: subId,
+            subscriberEmail: subscriberEmailFromEvent(event),
+            customId: event?.resource?.custom_id,
+          });
+          if (mobileAccount) {
+            isMobileAppSub = true;
+            if (subId && mobileAccount.paypalSubscriptionId !== subId) {
+              mobileAccount.paypalSubscriptionId = subId;
+              await mobileAccount.save();
+            }
+          }
+        }
+        if (!isCalculatorSub && !isMobileAppSub) {
+          const trackFacility = await findTrackFacilityForPaypalEvent({
+            paypalSubscriptionId: subId,
+            subscriberEmail: subscriberEmailFromEvent(event),
+            customId: event?.resource?.custom_id,
+          });
+          if (trackFacility) {
+            isTrackSub = true;
+            if (subId && trackFacility.paypalSubscriptionId !== subId) {
+              trackFacility.paypalSubscriptionId = subId;
+              await trackFacility.save();
+            }
+          }
+        }
+      }
+
+      if (eventType === "BILLING.SUBSCRIPTION.ACTIVATED" && subId) {
+        if (isCalculatorSub) {
+          await applyCalculatorSubscriptionActivated({ paypalSubscriptionId: subId, eventId });
+        } else if (isMobileAppSub) {
+          await applyMobileAppSubscriptionActivated({ paypalSubscriptionId: subId, eventId });
+        } else if (isTrackSub) {
+          await applyTrackSubscriptionActivated({ paypalSubscriptionId: subId, eventId });
+        } else {
+          await applySubscriptionActivated({ subscriptionId: subId, eventId });
+        }
+      } else if (eventType === "BILLING.SUBSCRIPTION.CANCELLED" && subId) {
+        if (isCalculatorSub) {
+          await applyCalculatorSubscriptionCancelled({ paypalSubscriptionId: subId });
+        } else if (isMobileAppSub) {
+          await applyMobileAppSubscriptionCancelled({ paypalSubscriptionId: subId });
+        } else if (isTrackSub) {
+          await applyTrackSubscriptionCancelled({ paypalSubscriptionId: subId });
+        } else {
+          await applySubscriptionCancelled({ subscriptionId: subId, eventId });
+        }
+      } else if (eventType === "PAYMENT.SALE.COMPLETED" && subId) {
+        if (isCalculatorSub) {
+          await applyCalculatorSubscriptionActivated({ paypalSubscriptionId: subId, eventId });
+        } else if (isMobileAppSub) {
+          await applyMobileAppSubscriptionActivated({ paypalSubscriptionId: subId, eventId });
+        } else if (isTrackSub) {
+          await applyTrackSubscriptionActivated({ paypalSubscriptionId: subId, eventId });
+        } else {
+          const amt = event.resource?.amount?.total != null ? Number(event.resource.amount.total) : undefined;
+          const currency = event.resource?.amount?.currency || "USD";
+          const saleId = event.resource?.id || "";
+          await applyPaymentSaleCompleted({
+            subscriptionId: subId,
+            amount: amt,
+            currency,
+            saleId,
+            eventId,
+          });
+        }
+      } else if (eventType === "PAYMENT.SALE.DENIED" && subId) {
+        if (isMobileAppSub) {
+          await applyMobileAppPaymentDenied({ paypalSubscriptionId: subId });
+        } else if (isTrackSub) {
+          await applyTrackPaymentDenied({ paypalSubscriptionId: subId });
+        } else if (!isCalculatorSub) {
+          await applyPaymentSaleDenied({ subscriptionId: subId, eventId });
+        }
+      }
+    } catch (e) {
+      errMsg = e.message || String(e);
+      console.error("PayPal webhook handler error:", errMsg);
+    }
+
+    await PaypalWebhookEvent.findOneAndUpdate(
+      { eventId },
+      {
+        $set: {
+          eventType,
+          processedOk: !errMsg,
+          errorMessage: errMsg.slice(0, 500),
+        },
+      },
+      { upsert: true, new: true }
+    );
+
+    return NextResponse.json({ ok: true });
+  } catch (err) {
+    console.error("PayPal webhook:", err);
+    return NextResponse.json({ error: "Webhook error" }, { status: 500 });
+  }
+}

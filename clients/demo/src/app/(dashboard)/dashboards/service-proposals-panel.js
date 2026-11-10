@@ -1,0 +1,1513 @@
+"use client";
+
+import { useCallback, useEffect, useMemo, useState, useRef } from "react";
+import { useRouter } from "next/navigation";
+import { useSimpleOpenParam } from "@/hooks/use-simple-open-param";
+import { useIsPhoneForm } from "@/hooks/use-media-query";
+import {
+  FiAlertTriangle,
+  FiCheckCircle,
+  FiClipboard,
+  FiFileText,
+  FiLayers,
+  FiPackage,
+  FiPlus,
+  FiTool,
+  FiX,
+  FiXCircle,
+} from "react-icons/fi";
+import Table from "@/components/ui/table";
+import Button from "@/components/ui/button";
+import Badge from "@/components/ui/badge";
+import Modal from "@/components/ui/modal";
+import Textarea from "@/components/ui/textarea";
+import StatusFilterPillButton from "@/components/dashboard/status-filter-pill-button";
+import CustomerViewModal from "@/components/dashboard/customer-view-modal";
+import ServiceProposalFormModal from "@/components/simple/service-proposal-form-modal";
+import SimpleInvoicePaymentModal from "@/components/simple/simple-invoice-payment-modal";
+import SimpleInvoiceTaxesModal from "@/components/simple/simple-invoice-taxes-modal";
+import {
+  SIMPLE_SCREEN_FILTERS_CLASS,
+  SIMPLE_SCREEN_PANEL_CLASS,
+  SIMPLE_SCREEN_TABLE_WRAP_CLASS,
+} from "@/lib/simple-screen-ui";
+import SimpleSelect from "@/components/simple/simple-select";
+import { useConfirm, useAlert } from "@/components/confirm-provider";
+import { useFinancialAccess } from "@/hooks/use-financial-access";
+import { useAuth } from "@/contexts/auth-context";
+import { useFormatDate, usePreferredTablePageSize, useUserSettings } from "@/contexts/user-settings-context";
+import {
+  invoiceStatusSelectOptionsFromMerged,
+  invoiceStatusTileColorForValue,
+  quoteStatusSelectOptionsFromMerged,
+  quoteStatusTileColorForValue,
+  buildCombinedQuoteInvoiceStatusOptions,
+  buildQuoteStatusFilterCardSpecs,
+  resolveConfiguredStatusSlug,
+  workOrderStatusSelectOptionsFromMerged,
+  otherStatusTileColorForValue,
+  OTHER_STATUS_ALL,
+} from "@/lib/dropdown-catalog";
+import { resolveStatusTileProps, resolveWorkOrderStatusTileProps } from "@/lib/work-order-status-tiles";
+import { mergeUserSettings } from "@/lib/user-settings";
+import { fetchAllPaginatedDashboardItems } from "@/lib/fetch-all-paginated-dashboard-items";
+import { resolveEmployeeDisplayName, withShopAdminEmployee } from "@/lib/technician-select-options";
+import {
+  formatSimpleMoney,
+  formToServiceProposalListRow,
+  toSimpleServiceProposalListRow,
+  resolveSimpleInvoiceStatusFromPayments,
+  isSimpleInvoiceRecord,
+  RECORD_TYPE_RFQ,
+  resolveRecordTypeOnSave,
+  proposalTypeLabel,
+} from "@/lib/simple-service-proposal-form";
+import { proposalTypeBadgeVariant } from "@/lib/proposal-types";
+import {
+  hideSimpleRecord,
+  fetchSimpleServiceProposal,
+  fetchSimpleServiceProposalsPage,
+  saveSimpleServiceProposal,
+} from "@/lib/simple-portal-api";
+import { simpleServiceProposalFormHref } from "@/lib/simple-portal-tabs";
+import {
+  INVOICE_FILTER_AMOUNT_RECEIVABLE,
+  INVOICE_FILTER_TAX_COLLECTED,
+  INVOICE_FILTER_TAX_TO_BE_COLLECTED,
+} from "@/lib/invoice-tax-collected";
+import { computeSpInvoiceMoney } from "@/lib/simple-reports/helpers";
+import { proposalLogisticsChargesTotal } from "@/lib/simple-motor-logistics";
+import { resolveMachineType } from "@/lib/machine-types";
+
+const FILTER_AMOUNT_RECEIVABLE = INVOICE_FILTER_AMOUNT_RECEIVABLE;
+const FILTER_TAX_COLLECTED = INVOICE_FILTER_TAX_COLLECTED;
+const FILTER_TAX_TO_COLLECT = INVOICE_FILTER_TAX_TO_BE_COLLECTED;
+
+export const SIMPLE_LIST_VARIANT_PROPOSALS = "proposals";
+export const SIMPLE_LIST_VARIANT_INVOICES = "invoices";
+
+const NOTES_EDIT_FORM_ID = "simple-proposal-notes-edit-form";
+
+const EMPTY_INVOICE_FINANCE = {
+  amountReceivable: { count: 0, amount: 0 },
+  taxCollected: { count: 0, amount: 0 },
+  taxToCollect: { count: 0, amount: 0 },
+};
+
+function statusBareKey(status) {
+  return String(status || "")
+    .trim()
+    .toLowerCase()
+    .replace(/^invoice:/, "");
+}
+
+/** Match Invoices-panel statusOptions encoding (`invoice:` only when slug also exists in quote). */
+function toInvoiceStatusSelectValue(status, quoteStatusValues) {
+  const bare = statusBareKey(status);
+  if (!bare) return "";
+  const quoteValues = new Set(
+    (Array.isArray(quoteStatusValues) ? quoteStatusValues : []).map((v) =>
+      String(v || "")
+        .trim()
+        .toLowerCase()
+    )
+  );
+  return quoteValues.has(bare) ? `invoice:${bare}` : bare;
+}
+
+function statusCardIcon(label) {
+  const l = String(label || "").toLowerCase();
+  if (!l || l === "all") return FiLayers;
+  if (l.includes("receivable")) return FiClipboard;
+  if (l.includes("tax collected") && !l.includes("to be")) return FiCheckCircle;
+  if (l.includes("tax to be")) return FiClipboard;
+  if (l.includes("reject")) return FiXCircle;
+  if (l.includes("approv") || l.includes("accept") || l.includes("closed")) return FiCheckCircle;
+  if (l.includes("bill") || l.includes("invoice") || l.includes("paid")) return FiClipboard;
+  if (l.includes("warranty")) return FiTool;
+  if (l.includes("rnr") || l.includes("return")) return FiPackage;
+  return FiFileText;
+}
+
+function resolveRowStatusPill(status, mergedSettings, quoteOpts, invoiceOpts) {
+  const raw = String(status || "").trim();
+  if (!raw) return null;
+  const bare = statusBareKey(raw);
+  const isInvoiceOpt = raw.toLowerCase().startsWith("invoice:");
+  const quoteIdx = quoteOpts.findIndex((o) => String(o.value).toLowerCase() === bare);
+  const invIdx = invoiceOpts.findIndex((o) => String(o.value).toLowerCase() === bare);
+  const useInvoice = isInvoiceOpt || (invIdx >= 0 && quoteIdx < 0);
+  const { tileColor, tileBgColor, tileTextColor, index } = useInvoice
+    ? invoiceStatusTileColorForValue(mergedSettings, bare, invIdx >= 0 ? invIdx : 0)
+    : quoteStatusTileColorForValue(mergedSettings, bare, quoteIdx >= 0 ? quoteIdx : 0);
+  const pill = resolveStatusTileProps(tileColor, index, { tileBgColor, tileTextColor, tileColor });
+  const label =
+    (useInvoice ? invoiceOpts : quoteOpts).find((o) => String(o.value).toLowerCase() === bare)?.label ||
+    raw.replace(/^invoice:/i, "");
+  return { style: pill.style, className: pill.className || "", label };
+}
+
+/** Full-cell status highlight (flush to cell edges; keep control padding inside). */
+function proposalStatusCellChrome(row, mergedSettings, quoteOpts, invoiceOpts) {
+  const resolved = resolveRowStatusPill(row?.status, mergedSettings, quoteOpts, invoiceOpts);
+  if (!resolved) return { style: null, className: "" };
+  return {
+    style: resolved.style || null,
+    className: `!p-0 ${resolved.className || ""}`.trim(),
+  };
+}
+
+function jobStatusCellChrome(row, jobStatusOptions, workOrderStatusTileColors) {
+  const current = String(row?.jobStatus || "").trim();
+  if (!current) return { style: null, className: "!p-0" };
+  const idx = (jobStatusOptions || []).findIndex(
+    (o) => String(o.value).toLowerCase() === current.toLowerCase()
+  );
+  const pill = resolveWorkOrderStatusTileProps(
+    current,
+    idx >= 0 ? idx : 0,
+    workOrderStatusTileColors || {}
+  );
+  return {
+    style: pill.style || null,
+    className: `!p-0 ${pill.className || ""}`.trim(),
+  };
+}
+
+export default function ServiceProposalsPanel({
+  variant = SIMPLE_LIST_VARIANT_PROPOSALS,
+  createNonce = 0,
+}) {
+  const isInvoices = variant === SIMPLE_LIST_VARIANT_INVOICES;
+  const router = useRouter();
+  const isPhoneForm = useIsPhoneForm();
+  const alert = useAlert();
+  const confirm = useConfirm();
+  const { canViewFinancials } = useFinancialAccess();
+  const { user } = useAuth();
+  const { settings } = useUserSettings();
+  const formatDate = useFormatDate();
+  const mergedSettings = useMemo(() => mergeUserSettings(settings), [settings]);
+
+  const [rows, setRows] = useState([]);
+  const [ready, setReady] = useState(false);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [editingId, setEditingId] = useState(null);
+  const [notesEdit, setNotesEdit] = useState(null);
+  const [notesDraft, setNotesDraft] = useState("");
+  const [openCustomerId, setOpenCustomerId] = useState(null);
+  const [customers, setCustomers] = useState([]);
+  const [employees, setEmployees] = useState([]);
+  const [statusFilter, setStatusFilter] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [tableSort, setTableSort] = useState({ key: "date", direction: "desc" });
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = usePreferredTablePageSize();
+  const [totalCount, setTotalCount] = useState(0);
+  const [statusBuckets, setStatusBuckets] = useState([]);
+  const [listTotals, setListTotals] = useState({
+    total: 0,
+    taxCollected: 0,
+    logisticCharges: 0,
+    count: 0,
+  });
+  const [invoiceFinance, setInvoiceFinance] = useState(EMPTY_INVOICE_FINANCE);
+  const [taxesModalOpen, setTaxesModalOpen] = useState(false);
+  const [invoicePayment, setInvoicePayment] = useState(null);
+  /** Ignore stale createNonce when Tabs remount this panel on tab switch. */
+  const lastHandledCreateNonceRef = useRef(createNonce);
+  const listRequestRef = useRef(0);
+
+  const quoteOpts = useMemo(
+    () => quoteStatusSelectOptionsFromMerged(mergedSettings),
+    [mergedSettings]
+  );
+  const invoiceOpts = useMemo(
+    () => invoiceStatusSelectOptionsFromMerged(mergedSettings),
+    [mergedSettings]
+  );
+
+  const quoteStatusValues = useMemo(
+    () => quoteOpts.map((o) => String(o.value || "").trim()).filter(Boolean),
+    [quoteOpts]
+  );
+  const invoiceStatusValues = useMemo(
+    () => invoiceOpts.map((o) => String(o.value || "").trim()).filter(Boolean),
+    [invoiceOpts]
+  );
+
+  const statusOptionsForCards = useMemo(() => {
+    if (isInvoices) {
+      const quoteValues = new Set(quoteStatusValues.map((v) => v.toLowerCase()));
+      return invoiceOpts.map((o) => {
+        const value = String(o.value || "").trim();
+        const lower = value.toLowerCase();
+        return {
+          value: quoteValues.has(lower) ? `invoice:${lower}` : value,
+          label: o.label || o.value,
+        };
+      });
+    }
+    return quoteOpts.map((o) => ({
+      value: String(o.value || "").trim(),
+      label: o.label || o.value,
+    }));
+  }, [isInvoices, quoteOpts, invoiceOpts, quoteStatusValues]);
+
+  const statusOptions = useMemo(() => {
+    if (isInvoices) {
+      const quoteValues = new Set(quoteStatusValues.map((v) => v.toLowerCase()));
+      return invoiceOpts.map((o) => {
+        const value = String(o.value || "").trim();
+        const lower = value.toLowerCase();
+        return {
+          value: quoteValues.has(lower) ? `invoice:${lower}` : value,
+          label: o.label || o.value,
+        };
+      });
+    }
+    return buildCombinedQuoteInvoiceStatusOptions(mergedSettings);
+  }, [isInvoices, invoiceOpts, quoteStatusValues, mergedSettings]);
+
+  const jobStatusOptions = useMemo(
+    () => workOrderStatusSelectOptionsFromMerged(mergedSettings),
+    [mergedSettings]
+  );
+
+  const phoneFormHref = useCallback(
+    (id = "") => {
+      const base = simpleServiceProposalFormHref(id);
+      return isInvoices ? `${base}?from=invoices` : base;
+    },
+    [isInvoices]
+  );
+
+  const openCreate = useCallback(() => {
+    if (isPhoneForm) {
+      router.push(phoneFormHref("new"));
+      return;
+    }
+    setEditingId(null);
+    setModalOpen(true);
+  }, [isPhoneForm, phoneFormHref, router]);
+
+  useEffect(() => {
+    if (!createNonce || isInvoices) return;
+    if (createNonce === lastHandledCreateNonceRef.current) return;
+    lastHandledCreateNonceRef.current = createNonce;
+    openCreate();
+  }, [createNonce, isInvoices, openCreate]);
+
+  const reload = useCallback(async () => {
+    const seq = ++listRequestRef.current;
+    setReady(false);
+    try {
+      const [pageData, cust, emps] = await Promise.all([
+        fetchSimpleServiceProposalsPage({
+          page,
+          pageSize,
+          q: searchQuery,
+          sortBy: tableSort?.key || "date",
+          sortDir: tableSort?.direction || "desc",
+          listKind: isInvoices ? "invoices" : "proposals",
+          status: statusFilter,
+          proposalType: "",
+        }),
+        fetchAllPaginatedDashboardItems("/api/dashboard/customers"),
+        fetchAllPaginatedDashboardItems("/api/dashboard/employees"),
+      ]);
+      if (seq !== listRequestRef.current) return;
+      const customersList = Array.isArray(cust) ? cust : [];
+      const byId = new Map(customersList.map((c) => [String(c.id || ""), c]));
+      const employeesList = withShopAdminEmployee(Array.isArray(emps) ? emps : [], user);
+      const normalized = (Array.isArray(pageData.items) ? pageData.items : []).map((doc) => {
+        const customer = byId.get(String(doc?.customerId || "").trim()) || null;
+        const preparedByRaw = String(doc?.preparedBy || doc?.quotedBy || "").trim();
+        return toSimpleServiceProposalListRow(
+          {
+            ...doc,
+            status: resolveConfiguredStatusSlug(doc?.status, mergedSettings),
+          },
+          {
+            companyName: customer?.companyName || customer?.primaryContactName || doc?.companyName || "",
+            phone: customer?.phone || doc?.phone || doc?.customerPhone || "",
+            email: customer?.email || doc?.email || doc?.customerEmail || "",
+            preparedByLabel: resolveEmployeeDisplayName(employeesList, preparedByRaw),
+          }
+        );
+      });
+      setRows(normalized);
+      setTotalCount(Number(pageData.totalCount) || 0);
+      setStatusBuckets(Array.isArray(pageData.statusBuckets) ? pageData.statusBuckets : []);
+      setListTotals(
+        pageData.totals || { total: 0, taxCollected: 0, logisticCharges: 0, count: 0 }
+      );
+      setInvoiceFinance(pageData.invoiceFinance || EMPTY_INVOICE_FINANCE);
+      setCustomers(customersList);
+      setEmployees(employeesList);
+    } catch {
+      if (seq !== listRequestRef.current) return;
+      setRows([]);
+      setTotalCount(0);
+      setStatusBuckets([]);
+      setListTotals({ total: 0, taxCollected: 0, logisticCharges: 0, count: 0 });
+      setInvoiceFinance(EMPTY_INVOICE_FINANCE);
+    } finally {
+      if (seq === listRequestRef.current) setReady(true);
+    }
+  }, [
+    mergedSettings,
+    page,
+    pageSize,
+    searchQuery,
+    tableSort,
+    isInvoices,
+    statusFilter,
+    user,
+  ]);
+
+  useEffect(() => {
+    void reload();
+  }, [reload]);
+
+  const employeeLabel = useCallback(
+    (id) => resolveEmployeeDisplayName(employees, id),
+    [employees]
+  );
+
+  const customerName = useCallback(
+    (id) => {
+      const key = String(id || "").trim();
+      const c = customers.find((row) => String(row.id || row._id || "") === key);
+      return String(c?.companyName || c?.primaryContactName || "").trim();
+    },
+    [customers]
+  );
+
+  const editingRow = useMemo(
+    () => (editingId ? rows.find((r) => r.id === editingId) || null : null),
+    [editingId, rows]
+  );
+  const stickyEditingRowRef = useRef(null);
+  const recordNavTargetRef = useRef(null);
+  if (editingRow) stickyEditingRowRef.current = editingRow;
+
+  const formInitial = editingRow
+    || (recordNavTargetRef.current && stickyEditingRowRef.current)
+    || null;
+
+  useEffect(() => {
+    const target = recordNavTargetRef.current;
+    if (!modalOpen || !target || !ready || page !== target.page) return;
+    recordNavTargetRef.current = null;
+    if (!rows.length) return;
+    const row = target.edge === "last" ? rows[rows.length - 1] : rows[0];
+    if (row?.id) setEditingId(row.id);
+  }, [modalOpen, ready, page, rows]);
+
+  const recordNavigation = useMemo(() => {
+    if (!modalOpen || !editingId || totalCount < 2) return null;
+    const indexOnPage = rows.findIndex((r) => String(r.id) === String(editingId));
+    if (indexOnPage < 0) return null;
+    const globalIndex = (page - 1) * pageSize + indexOnPage;
+    const pageCount = Math.max(1, Math.ceil(totalCount / pageSize));
+    const goToPageEdge = (nextPage, edge) => {
+      recordNavTargetRef.current = { page: nextPage, edge };
+      setReady(false);
+      setPage(nextPage);
+    };
+    return {
+      label: isInvoices ? "Invoices" : "Proposals",
+      currentIndex: globalIndex,
+      total: totalCount,
+      canPrevious: globalIndex > 0,
+      canNext: globalIndex < totalCount - 1,
+      onPrevious: () => {
+        if (indexOnPage > 0) {
+          setEditingId(rows[indexOnPage - 1].id);
+          return;
+        }
+        if (page > 1) goToPageEdge(page - 1, "last");
+      },
+      onNext: () => {
+        if (indexOnPage < rows.length - 1) {
+          setEditingId(rows[indexOnPage + 1].id);
+          return;
+        }
+        if (page < pageCount) goToPageEdge(page + 1, "first");
+      },
+    };
+  }, [modalOpen, editingId, rows, page, pageSize, totalCount, isInvoices]);
+
+  const openEdit = (row) => {
+    if (isPhoneForm) {
+      router.push(phoneFormHref(row.id));
+      return;
+    }
+    setEditingId(row.id);
+    setModalOpen(true);
+  };
+
+  const handleDeepLinkOpen = useCallback(
+    async (openId) => {
+      let row = rows.find((r) => String(r.id) === openId);
+      if (!row) {
+        try {
+          const doc = await fetchSimpleServiceProposal(openId);
+          if (doc) {
+            row = toSimpleServiceProposalListRow(
+              {
+                ...doc,
+                status: resolveConfiguredStatusSlug(doc?.status, mergedSettings),
+              },
+              {
+                companyName: customerName(doc.customerId) || doc.companyName || "",
+                preparedByLabel: resolveEmployeeDisplayName(
+                  employees,
+                  doc.preparedBy || doc.quotedBy
+                ),
+              }
+            );
+          }
+        } catch {
+          return true;
+        }
+      }
+      if (!row) return true;
+      const rowIsInvoice = isSimpleInvoiceRecord(row, invoiceStatusValues, quoteStatusValues);
+      if (isInvoices !== rowIsInvoice) return true;
+      openEdit(row);
+      return true;
+    },
+    [rows, isInvoices, invoiceStatusValues, quoteStatusValues, mergedSettings, customerName, employees]
+  );
+
+  useSimpleOpenParam({
+    ready,
+    onOpen: handleDeepLinkOpen,
+  });
+
+  const handleSave = async (form, options = {}) => {
+    const forceNew = options?.forceNew === true;
+    const id = forceNew ? undefined : editingId || form.id || undefined;
+    let documentNumber = forceNew ? "" : String(form.documentNumber ?? "").trim();
+    // Job numbers are assigned on the server from the full DB (not paginated list rows).
+    const row = formToServiceProposalListRow(
+      { ...form, documentNumber, ...(forceNew ? { id: "", recordType: RECORD_TYPE_RFQ } : {}) },
+      {
+        id: id || "",
+        companyName:
+          customerName(form.customerId) ||
+          String(form.companyName || "").trim() ||
+          (forceNew ? "" : editingRow?.companyName) ||
+          "",
+        preparedByLabel: employeeLabel(form.preparedBy),
+      }
+    );
+    const saved = await saveSimpleServiceProposal(
+      { ...row, id: id || undefined },
+      { forceNew: forceNew || !id }
+    );
+    setRows((prev) => {
+      const sid = String(saved?.id || "").trim();
+      const idx = sid ? prev.findIndex((r) => r.id === sid) : -1;
+      if (idx >= 0) {
+        const next = [...prev];
+        next[idx] = { ...prev[idx], ...saved };
+        return next;
+      }
+      return [saved, ...prev];
+    });
+    setEditingId(saved.id);
+    return saved;
+  };
+
+  const handleAttachmentsChange = useCallback((recordId, attachments) => {
+    const id = String(recordId || "").trim();
+    if (!id) return;
+    setRows((prev) =>
+      prev.map((r) => (r.id === id ? { ...r, attachments: Array.isArray(attachments) ? attachments : [] } : r))
+    );
+  }, []);
+
+  const handleDelete = useCallback(
+    async (row) => {
+      const ok = await confirm({
+        title: isInvoices ? "Remove invoice" : "Remove service proposal",
+        message: `Remove ${row.quote || "this record"} from the list? You can open it again in Settings: Deleted.`,
+        confirmLabel: "Remove",
+        variant: "danger",
+      });
+      if (!ok) return;
+      try {
+        await hideSimpleRecord(isInvoices ? "invoice" : "proposal", row.id);
+        setRows((prev) => prev.filter((r) => r.id !== row.id));
+        setSelectedRowIds((prev) => prev.filter((id) => id !== row.id));
+        await alert({
+          title: "Removed",
+          message: "Removed from the list. Open Settings: Deleted to view or restore it.",
+        });
+      } catch (err) {
+        await alert({
+          title: "Error",
+          message: err?.message || "Failed to delete.",
+          variant: "danger",
+        });
+      }
+    },
+    [confirm, alert, isInvoices]
+  );
+
+  const openInvoicePayments = useCallback(
+    async (row) => {
+      const id = String(row?.id || "").trim();
+      if (!id) return;
+      try {
+        const doc = await fetchSimpleServiceProposal(id);
+        if (!doc) throw new Error("Invoice not found");
+        setInvoicePayment(
+          toSimpleServiceProposalListRow(doc, {
+            companyName: customerName(doc.customerId) || doc.companyName || row.companyName || "",
+          })
+        );
+      } catch (err) {
+        await alert({
+          title: "Error",
+          message: err?.message || "Failed to open payment records.",
+          variant: "danger",
+        });
+      }
+    },
+    [alert, customerName]
+  );
+
+  const handleInvoicePaymentsChange = useCallback(
+    async (applied) => {
+      const current = invoicePayment;
+      if (!current?.id) return;
+      const grandTotal = Number(current.total) || 0;
+      const nextStatus = resolveSimpleInvoiceStatusFromPayments({
+        payments: applied.payments,
+        grandTotal,
+        currentStatus: current.status,
+        mergedSettings,
+      });
+      const next = {
+        ...current,
+        payments: applied.payments,
+        invoicePaidDate: applied.invoicePaidDate,
+        status: nextStatus,
+      };
+      setInvoicePayment(next);
+      try {
+        const saved = await saveSimpleServiceProposal(next);
+        const sid = String(saved?.id || current.id).trim();
+        setRows((prev) => prev.map((r) => (r.id === sid ? { ...r, ...saved } : r)));
+        setInvoicePayment((open) => (open && open.id === sid ? { ...open, ...saved, ...next } : open));
+      } catch (err) {
+        await alert({
+          title: "Error",
+          message: err?.message || "Failed to save payment.",
+          variant: "danger",
+        });
+      }
+    },
+    [alert, invoicePayment, mergedSettings]
+  );
+
+  const handleRowFieldChange = useCallback((rowId, patch) => {
+    const id = String(rowId || "").trim();
+    if (!id) return;
+    setRows((prev) => {
+      const current = prev.find((r) => r.id === id);
+      if (!current) return prev;
+      const nextRow = { ...current, ...patch };
+      void saveSimpleServiceProposal(nextRow).catch(() => {
+        /* list stays optimistic; next reload corrects */
+      });
+      return prev.map((r) => (r.id === id ? nextRow : r));
+    });
+  }, []);
+
+  const openNotesEdit = useCallback((row) => {
+    const id = String(row?.id || "").trim();
+    if (!id) return;
+    setNotesEdit({ id, quote: String(row?.quote || "").trim() });
+    setNotesDraft(String(row?.notes ?? ""));
+  }, []);
+
+  const closeNotesEdit = useCallback(() => {
+    setNotesEdit(null);
+    setNotesDraft("");
+  }, []);
+
+  const handleNotesSave = useCallback(
+    (e) => {
+      e?.preventDefault?.();
+      const id = String(notesEdit?.id || "").trim();
+      if (!id) return;
+      handleRowFieldChange(id, { notes: notesDraft });
+      closeNotesEdit();
+    },
+    [notesEdit, notesDraft, handleRowFieldChange, closeNotesEdit]
+  );
+
+  const handleRowStatusChange = useCallback(
+    (row, nextStatus) => {
+      const nextType = resolveRecordTypeOnSave(
+        row.recordType,
+        nextStatus,
+        invoiceStatusValues,
+        quoteStatusValues
+      );
+      handleRowFieldChange(row.id, { status: nextStatus, recordType: nextType });
+    },
+    [handleRowFieldChange, invoiceStatusValues, quoteStatusValues]
+  );
+
+  const handleRowJobStatusChange = useCallback(
+    (row, nextJobStatus) => {
+      handleRowFieldChange(row.id, { jobStatus: nextJobStatus });
+    },
+    [handleRowFieldChange]
+  );
+
+  const bucketByStatus = useMemo(() => {
+    const map = new Map();
+    for (const b of statusBuckets) {
+      const key = statusBareKey(b.status);
+      const prev = map.get(key) || { count: 0, amount: 0, taxCollected: 0 };
+      map.set(key, {
+        count: prev.count + (Number(b.count) || 0),
+        amount: prev.amount + (Number(b.amount) || 0),
+        taxCollected: prev.taxCollected + (Number(b.taxCollected) || 0),
+      });
+    }
+    return map;
+  }, [statusBuckets]);
+
+  const statusSummaryCards = useMemo(() => {
+    const tileAppearanceForKey = (statusKey, fallbackIndex) => {
+      if (statusKey === "") return resolveStatusTileProps("", 0);
+      const bare = statusBareKey(statusKey);
+      if (isInvoices) {
+        const invIdx = invoiceOpts.findIndex((o) => String(o.value).toLowerCase() === bare);
+        const { tileColor, tileBgColor, tileTextColor, index } = invoiceStatusTileColorForValue(
+          mergedSettings,
+          bare,
+          invIdx >= 0 ? invIdx : fallbackIndex
+        );
+        return resolveStatusTileProps(tileColor, index, { tileBgColor, tileTextColor, tileColor });
+      }
+      const quoteIdx = quoteOpts.findIndex((o) => String(o.value).toLowerCase() === bare);
+      const { tileColor, tileBgColor, tileTextColor, index } = quoteStatusTileColorForValue(
+        mergedSettings,
+        bare,
+        quoteIdx >= 0 ? quoteIdx : fallbackIndex
+      );
+      return resolveStatusTileProps(tileColor, index, { tileBgColor, tileTextColor, tileColor });
+    };
+
+    const sumMembers = (memberValues) => {
+      let count = 0;
+      let amount = 0;
+      let taxCollected = 0;
+      for (const m of memberValues || []) {
+        const hit = bucketByStatus.get(statusBareKey(m));
+        if (!hit) continue;
+        count += hit.count;
+        amount += hit.amount;
+        taxCollected += hit.taxCollected;
+      }
+      return { count, amount, taxCollected };
+    };
+
+    /** @type {Array<{ key: string, label: string, count: number, amount: number, tileAppearance: ReturnType<typeof resolveStatusTileProps>, icon: typeof FiLayers }>} */
+    let buttons;
+
+    if (!isInvoices) {
+      const specs = buildQuoteStatusFilterCardSpecs(mergedSettings);
+      buttons = specs.map((spec, optIdx) => {
+        const totals = sumMembers(spec.memberValues);
+        const fallback = quoteStatusTileColorForValue(
+          mergedSettings,
+          spec.tileValue,
+          spec.topIndex >= 0 ? spec.topIndex : optIdx
+        );
+        const tileBgColor = spec.filterGroupBgColor || fallback.tileBgColor || "";
+        const tileTextColor = spec.filterGroupTextColor || fallback.tileTextColor || "";
+        const tileColor = tileBgColor || tileTextColor ? "" : fallback.tileColor || "";
+        return {
+          key: spec.key,
+          label: spec.label,
+          count: totals.count,
+          amount: totals.amount,
+          tileAppearance: resolveStatusTileProps(tileColor, fallback.index, {
+            tileBgColor,
+            tileTextColor,
+            tileColor,
+          }),
+          icon: statusCardIcon(spec.label),
+        };
+      });
+    } else {
+      buttons = statusOptionsForCards.map((opt, optIdx) => {
+        const key = opt.value;
+        const totals = sumMembers([statusBareKey(key)]);
+        return {
+          key,
+          label: opt.label,
+          count: totals.count,
+          amount: totals.amount,
+          tileAppearance: tileAppearanceForKey(key, optIdx),
+          icon: statusCardIcon(opt.label),
+        };
+      });
+    }
+
+    const allCount = [...bucketByStatus.values()].reduce((s, b) => s + b.count, 0);
+    const allAmount = [...bucketByStatus.values()].reduce((s, b) => s + b.amount, 0);
+    const allTile = otherStatusTileColorForValue(mergedSettings, OTHER_STATUS_ALL, 0);
+    buttons.unshift({
+      key: "",
+      label: allTile.label || "All",
+      count: allCount,
+      amount: allAmount,
+      tileAppearance: resolveStatusTileProps(allTile.tileColor, allTile.index, {
+        tileBgColor: allTile.tileBgColor,
+        tileTextColor: allTile.tileTextColor,
+        tileColor: allTile.tileColor,
+      }),
+      icon: statusCardIcon(allTile.label || "All"),
+    });
+
+    if (isInvoices && canViewFinancials) {
+      const ar = invoiceFinance?.amountReceivable || { count: 0, amount: 0 };
+      const taxPaid = invoiceFinance?.taxCollected || { count: 0, amount: 0 };
+      const taxDue = invoiceFinance?.taxToCollect || { count: 0, amount: 0 };
+      const arTile = otherStatusTileColorForValue(mergedSettings, FILTER_AMOUNT_RECEIVABLE, 3);
+      const taxPaidTile = otherStatusTileColorForValue(mergedSettings, FILTER_TAX_COLLECTED, 2);
+      const taxDueTile = otherStatusTileColorForValue(mergedSettings, FILTER_TAX_TO_COLLECT, 4);
+      buttons.push(
+        {
+          key: FILTER_AMOUNT_RECEIVABLE,
+          label: arTile.label || "Amount Receivable",
+          count: ar.count,
+          amount: ar.amount,
+          tileAppearance: resolveStatusTileProps(arTile.tileColor, arTile.index, {
+            tileBgColor: arTile.tileBgColor,
+            tileTextColor: arTile.tileTextColor,
+            tileColor: arTile.tileColor,
+          }),
+          icon: statusCardIcon(arTile.label || "Amount Receivable"),
+        },
+        {
+          key: FILTER_TAX_COLLECTED,
+          label: taxPaidTile.label || "Tax Collected",
+          count: taxPaid.count,
+          amount: taxPaid.amount,
+          tileAppearance: resolveStatusTileProps(taxPaidTile.tileColor, taxPaidTile.index, {
+            tileBgColor: taxPaidTile.tileBgColor,
+            tileTextColor: taxPaidTile.tileTextColor,
+            tileColor: taxPaidTile.tileColor,
+          }),
+          icon: statusCardIcon(taxPaidTile.label || "Tax Collected"),
+        },
+        {
+          key: FILTER_TAX_TO_COLLECT,
+          label: taxDueTile.label || "Tax To Be Collected",
+          count: taxDue.count,
+          amount: taxDue.amount,
+          tileAppearance: resolveStatusTileProps(taxDueTile.tileColor, taxDueTile.index, {
+            tileBgColor: taxDueTile.tileBgColor,
+            tileTextColor: taxDueTile.tileTextColor,
+            tileColor: taxDueTile.tileColor,
+          }),
+          icon: statusCardIcon(taxDueTile.label || "Tax To Be Collected"),
+        }
+      );
+    }
+
+    return buttons;
+  }, [
+    bucketByStatus,
+    statusOptionsForCards,
+    mergedSettings,
+    quoteOpts,
+    invoiceOpts,
+    isInvoices,
+    invoiceFinance,
+  ]);
+
+  const displayRows = rows;
+
+  const currencySubtotals = useMemo(
+    () => ({
+      total: Number(listTotals.total) || 0,
+      taxCollected: Number(listTotals.taxCollected) || 0,
+      logisticCharges: Number(listTotals.logisticCharges) || 0,
+    }),
+    [listTotals]
+  );
+
+  const currencySubtotalBadge = useCallback((title, amount) => {
+    return (
+      <span
+        className="ui-table-header-subtotal flex w-full items-center justify-end rounded-none border border-primary/25 bg-primary/[0.1] px-1 py-0.5 text-[10px] font-bold leading-none tabular-nums text-primary dark:bg-primary/20 md:px-2 md:py-2 md:text-sm"
+        title={`${title} subtotal`}
+      >
+        {formatSimpleMoney(amount)}
+      </span>
+    );
+  }, []);
+
+  const columns = useMemo(
+    () => [
+      {
+        key: "actions",
+        label: "",
+        sortable: false,
+        className: "w-10",
+        render: (_, row) => (
+          <button
+            type="button"
+            className="rounded p-0.5 text-danger hover:bg-danger/10"
+            title="Remove from list"
+            aria-label="Remove from list"
+            onClick={(e) => {
+              e.stopPropagation();
+              handleDelete(row);
+            }}
+          >
+            <FiX className="h-3.5 w-3.5" aria-hidden />
+          </button>
+        ),
+      },
+      {
+        key: "quote",
+        label: isInvoices ? "Invoice#" : "Quote/Job",
+        sortable: true,
+        render: (v, row) => (
+          <button
+            type="button"
+            className="font-medium text-primary hover:underline"
+            onClick={() => openEdit(row)}
+          >
+            {v || "-"}
+          </button>
+        ),
+      },
+      ...(!isInvoices
+        ? [
+            {
+              key: "jobType",
+              label: "Job Type",
+              sortable: true,
+              align: "center",
+              phoneHidden: true,
+              render: (_, row) => resolveMachineType(row?.motorPower, "AC"),
+            },
+          ]
+        : []),
+      {
+        key: "date",
+        label: "Date",
+        sortable: true,
+        align: "right",
+        render: (v) => {
+          const text = formatDate(v);
+          return text && text !== "-" ? text : "-";
+        },
+      },
+      {
+        key: "companyName",
+        label: "Company",
+        sortable: true,
+        render: (v, row) => {
+          const customerId = String(row.customerId || "").trim();
+          const name = String(v || "").trim() || customerName(customerId) || "-";
+          if (!customerId || name === "-") return name;
+          return (
+            <button
+              type="button"
+              className="text-left font-medium text-primary hover:underline focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 rounded"
+              onClick={(e) => {
+                e.stopPropagation();
+                setOpenCustomerId(customerId);
+              }}
+              title="Open customer"
+            >
+              {name}
+            </button>
+          );
+        },
+      },
+      ...(!isInvoices
+        ? [{ key: "phone", label: "Phone", sortable: true, phoneHidden: true }]
+        : []),
+      { key: "email", label: "Email", sortable: true, phoneHidden: true },
+      {
+        key: "quotedBy",
+        label: "Quoted By",
+        sortable: true,
+        phoneHidden: true,
+        render: (v, row) =>
+          resolveEmployeeDisplayName(employees, v || row?.preparedBy) || "—",
+      },
+      ...(!isInvoices
+        ? [
+            {
+              key: "proposalType",
+              label: "Type",
+              sortable: true,
+              phoneHidden: true,
+              render: (v) => (
+                <Badge
+                  variant={proposalTypeBadgeVariant(v)}
+                  className="rounded-full px-2.5 py-0.5 text-xs"
+                >
+                  {proposalTypeLabel(v)}
+                </Badge>
+              ),
+            },
+          ]
+        : []),
+      { key: "quoteType", label: "Lead source", sortable: true, phoneHidden: true },
+      ...(canViewFinancials
+        ? [
+            {
+              key: "total",
+              label: "Total",
+              headerSubtotal: currencySubtotalBadge("Total", currencySubtotals.total),
+              sortable: true,
+              align: "right",
+              render: (v) => formatSimpleMoney(Number(v) || 0),
+            },
+            {
+              key: "logisticCharges",
+              label: "Logistic Charges",
+              headerSubtotal: currencySubtotalBadge(
+                "Logistic Charges",
+                currencySubtotals.logisticCharges
+              ),
+              sortable: true,
+              align: "right",
+              phoneHidden: true,
+              render: (v, row) =>
+                formatSimpleMoney(
+                  Number(v) || proposalLogisticsChargesTotal(row) || 0
+                ),
+            },
+            {
+              key: "taxCollected",
+              label: "Tax",
+              headerSubtotal: currencySubtotalBadge("Tax", currencySubtotals.taxCollected),
+              sortable: true,
+              align: "right",
+              phoneHidden: true,
+              render: (v) => formatSimpleMoney(Number(v) || 0),
+            },
+          ]
+        : []),
+      ...(isInvoices && canViewFinancials
+        ? [
+            {
+              key: "paidAmount",
+              label: "Paid",
+              sortable: false,
+              align: "right",
+              render: (_, row) =>
+                formatSimpleMoney(computeSpInvoiceMoney(row).amountPaid || 0),
+            },
+          ]
+        : []),
+      {
+        key: "submitDate",
+        label: isInvoices ? "Proposal Submit Date" : "Submit date",
+        sortable: true,
+        align: "right",
+        phoneHidden: true,
+        headerWrap: isInvoices,
+        minWidth: isInvoices ? 88 : undefined,
+        className: isInvoices ? "max-w-[6.5rem]" : undefined,
+        getCellStyle: (_, row) =>
+          proposalStatusCellChrome(row, mergedSettings, quoteOpts, invoiceOpts).style,
+        getCellClassName: (_, row) =>
+          proposalStatusCellChrome(row, mergedSettings, quoteOpts, invoiceOpts).className,
+        render: (v) => {
+          const text = formatDate(v);
+          const shown = text && text !== "-" ? text : "";
+          return (
+            <span
+              className={`block px-1.5 py-1 text-right tabular-nums ${shown ? "font-semibold" : "font-normal"}`}
+            >
+              {shown || "-"}
+            </span>
+          );
+        },
+      },
+      {
+        key: "acceptDate",
+        label: isInvoices ? "Proposal Accept Date" : "Accept Date",
+        sortable: true,
+        align: "right",
+        phoneHidden: true,
+        headerWrap: isInvoices,
+        minWidth: isInvoices ? 88 : undefined,
+        className: isInvoices ? "max-w-[6.5rem]" : undefined,
+        getCellStyle: (_, row) =>
+          proposalStatusCellChrome(row, mergedSettings, quoteOpts, invoiceOpts).style,
+        getCellClassName: (_, row) =>
+          proposalStatusCellChrome(row, mergedSettings, quoteOpts, invoiceOpts).className,
+        render: (v) => {
+          const text = formatDate(v);
+          const shown = text && text !== "-" ? text : "";
+          return (
+            <span
+              className={`block px-1.5 py-1 text-right tabular-nums ${shown ? "font-semibold" : "font-normal"}`}
+            >
+              {shown || "-"}
+            </span>
+          );
+        },
+      },
+      ...(isInvoices
+        ? [
+            {
+              key: "invoiceSubmitDate",
+              label: "Invoice Sent Date",
+              sortable: true,
+              align: "right",
+              phoneHidden: true,
+              headerWrap: true,
+              minWidth: 88,
+              className: "max-w-[6.5rem]",
+              getCellStyle: (_, row) =>
+                proposalStatusCellChrome(row, mergedSettings, quoteOpts, invoiceOpts).style,
+              getCellClassName: (_, row) =>
+                proposalStatusCellChrome(row, mergedSettings, quoteOpts, invoiceOpts).className,
+              render: (v) => {
+                const text = formatDate(v);
+                const shown = text && text !== "-" ? text : "";
+                return (
+                  <span
+                    className={`block px-1.5 py-1 text-right tabular-nums ${shown ? "font-semibold" : "font-normal"}`}
+                  >
+                    {shown || "-"}
+                  </span>
+                );
+              },
+            },
+            {
+              key: "paymentDates",
+              label: "Payment Dates",
+              sortable: false,
+              phoneHidden: true,
+              headerWrap: true,
+              minWidth: 120,
+              className: "max-w-[14rem]",
+              getCellStyle: (_, row) =>
+                proposalStatusCellChrome(row, mergedSettings, quoteOpts, invoiceOpts).style,
+              getCellClassName: (_, row) =>
+                proposalStatusCellChrome(row, mergedSettings, quoteOpts, invoiceOpts).className,
+              render: (_, row) => {
+                const chrome = proposalStatusCellChrome(row, mergedSettings, quoteOpts, invoiceOpts);
+                const payments = Array.isArray(row?.payments) ? row.payments : [];
+                const shown = payments
+                  .map((payment) => String(payment?.date || "").trim())
+                  .filter(Boolean)
+                  .sort()
+                  .map((day) => {
+                    const text = formatDate(day);
+                    return text && text !== "-" ? text : "";
+                  })
+                  .filter(Boolean)
+                  .join(", ");
+                return (
+                  <span
+                    className="block whitespace-normal px-1.5 py-1 text-xs font-semibold tabular-nums"
+                    style={{ color: chrome.style?.color || "inherit" }}
+                  >
+                    {shown || "-"}
+                  </span>
+                );
+              },
+            },
+            {
+              key: "invoicePaidDate",
+              label: "Payment Record",
+              sortable: true,
+              align: "right",
+              phoneHidden: true,
+              headerWrap: true,
+              minWidth: 88,
+              className: "max-w-[6.5rem]",
+              getCellStyle: (_, row) =>
+                proposalStatusCellChrome(row, mergedSettings, quoteOpts, invoiceOpts).style,
+              getCellClassName: (_, row) =>
+                proposalStatusCellChrome(row, mergedSettings, quoteOpts, invoiceOpts).className,
+              render: (_, row) => {
+                const chrome = proposalStatusCellChrome(row, mergedSettings, quoteOpts, invoiceOpts);
+                const color = chrome.style?.color || "inherit";
+                const statusBare = String(row?.status || "")
+                  .trim()
+                  .toLowerCase()
+                  .replace(/^invoice:/, "")
+                  .replace(/[\s-]+/g, "_");
+                const statusIsPaid =
+                  statusBare === "paid" ||
+                  statusBare === "fully_paid" ||
+                  statusBare.endsWith("_fully_paid") ||
+                  (statusBare.includes("paid") &&
+                    !statusBare.includes("partial") &&
+                    !statusBare.includes("unpaid"));
+                const payments = Array.isArray(row?.payments) ? row.payments : [];
+                const paidWithoutRecord = statusIsPaid && payments.length === 0;
+                return (
+                  <button
+                    type="button"
+                    className="inline-flex w-full cursor-pointer items-center justify-end gap-1 bg-transparent px-1.5 py-1 text-right text-xs font-semibold underline decoration-current/50 hover:decoration-current"
+                    style={{ color }}
+                    aria-label={
+                      paidWithoutRecord
+                        ? "Paid with no payment record. Open payment records"
+                        : "Open payment records"
+                    }
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      void openInvoicePayments(row);
+                    }}
+                  >
+                    {paidWithoutRecord ? (
+                      <FiAlertTriangle
+                        className="h-3.5 w-3.5 shrink-0 text-danger"
+                        title="Status is paid, but there is no payment record"
+                        aria-hidden
+                      />
+                    ) : null}
+                    Click to View
+                  </button>
+                );
+              },
+            },
+          ]
+        : []),
+      {
+        key: "status",
+        label: isInvoices ? "Invoice Status" : "Proposal Status",
+        sortable: true,
+        className: "min-w-[7.5rem] md:min-w-[10rem]",
+        getCellStyle: (_, row) =>
+          proposalStatusCellChrome(row, mergedSettings, quoteOpts, invoiceOpts).style,
+        getCellClassName: (_, row) =>
+          proposalStatusCellChrome(row, mergedSettings, quoteOpts, invoiceOpts).className,
+        render: (v, row) => {
+          return (
+            <div className="min-w-[6.5rem] max-w-[12rem] md:min-w-[8rem] md:max-w-[14rem]" onClick={(e) => e.stopPropagation()}>
+              <SimpleSelect
+                variant="pill"
+                className="w-full"
+                options={statusOptions}
+                value={
+                  isInvoices
+                    ? toInvoiceStatusSelectValue(row.status, quoteStatusValues)
+                    : row.status || ""
+                }
+                onChange={(e) => handleRowStatusChange(row, e.target.value)}
+                triggerClassName="w-full rounded-none border-0 bg-transparent shadow-none ring-0"
+                placeholder="Select…"
+                searchable
+                aria-label="Status"
+              />
+            </div>
+          );
+        },
+      },
+      {
+        key: "jobStatus",
+        label: "Job Status",
+        sortable: true,
+        className: "min-w-[7rem] md:min-w-[9rem]",
+        getCellStyle: (_, row) =>
+          jobStatusCellChrome(row, jobStatusOptions, mergedSettings.workOrderStatusTileColors)
+            .style,
+        getCellClassName: (_, row) =>
+          jobStatusCellChrome(row, jobStatusOptions, mergedSettings.workOrderStatusTileColors)
+            .className,
+        render: (v, row) => {
+          const current = String(v || "").trim();
+          return (
+            <div className="min-w-[6rem] max-w-[10rem] md:min-w-[7rem] md:max-w-[12rem]" onClick={(e) => e.stopPropagation()}>
+              <SimpleSelect
+                variant="pill"
+                className="w-full"
+                options={jobStatusOptions}
+                value={current}
+                onChange={(e) => handleRowJobStatusChange(row, e.target.value)}
+                triggerClassName="w-full rounded-none border-0 bg-transparent shadow-none ring-0"
+                placeholder="Select…"
+                searchable
+                aria-label="Job Status"
+              />
+            </div>
+          );
+        },
+      },
+      {
+        key: "notes",
+        label: "Notes",
+        sortable: false,
+        phoneHidden: true,
+        className: "min-w-[12rem] max-w-[20rem]",
+        render: (v, row) => {
+          const text = String(v || "").trim();
+          return (
+            <button
+              type="button"
+              className="block w-full min-w-[12rem] max-w-[20rem] truncate text-left font-normal text-secondary hover:text-foreground"
+              title={text || "Click to add notes"}
+              onClick={(e) => {
+                e.stopPropagation();
+                openNotesEdit(row);
+              }}
+            >
+              {text || "-"}
+            </button>
+          );
+        },
+      },
+    ],
+    [
+      handleDelete,
+      handleRowFieldChange,
+      openInvoicePayments,
+      handleRowStatusChange,
+      handleRowJobStatusChange,
+      openNotesEdit,
+      customerName,
+      employees,
+      mergedSettings,
+      quoteOpts,
+      invoiceOpts,
+      statusOptions,
+      jobStatusOptions,
+      currencySubtotalBadge,
+      currencySubtotals.total,
+      currencySubtotals.taxCollected,
+      currencySubtotals.logisticCharges,
+      isInvoices,
+      quoteStatusValues,
+      formatDate,
+      canViewFinancials,
+    ]
+  );
+
+  const renderStatusCard = (card) => (
+    <StatusFilterPillButton
+      key={card.key || "__all__"}
+      card={card}
+      active={(statusFilter || "") === (card.key || "")}
+      onClick={() => {
+        setPage(1);
+        setStatusFilter(card.key || "");
+      }}
+      formatAmount={
+        canViewFinancials
+          ? (n) =>
+              `$${(Number.isFinite(n) ? n : 0).toLocaleString("en-US", {
+                maximumFractionDigits: 0,
+              })}`
+          : () => ""
+      }
+    />
+  );
+
+  const emptyMessage =
+    totalCount === 0
+      ? searchQuery.trim()
+        ? "No records match your search."
+        : statusFilter === FILTER_TAX_COLLECTED
+          ? "No fully paid invoices with tax collected."
+          : statusFilter === FILTER_TAX_TO_COLLECT
+            ? "No open invoices with tax still to collect."
+            : statusFilter === FILTER_AMOUNT_RECEIVABLE
+              ? "No open invoices with an amount receivable."
+              : statusFilter
+                ? "No records with this status."
+                : isInvoices
+                  ? "No invoices yet. Convert a proposal to an invoice status to see it here."
+                  : "No service proposals yet. Click Add New to create one."
+      : isInvoices
+        ? "No invoices yet."
+        : "No service proposals yet. Click Add New to create one.";
+
+  return (
+    <div className={SIMPLE_SCREEN_PANEL_CLASS}>
+      <div className={`${SIMPLE_SCREEN_FILTERS_CLASS} shrink-0`}>
+        {statusSummaryCards.map(renderStatusCard)}
+      </div>
+
+      <div className={SIMPLE_SCREEN_TABLE_WRAP_CLASS}>
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+          <Table
+            columns={columns}
+            data={displayRows}
+            rowKey="id"
+            loading={!ready}
+            searchable
+            onSearch={(q) => {
+              setPage(1);
+              setSearchQuery(q);
+            }}
+            searchPlaceholder={isInvoices ? "Search invoices…" : "Search proposals…"}
+            sortState={tableSort}
+            onSort={(key, direction) => {
+              setPage(1);
+              setTableSort({ key, direction });
+            }}
+            onRefresh={reload}
+            columnSettingsKey={isInvoices ? "simple-invoices" : "simple-service-proposals"}
+            toolbarBeforeRefresh={
+              isInvoices && canViewFinancials ? (
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  className="!h-7 !min-h-0 shrink-0 !rounded-none !px-2 !text-[11px] font-semibold md:!h-9 md:!px-2.5 md:!text-sm"
+                  onClick={() => setTaxesModalOpen(true)}
+                >
+                  Taxes
+                </Button>
+              ) : null
+            }
+            toolbarBeforeSearch={
+              isInvoices ? null : (
+                <Button
+                  type="button"
+                  variant="primary"
+                  size="sm"
+                  className="!h-7 !min-h-0 shrink-0 !rounded-none !px-2 !text-[11px] font-semibold md:!h-9 md:!px-2.5 md:!text-sm"
+                  onClick={openCreate}
+                >
+                  <FiPlus className="h-3.5 w-3.5 shrink-0 md:h-4 md:w-4" aria-hidden />
+                  Add New
+                </Button>
+              )
+            }
+            emptyMessage={emptyMessage}
+            fillHeight
+            responsive
+            dense
+            textSize="xs"
+            stickyColumns
+            paginateClientSide={false}
+            pagination={{ page, pageSize, totalCount }}
+            onPageChange={(nextPage, nextPageSize) => {
+              setPage(nextPage);
+              setPageSize(nextPageSize);
+            }}
+          />
+        </div>
+      </div>
+
+      <SimpleInvoicePaymentModal
+        open={Boolean(invoicePayment)}
+        onClose={() => setInvoicePayment(null)}
+        payments={Array.isArray(invoicePayment?.payments) ? invoicePayment.payments : []}
+        grandTotal={Number(invoicePayment?.total) || 0}
+        customer={
+          customers.find(
+            (c) => String(c.id || c._id || "") === String(invoicePayment?.customerId || "")
+          ) || null
+        }
+        invoiceNumber={String(invoicePayment?.documentNumber || invoicePayment?.quote || "").trim()}
+        onChange={(applied) => {
+          void handleInvoicePaymentsChange(applied);
+        }}
+      />
+
+      <ServiceProposalFormModal
+        open={modalOpen}
+        onClose={() => {
+          recordNavTargetRef.current = null;
+          setModalOpen(false);
+          setEditingId(null);
+        }}
+        initialForm={formInitial}
+        onSave={handleSave}
+        searchResultNavigation={recordNavigation}
+        onAttachmentsChange={handleAttachmentsChange}
+      />
+
+      {isInvoices ? (
+        <SimpleInvoiceTaxesModal
+          open={taxesModalOpen}
+          onClose={() => setTaxesModalOpen(false)}
+          onSaved={() => {
+            void reload();
+          }}
+        />
+      ) : null}
+
+      <Modal
+        open={!!notesEdit}
+        onClose={closeNotesEdit}
+        title={notesEdit?.quote ? `Notes — ${notesEdit.quote}` : "Notes"}
+        size="md"
+        actions={
+          <Button type="submit" form={NOTES_EDIT_FORM_ID} variant="primary" size="sm">
+            Save
+          </Button>
+        }
+      >
+        <form id={NOTES_EDIT_FORM_ID} onSubmit={handleNotesSave} className="flex flex-col gap-3">
+          <Textarea
+            id="simple-proposal-notes-edit"
+            label="Notes"
+            value={notesDraft}
+            onChange={(e) => setNotesDraft(e.target.value)}
+            rows={8}
+            placeholder="Enter notes…"
+            textareaClassName="min-h-[10rem]"
+          />
+        </form>
+      </Modal>
+
+      <CustomerViewModal
+        open={!!openCustomerId}
+        customerId={openCustomerId}
+        onClose={() => setOpenCustomerId(null)}
+        zIndex={120}
+        portal="simple"
+        onCustomerUpdated={(customer) => {
+          const cid = String(customer?.id || openCustomerId || "").trim();
+          if (!cid) return;
+          const nextName =
+            String(customer?.companyName || "").trim() ||
+            String(customer?.primaryContactName || "").trim();
+          const nextPhone = String(customer?.phone || "").trim();
+          const nextEmail = String(customer?.email || "").trim();
+          setCustomers((prev) => {
+            const idx = prev.findIndex((c) => String(c.id || "") === cid);
+            if (idx < 0) return [...prev, { ...customer, id: cid }];
+            const next = [...prev];
+            next[idx] = { ...next[idx], ...customer, id: cid };
+            return next;
+          });
+          if (!nextName && !nextPhone && !nextEmail) return;
+          setRows((prev) =>
+            prev.map((r) => {
+              if (String(r.customerId || "") !== cid) return r;
+              return {
+                ...r,
+                ...(nextName ? { companyName: nextName } : {}),
+                ...(nextPhone ? { phone: nextPhone } : {}),
+                ...(nextEmail ? { email: nextEmail } : {}),
+              };
+            })
+          );
+        }}
+      />
+    </div>
+  );
+}

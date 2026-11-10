@@ -1,0 +1,591 @@
+"use client";
+
+import { useCallback, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
+import { FiSearch } from "react-icons/fi";
+import Button from "@/components/ui/button";
+import Badge from "@/components/ui/badge";
+import Input from "@/components/ui/input";
+import Table from "@/components/ui/table";
+import Tabs from "@/components/ui/tabs";
+import DatasheetFieldGrid from "@/components/simple/simple-datasheet-field-grid";
+import ServiceProposalFormModal from "@/components/simple/service-proposal-form-modal";
+import CustomerViewModal from "@/components/dashboard/customer-view-modal";
+import { useAlert } from "@/components/confirm-provider";
+import { useIsPhoneForm } from "@/hooks/use-media-query";
+import {
+  MASTER_DATA_SEARCH_FORMS,
+  createEmptyDatasheetCriteria,
+} from "@/lib/simple-datasheet-form";
+import {
+  RECORD_TYPE_INVOICE,
+  RECORD_TYPE_JOB,
+  RECORD_TYPE_RFQ,
+  formToServiceProposalListRow,
+} from "@/lib/simple-service-proposal-form";
+import { saveSimpleServiceProposal } from "@/lib/simple-portal-api";
+import {
+  SIMPLE_SCREEN_PANEL_CLASS,
+  SIMPLE_SCREEN_TABLE_WRAP_CLASS,
+} from "@/lib/simple-screen-ui";
+import {
+  saveMasterDataSearchSession,
+  SIMPLE_MASTER_DATA_SEARCH_RESULTS_PATH,
+} from "@/lib/simple-master-data-search-session";
+import { simpleServiceProposalFormHref } from "@/lib/simple-portal-tabs";
+
+
+function emptyCriteriaForForm(formId) {
+  const form = MASTER_DATA_SEARCH_FORMS[formId];
+  if (form?.searchType === "customer") {
+    return { companyName: "", primaryContactName: "", documentNumber: "", customerPo: "" };
+  }
+  /** @type {Record<string, Record<string, string>>} */
+  const out = {};
+  if (!form) return out;
+  for (const block of form.blocks) {
+    out[block.id] = createEmptyDatasheetCriteria(block.columns);
+  }
+  return out;
+}
+
+function recordTypeBadgeVariant(recordType) {
+  const t = String(recordType || RECORD_TYPE_RFQ).toUpperCase();
+  if (t === RECORD_TYPE_INVOICE) return "success";
+  if (t === RECORD_TYPE_JOB) return "primary";
+  return "default";
+}
+
+function formatRecordType(recordType) {
+  const t = String(recordType || RECORD_TYPE_RFQ).trim().toUpperCase();
+  if (t === RECORD_TYPE_INVOICE) return RECORD_TYPE_INVOICE;
+  if (t === RECORD_TYPE_JOB) return RECORD_TYPE_JOB;
+  return RECORD_TYPE_RFQ;
+}
+
+/**
+ * Hub — Master Data Search (datasheet field wildcard search across jobs).
+ */
+export default function MasterDataSearchPanel() {
+  const alert = useAlert();
+  const router = useRouter();
+  const isPhoneForm = useIsPhoneForm();
+  const [formId, setFormId] = useState("ac");
+  const [criteriaByForm, setCriteriaByForm] = useState(() => ({
+    ac: emptyCriteriaForForm("ac"),
+    dc: emptyCriteriaForForm("dc"),
+    armature: emptyCriteriaForForm("armature"),
+    customer: emptyCriteriaForForm("customer"),
+  }));
+  const [searching, setSearching] = useState(false);
+  const [resultMeta, setResultMeta] = useState(null);
+  const [rows, setRows] = useState([]);
+  const [openProposalId, setOpenProposalId] = useState(null);
+  const [openCustomerId, setOpenCustomerId] = useState(null);
+  /** After a Search click, highlight filled criteria inputs until Clear. */
+  const [highlightFilledFields, setHighlightFilledFields] = useState(false);
+
+  const patchField = useCallback((activeFormId, blockId, key, value) => {
+    setCriteriaByForm((prev) => ({
+      ...prev,
+      [activeFormId]: {
+        ...(prev[activeFormId] || {}),
+        [blockId]: {
+          ...((prev[activeFormId] || {})[blockId] || {}),
+          [key]: value,
+        },
+      },
+    }));
+  }, []);
+
+  const patchCustomerField = useCallback((key, value) => {
+    setCriteriaByForm((prev) => ({
+      ...prev,
+      customer: {
+        ...(prev.customer || {}),
+        [key]: value,
+      },
+    }));
+  }, []);
+
+  const clearForm = useCallback(() => {
+    setCriteriaByForm((prev) => ({
+      ...prev,
+      [formId]: emptyCriteriaForForm(formId),
+    }));
+    setRows([]);
+    setResultMeta(null);
+    setHighlightFilledFields(false);
+  }, [formId]);
+
+  const runSearch = useCallback(async () => {
+    if (searching) return;
+    setSearching(true);
+    setHighlightFilledFields(true);
+    try {
+      const res = await fetch("/api/dashboard/simple-master-data-search", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          formId,
+          criteria:
+            MASTER_DATA_SEARCH_FORMS[formId]?.searchType === "customer"
+              ? criteriaByForm.customer || {}
+              : criteriaByForm[formId] || {},
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || "Search failed");
+      const nextRows = Array.isArray(data.rows) ? data.rows : [];
+      const nextMeta = {
+        searchedFields: Array.isArray(data.searchedFields) ? data.searchedFields : [],
+        truncated: Boolean(data.truncated),
+        limit: Number(data.limit) || 200,
+        searchType: String(data.searchType || "").trim(),
+      };
+      setRows(nextRows);
+      setResultMeta(nextMeta);
+      if (isPhoneForm) {
+        saveMasterDataSearchSession({
+          rows: nextRows,
+          resultMeta: nextMeta,
+          formId,
+        });
+        router.push(SIMPLE_MASTER_DATA_SEARCH_RESULTS_PATH);
+      }
+    } catch (err) {
+      setRows([]);
+      setResultMeta(null);
+      await alert({
+        title: "Search failed",
+        message: err.message || "Search failed",
+        variant: "danger",
+      });
+    } finally {
+      setSearching(false);
+    }
+  }, [alert, criteriaByForm, formId, isPhoneForm, router, searching]);
+
+  const openProposal = useCallback(
+    (row) => {
+      const id = String(row?.id || "").trim();
+      if (!id) return;
+      if (isPhoneForm) {
+        router.push(simpleServiceProposalFormHref(id));
+        return;
+      }
+      setOpenProposalId(id);
+    },
+    [isPhoneForm, router]
+  );
+
+  const openCustomer = useCallback((row) => {
+    const id = String(row?.customerId || "").trim();
+    if (!id) return;
+    setOpenCustomerId(id);
+  }, []);
+
+  const handleProposalSave = useCallback(async (form, options = {}) => {
+    const forceNew = options?.forceNew === true;
+    const id = forceNew ? undefined : openProposalId || form.id || undefined;
+    const documentNumber = String(form.documentNumber ?? form.quote ?? "").trim();
+    const existing = rows.find((r) => String(r.id) === String(id || ""));
+    const row = formToServiceProposalListRow(
+      { ...form, documentNumber, ...(forceNew ? { id: "", recordType: "RFQ" } : {}) },
+      {
+        id: id || "",
+        companyName:
+          String(form.companyName || "").trim() ||
+          (forceNew ? "" : existing?.customer) ||
+          "",
+      }
+    );
+    const saved = await saveSimpleServiceProposal(
+      { ...row, id: id || undefined },
+      { forceNew: forceNew || !id }
+    );
+    const sid = String(saved?.id || id || "").trim();
+    if (sid) {
+      setRows((prev) =>
+        prev.map((r) =>
+          String(r.id) === sid
+            ? {
+                ...r,
+                id: sid,
+                recordType: formatRecordType(saved?.recordType || r.recordType),
+                jobNumber:
+                  String(saved?.documentNumber || saved?.quote || r.jobNumber || "").trim() ||
+                  r.jobNumber,
+                customer:
+                  String(saved?.companyName || r.customer || "").trim() || r.customer,
+                customerId: String(saved?.customerId || r.customerId || "").trim(),
+              }
+            : r
+        )
+      );
+      setOpenProposalId(sid);
+    }
+    return saved;
+  }, [openProposalId, rows]);
+
+  const columns = useMemo(() => {
+    const searched = resultMeta?.searchedFields || [];
+    const isCustomerSearch = resultMeta?.searchType === "customer";
+    const base = [
+      {
+        key: "recordType",
+        label: "Type",
+        sortable: true,
+        className: "w-24",
+        render: (v) => {
+          const label = formatRecordType(v);
+          return (
+            <Badge
+              variant={recordTypeBadgeVariant(label)}
+              className="rounded-full px-2.5 py-0.5 text-xs"
+            >
+              {label}
+            </Badge>
+          );
+        },
+      },
+      {
+        key: "jobNumber",
+        label: "Job #",
+        sortable: true,
+        className: "w-28",
+        render: (v, row) => {
+          const label = String(v || "").trim() || "—";
+          const id = String(row?.id || "").trim();
+          if (!id || label === "—") return label;
+          return (
+            <button
+              type="button"
+              className="font-medium text-primary hover:underline focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 rounded"
+              onClick={() => openProposal(row)}
+            >
+              {label}
+            </button>
+          );
+        },
+      },
+      {
+        key: "customer",
+        label: "Customer",
+        sortable: true,
+        render: (v, row) => {
+          const name = String(v || "").trim() || "—";
+          const customerId = String(row?.customerId || "").trim();
+          if (!customerId || name === "—") return name;
+          return (
+            <button
+              type="button"
+              className="text-left font-medium text-primary hover:underline focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 rounded"
+              onClick={(e) => {
+                e.stopPropagation();
+                openCustomer(row);
+              }}
+            >
+              {name}
+            </button>
+          );
+        },
+      },
+    ];
+    if (isCustomerSearch) {
+      base.push(
+        {
+          key: "contactName",
+          label: "Contact Name",
+          sortable: true,
+          render: (v) => String(v || "").trim() || "—",
+        },
+        {
+          key: "customerPo",
+          label: "Purchase Order",
+          sortable: true,
+          render: (v) => String(v || "").trim() || "—",
+        }
+      );
+      return base;
+    }
+    const fieldCols = searched.map((f) => ({
+      key: `field:${f.key}`,
+      label: f.label,
+      sortable: false,
+      render: (_, row) => {
+        const val = row?.fields?.[f.key];
+        return val == null || val === "" ? "—" : String(val);
+      },
+    }));
+    return [...base, ...fieldCols];
+  }, [openCustomer, openProposal, resultMeta]);
+
+  const formTabs = useMemo(
+    () =>
+      Object.values(MASTER_DATA_SEARCH_FORMS).map((f) => ({
+        id: f.id,
+        label: f.label,
+        children:
+          f.searchType === "customer" ? (
+            <div
+              className={
+                isPhoneForm
+                  ? "grid min-w-0 grid-cols-1 gap-3 pt-3"
+                  : "flex min-w-0 max-w-md flex-col gap-4 pt-3"
+              }
+            >
+              <Input
+                label="Customer Name"
+                value={criteriaByForm.customer?.companyName ?? ""}
+                onChange={(e) => patchCustomerField("companyName", e.target.value)}
+                placeholder="e.g. *Acme* or exact name"
+                inputClassName={
+                  highlightFilledFields && String(criteriaByForm.customer?.companyName || "").trim()
+                    ? "border-primary/50 bg-primary/[0.08] dark:bg-primary/15"
+                    : isPhoneForm
+                      ? "!h-10 !text-base"
+                      : ""
+                }
+              />
+              <div className={isPhoneForm ? "grid grid-cols-2 gap-3" : "contents"}>
+                <Input
+                  label="Contact Name"
+                  value={criteriaByForm.customer?.primaryContactName ?? ""}
+                  onChange={(e) => patchCustomerField("primaryContactName", e.target.value)}
+                  placeholder="e.g. *Smith* or exact name"
+                  inputClassName={
+                    highlightFilledFields &&
+                    String(criteriaByForm.customer?.primaryContactName || "").trim()
+                      ? "border-primary/50 bg-primary/[0.08] dark:bg-primary/15"
+                      : isPhoneForm
+                        ? "!h-10 !text-base"
+                        : ""
+                  }
+                />
+                <Input
+                  label="RFQ#/Job#/Invoice#"
+                  value={criteriaByForm.customer?.documentNumber ?? ""}
+                  onChange={(e) => patchCustomerField("documentNumber", e.target.value)}
+                  placeholder="e.g. *123* or exact number"
+                  inputClassName={
+                    highlightFilledFields &&
+                    String(criteriaByForm.customer?.documentNumber || "").trim()
+                      ? "border-primary/50 bg-primary/[0.08] dark:bg-primary/15"
+                      : isPhoneForm
+                        ? "!h-10 !text-base"
+                        : ""
+                  }
+                />
+                <Input
+                  label="Purchase Order"
+                  value={criteriaByForm.customer?.customerPo ?? ""}
+                  onChange={(e) => patchCustomerField("customerPo", e.target.value)}
+                  placeholder="e.g. *PO-45* or exact PO"
+                  inputClassName={
+                    highlightFilledFields &&
+                    String(criteriaByForm.customer?.customerPo || "").trim()
+                      ? "border-primary/50 bg-primary/[0.08] dark:bg-primary/15"
+                      : isPhoneForm
+                        ? "!h-10 !text-base"
+                        : ""
+                  }
+                />
+              </div>
+              <p className="text-xs text-secondary col-span-full">
+                Use <span className="font-medium text-title">*</span> wildcards, e.g.{" "}
+                <span className="font-mono text-title">*abb*</span> or{" "}
+                <span className="font-mono text-title">Smith*</span>. Filled fields are combined with AND.
+              </p>
+            </div>
+          ) : (
+            <div className={`flex min-w-0 flex-col ${isPhoneForm ? "gap-5 pt-2" : "gap-4 pt-3"}`}>
+              {(f.blocks || []).map((block) => (
+                <div key={block.id} className="min-w-0">
+                  {f.blocks.length > 1 ? (
+                    <p
+                      className={`mb-2 border-b border-primary/25 pb-1 font-bold uppercase tracking-wide text-primary ${
+                        isPhoneForm ? "text-xs" : "text-sm"
+                      }`}
+                    >
+                      {block.label}
+                    </p>
+                  ) : null}
+                  <DatasheetFieldGrid
+                    columns={block.columns}
+                    values={criteriaByForm[f.id]?.[block.id] || {}}
+                    onFieldChange={(key, value) => patchField(f.id, block.id, key, value)}
+                    highlightFilled={highlightFilledFields && f.id === formId}
+                    dense={!isPhoneForm}
+                    stacked={isPhoneForm}
+                    stackedCols={2}
+                  />
+                </div>
+              ))}
+            </div>
+          ),
+      })),
+    [
+      criteriaByForm,
+      formId,
+      highlightFilledFields,
+      isPhoneForm,
+      patchCustomerField,
+      patchField,
+    ]
+  );
+
+  const editingProposal = useMemo(
+    () => (openProposalId ? { id: openProposalId } : null),
+    [openProposalId]
+  );
+
+  const openProposalIndex = useMemo(() => {
+    if (!openProposalId) return -1;
+    return rows.findIndex((r) => String(r.id) === String(openProposalId));
+  }, [openProposalId, rows]);
+
+  const searchResultNavigation = useMemo(() => {
+    if (openProposalIndex < 0 || rows.length < 2) return null;
+    return {
+      currentIndex: openProposalIndex,
+      total: rows.length,
+      canPrevious: openProposalIndex > 0,
+      canNext: openProposalIndex < rows.length - 1,
+      onPrevious: () => {
+        const prev = rows[openProposalIndex - 1];
+        const id = String(prev?.id || "").trim();
+        if (id) setOpenProposalId(id);
+      },
+      onNext: () => {
+        const next = rows[openProposalIndex + 1];
+        const id = String(next?.id || "").trim();
+        if (id) setOpenProposalId(id);
+      },
+    };
+  }, [openProposalIndex, rows]);
+
+  return (
+    <div className={`${SIMPLE_SCREEN_PANEL_CLASS} flex min-h-0 flex-1 flex-col gap-3 overflow-hidden`}>
+      <div className="hidden shrink-0 border-b border-border pb-3 sm:block">
+        <h2 className="text-lg font-semibold text-title">Master Data Search</h2>
+        <p className="mt-1 text-sm text-secondary">
+          Search jobs by datasheet fields (same fields as the Service Proposal DataSheet). Use{" "}
+          <span className="font-medium text-title">*</span> wildcards, e.g.{" "}
+          <span className="font-mono text-xs text-title">*abb*</span>,{" "}
+          <span className="font-mono text-xs text-title">10*</span>, or exact{" "}
+          <span className="font-mono text-xs text-title">text</span>. Multiple fields are combined with AND.
+        </p>
+      </div>
+
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-3 overflow-hidden lg:flex-row">
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-sm border border-border bg-card max-sm:border-0 max-sm:bg-transparent">
+          <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-b border-border bg-primary/[0.04] px-3 py-2.5 max-sm:bg-card">
+            <span className="text-xs font-bold uppercase tracking-wide text-secondary">
+              Search criteria
+            </span>
+            <div className="flex flex-wrap gap-2">
+              <Button type="button" variant="outline" size="sm" className="!rounded-none" onClick={clearForm} disabled={searching}>
+                Clear
+              </Button>
+              <Button
+                type="button"
+                variant="primary"
+                size="sm"
+                onClick={() => void runSearch()}
+                disabled={searching}
+                className="inline-flex items-center gap-1.5 !rounded-none"
+              >
+                <FiSearch className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                {searching ? "Searching…" : "Search"}
+              </Button>
+            </div>
+          </div>
+          <div className="min-h-0 flex-1 overflow-y-auto p-3 max-sm:px-2">
+            <Tabs
+              tabs={formTabs}
+              value={formId}
+              onChange={setFormId}
+              ariaLabel="Master data motor type"
+              keepMounted
+              animatePanel={false}
+              listClassName="!rounded-none"
+              tabButtonClassName="!rounded-none"
+              panelClassName="pt-0"
+            />
+          </div>
+        </div>
+
+        <div className="hidden min-h-0 min-w-0 flex-[1.15] flex-col overflow-hidden rounded-sm border border-border bg-card sm:flex">
+          <div className="shrink-0 border-b border-border bg-primary/[0.04] px-3 py-2">
+            <p className="text-xs font-bold uppercase tracking-wide text-secondary">
+              Results
+              {resultMeta
+                ? ` (${rows.length}${resultMeta.truncated ? ` of first ${resultMeta.limit}` : ""})`
+                : ""}
+            </p>
+            {resultMeta?.truncated ? (
+              <p className="mt-0.5 text-[11px] text-warning">
+                Showing the first {resultMeta.limit} matches. Narrow your criteria for more specific results.
+              </p>
+            ) : null}
+          </div>
+          <div className={`${SIMPLE_SCREEN_TABLE_WRAP_CLASS} min-h-0 flex-1 overflow-auto p-2`}>
+            {!resultMeta ? (
+              <p className="px-2 py-6 text-center text-sm text-secondary">
+                Enter criteria and click Search to find matching jobs.
+              </p>
+            ) : (
+              <Table
+                columns={columns}
+                data={rows}
+                rowKey="id"
+                emptyMessage={
+                  resultMeta?.searchType === "customer"
+                    ? "No jobs matched these customer criteria."
+                    : "No jobs matched these datasheet criteria."
+                }
+                responsive
+                searchable={false}
+                dense
+                textSize="xs"
+                stickyColumns
+                columnSettingsKey="simple-master-data-search"
+              />
+            )}
+          </div>
+        </div>
+      </div>
+
+      <ServiceProposalFormModal
+        open={Boolean(openProposalId)}
+        onClose={() => setOpenProposalId(null)}
+        initialForm={editingProposal}
+        onSave={handleProposalSave}
+        searchResultNavigation={searchResultNavigation}
+      />
+
+      <CustomerViewModal
+        open={Boolean(openCustomerId)}
+        customerId={openCustomerId}
+        onClose={() => setOpenCustomerId(null)}
+        zIndex={120}
+        portal="simple"
+        onCustomerUpdated={(customer) => {
+          const cid = String(customer?.id || openCustomerId || "").trim();
+          if (!cid) return;
+          const nextName =
+            String(customer?.companyName || "").trim() ||
+            String(customer?.primaryContactName || "").trim();
+          if (!nextName) return;
+          setRows((prev) =>
+            prev.map((r) =>
+              String(r.customerId || "") === cid ? { ...r, customer: nextName } : r
+            )
+          );
+        }}
+      />
+    </div>
+  );
+}

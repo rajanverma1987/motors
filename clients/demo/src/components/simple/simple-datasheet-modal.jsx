@@ -1,0 +1,1102 @@
+"use client";
+
+import { useEffect, useMemo, useRef, useState } from "react";
+import dynamic from "next/dynamic";
+import Button from "@/components/ui/button";
+import Modal from "@/components/ui/modal";
+import { Form } from "@/components/ui/form-layout";
+import SimpleSelect from "@/components/simple/simple-select";
+import {
+  DATASHEET_TECHNICIAN_ALL,
+  datasheetTechnicianIds,
+  datasheetTechnicianLabel,
+  datasheetTechniciansForSave,
+  reconcileDatasheetTechnicians,
+} from "@/lib/datasheet-technicians";
+import DocumentPrintOffscreenPortal from "@/components/dashboard/document-print-offscreen-portal";
+import SimpleDatasheetPrintSheet from "@/components/simple/simple-datasheet-print-sheet";
+import SimpleSendDatasheetModal from "@/components/simple/simple-send-datasheet-modal";
+import SimpleServiceProposalAttachmentsModal from "@/components/simple/simple-service-proposal-attachments-modal";
+import SimpleDiagramModal from "@/components/simple/simple-diagram-modal";
+import SimpleAcDisassemblyFields from "@/components/simple/simple-ac-disassembly-fields";
+import SimpleAcAssemblyFields from "@/components/simple/simple-ac-assembly-fields";
+import SimpleStructuredDatasheetFields from "@/components/simple/simple-structured-datasheet-fields";
+import DatasheetFieldGrid, {
+  DATASHEET_FIELD_INPUT,
+} from "@/components/simple/simple-datasheet-field-grid";
+import { useAlert } from "@/components/confirm-provider";
+import { useAuth } from "@/contexts/auth-context";
+import {
+  AC_DATASHEET_FIELD_COLUMNS,
+  AC_DATASHEET_SECTIONS,
+  AC_DATASHEET_TAB_ASSEMBLY,
+  AC_DATASHEET_TAB_DISASSEMBLY,
+  DC_ARMATURE_FIELD_COLUMNS,
+  DC_DATASHEET_SECTIONS,
+  DC_DATASHEET_TAB_ARMATURE,
+  DC_FIELD_FRAME_FIELD_COLUMNS,
+  acDatasheetVisibleTabs,
+  createEmptyAcDatasheet,
+  createEmptyDcDatasheet,
+  dcDatasheetVisibleTabs,
+  normalizeAcDatasheet,
+  normalizeDcDatasheet,
+} from "@/lib/simple-datasheet-form";
+import {
+  GENERATOR_ASSEMBLY_GROUPS,
+  GENERATOR_DATASHEET_FIELD_COLUMNS,
+  GENERATOR_DATASHEET_SECTIONS,
+  GENERATOR_DISASSEMBLY_GROUPS,
+  GENERATOR_ROTOR_COLUMNS,
+  GENERATOR_TAB_ASSEMBLY,
+  GENERATOR_TAB_DATASHEET,
+  GENERATOR_TAB_DISASSEMBLY,
+  GENERATOR_TAB_ROTOR,
+  PUMP_ASSEMBLY_GROUPS,
+  PUMP_DATASHEET_FIELD_COLUMNS,
+  PUMP_DATASHEET_SECTIONS,
+  PUMP_DISASSEMBLY_GROUPS,
+  createEmptyGeneratorDatasheet,
+  createEmptyPumpDatasheet,
+  generatorDatasheetVisibleTabs,
+  normalizeGeneratorDatasheet,
+  normalizePumpDatasheet,
+  pumpDatasheetVisibleTabs,
+} from "@/lib/simple-datasheet-extra";
+import { machineTypeDiagramsEnabled, resolveMachineType } from "@/lib/machine-types";
+import { formatCmJobResultSummary } from "@/lib/cm-job-calculation";
+import { RECORD_TYPE_RFQ, recordTypeJobNumberLabel } from "@/lib/simple-service-proposal-form";
+import {
+  resolveLoggedInEmployeeSelectValue,
+} from "@/lib/technician-select-options";
+
+const FORM_ID = "simple-datasheet-form";
+const CmBestMatchCalculator = dynamic(() => import("@/components/dashboard/cm-best-match-calculator"), {
+  ssr: false,
+});
+const FIELD_INPUT = DATASHEET_FIELD_INPUT;
+const FIELD_TEXTAREA =
+  "w-full min-w-0 resize-y rounded-none border border-border bg-primary/[0.04] px-1.5 py-1 text-sm text-title outline-none focus:border-primary focus:ring-1 focus:ring-primary dark:bg-primary/10 dark:text-title";
+const FIELD_LABEL = "shrink-0 whitespace-nowrap text-right text-xs font-bold text-title";
+const TOOLBAR_BTN = "h-7 shrink-0 rounded-none px-2.5 text-xs font-semibold";
+const TAB_BTN =
+  "h-7 shrink-0 rounded-none px-3 text-xs font-semibold outline-none focus-visible:ring-2 focus-visible:ring-primary/40";
+const TOUCH_FIELD_INPUT =
+  "h-11 w-full min-w-0 rounded-none border border-border bg-primary/[0.04] px-3 text-base text-title outline-none focus:border-primary focus:ring-1 focus:ring-primary dark:bg-primary/10 dark:text-title";
+const TOUCH_TAB_BTN =
+  "min-h-11 shrink-0 px-4 text-sm font-semibold outline-none focus-visible:ring-2 focus-visible:ring-primary/40";
+
+function FieldRow({ label, labelWidth = "6.5rem", children, className = "" }) {
+  return (
+    <div className={`flex min-w-0 items-center gap-2 ${className}`}>
+      <label className={FIELD_LABEL} style={{ width: labelWidth }}>
+        {label}
+      </label>
+      <div className="min-w-0 flex-1">{children}</div>
+    </div>
+  );
+}
+
+function NotesPanel({ label, value, onChange, ariaLabel, touch = false }) {
+  return (
+    <div className="flex min-w-0 flex-col gap-1">
+      <span className={touch ? "text-sm font-bold text-title" : "text-xs font-bold text-title"}>{label}</span>
+      <textarea
+        rows={touch ? 5 : 8}
+        value={value ?? ""}
+        onChange={(e) => onChange(e.target.value)}
+        className={
+          touch
+            ? "min-h-[8rem] w-full min-w-0 resize-y rounded-none border border-border bg-primary/[0.04] px-3 py-2 text-base text-title outline-none focus:border-primary focus:ring-1 focus:ring-primary dark:bg-primary/10 dark:text-title"
+            : FIELD_TEXTAREA
+        }
+        aria-label={ariaLabel || label}
+      />
+    </div>
+  );
+}
+
+function SectionChoices({ label, options, value, onChange }) {
+  const list = Array.isArray(options) ? options : [];
+  return (
+    <div className="grid grid-cols-2 gap-2" role="radiogroup" aria-label={label}>
+      {list.map((opt, index) => {
+        const active = value === opt;
+        const span = list.length % 2 === 1 && index === list.length - 1;
+        return (
+          <button
+            key={opt}
+            type="button"
+            role="radio"
+            aria-checked={active}
+            className={`min-h-11 px-2 text-sm font-semibold ${span ? "col-span-2" : ""} ${
+              active ? "bg-primary text-white" : "border border-border bg-primary/[0.06] text-title"
+            }`}
+            onClick={() => onChange(opt)}
+          >
+            {opt}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+/**
+ * AC / DC datasheet modal for Simple service proposals (layout from documents/AC.png, DC.png, Armature.png).
+ */
+export default function SimpleDatasheetModal({
+  open,
+  onClose,
+  onSave,
+  motorType = "AC",
+  initialDatasheet = null,
+  technicianOptions = [],
+  /** Prefer this when datasheet technician is empty (usually Prepared By). */
+  defaultTechnicianValue = "",
+  printContext = null,
+  recordId = null,
+  attachments = [],
+  onAttached,
+  jobDiagrams = [],
+  onDiagramsChange,
+  /** Service Proposal job Status options + value (Disassembly Status section). */
+  jobStatusOptions = [],
+  jobStatus = "",
+  onJobStatusChange,
+  /** Saved CM Best Match for this job, if any. */
+  cmCalculation = null,
+  /** Persist a chosen CM match on the job. Return true when saved. */
+  onSaveCmCalculation,
+  recordType = RECORD_TYPE_RFQ,
+  /** Punchin PWA: full-screen sheet with larger fields. */
+  variant = "default",
+}) {
+  const timeClock = variant === "timeClock";
+  const alert = useAlert();
+  const { user } = useAuth();
+  const machineType = resolveMachineType(motorType);
+  const isDc = machineType === "DC";
+  const isPump = machineType === "Pump";
+  const isGenerator = machineType === "Generator";
+  const isStructured = isPump || isGenerator;
+  const diagramsEnabled = machineTypeDiagramsEnabled(machineType);
+  const [form, setForm] = useState(() => {
+    if (isPump) return createEmptyPumpDatasheet();
+    if (isGenerator) return createEmptyGeneratorDatasheet();
+    return isDc ? createEmptyDcDatasheet() : createEmptyAcDatasheet();
+  });
+  const [saving, setSaving] = useState(false);
+  const [printing, setPrinting] = useState(false);
+  const [downloadingPdf, setDownloadingPdf] = useState(false);
+  const [emailOpen, setEmailOpen] = useState(false);
+  const [attachmentsOpen, setAttachmentsOpen] = useState(false);
+  const [diagramOpen, setDiagramOpen] = useState(false);
+  const [cmOpen, setCmOpen] = useState(false);
+  const [savingCm, setSavingCm] = useState(false);
+  const wasOpenRef = useRef(false);
+  const formRef = useRef(form);
+  formRef.current = form;
+
+  const jobNumberLabel = useMemo(() => recordTypeJobNumberLabel(recordType), [recordType]);
+
+  const canAttach = Boolean(String(recordId || "").trim());
+  const cmSummary = formatCmJobResultSummary(cmCalculation);
+
+  const resolveTechnicianSelection = (sheet) => {
+    const opts = Array.isArray(technicianOptions) ? technicianOptions : [];
+    const stored = datasheetTechnicianIds(sheet);
+    if (stored.includes(DATASHEET_TECHNICIAN_ALL)) return [DATASHEET_TECHNICIAN_ALL];
+    const resolved = stored.map((id) => {
+      const byValue = opts.find((option) => String(option.value) === id);
+      if (byValue) return String(byValue.value);
+      const byLabel = opts.find(
+        (option) => String(option.label || "").trim().toLowerCase() === id.toLowerCase()
+      );
+      return byLabel ? String(byLabel.value) : id;
+    });
+    if (resolved.length) return resolved;
+    const preferred = String(defaultTechnicianValue || "").trim();
+    if (preferred && opts.some((option) => String(option.value) === preferred)) return [preferred];
+    const loggedIn = resolveLoggedInEmployeeSelectValue(user, []);
+    if (loggedIn && opts.some((option) => String(option.value) === loggedIn)) return [loggedIn];
+    if (preferred) return [preferred];
+    return loggedIn ? [loggedIn] : [];
+  };
+
+  useEffect(() => {
+    if (open && !wasOpenRef.current) {
+      const next = isPump
+        ? normalizePumpDatasheet(initialDatasheet || {})
+        : isGenerator
+          ? normalizeGeneratorDatasheet(initialDatasheet || {})
+          : isDc
+            ? normalizeDcDatasheet(initialDatasheet || {})
+            : normalizeAcDatasheet(initialDatasheet || {});
+      const savedTech = datasheetTechniciansForSave(resolveTechnicianSelection(next));
+      next.technician = savedTech.technician;
+      next.technicians = savedTech.technicians;
+      if (!isDc) {
+        const asm = next.assembly && typeof next.assembly === "object" ? next.assembly : {};
+        if (!String(asm.date || "").trim()) asm.date = String(next.date || "").slice(0, 10);
+        if (!String(asm.technicianName || "").trim()) {
+          asm.technicianName = datasheetTechnicianLabel(next.technicians, technicianOptions);
+        }
+        next.assembly = asm;
+      }
+      setForm(next);
+      setPrinting(false);
+      setEmailOpen(false);
+      setAttachmentsOpen(false);
+      setDiagramOpen(false);
+      setCmOpen(false);
+    }
+    wasOpenRef.current = open;
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- hydrate once per open
+  }, [open, isDc, isPump, isGenerator, initialDatasheet]);
+
+  const patch = (key, value) => setForm((f) => ({ ...f, [key]: value }));
+
+  const patchNested = (blockKey, fieldKey, value) => {
+    setForm((f) => ({
+      ...f,
+      [blockKey]: {
+        ...(f[blockKey] && typeof f[blockKey] === "object" ? f[blockKey] : {}),
+        [fieldKey]: value,
+      },
+    }));
+  };
+
+  const handleDcSectionChange = (nextSection) => {
+    setForm((f) => {
+      const visible = dcDatasheetVisibleTabs(nextSection);
+      const activeTab = visible.includes(f.activeTab) ? f.activeTab : visible[0];
+      return { ...f, section: nextSection, activeTab };
+    });
+  };
+
+  const handleStructuredSectionChange = (nextSection) => {
+    const visible = isPump ? pumpDatasheetVisibleTabs(nextSection) : generatorDatasheetVisibleTabs(nextSection);
+    setForm((f) => ({
+      ...f,
+      section: nextSection,
+      activeTab: visible.includes(f.activeTab) ? f.activeTab : visible[0],
+    }));
+  };
+
+  const handleAcSectionChange = (nextSection) => {
+    setForm((f) => {
+      const visible = acDatasheetVisibleTabs(nextSection);
+      const activeTab = visible.includes(f.activeTab) ? f.activeTab : visible[0];
+      return { ...f, section: nextSection, activeTab };
+    });
+  };
+
+  const handlePrint = () => {
+    setPrinting(true);
+  };
+
+  const handlePrintDone = () => {
+    setPrinting(false);
+  };
+
+  const handleDownloadPdf = async () => {
+    setDownloadingPdf(true);
+    try {
+      const res = await fetch("/api/dashboard/simple-service-proposals/datasheet/pdf", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          motorType: machineType,
+          datasheet: printDatasheet,
+          printContext: resolvedPrintContext,
+          technicianLabel,
+          jobDiagrams: Array.isArray(jobDiagrams) ? jobDiagrams : [],
+          attachments: Array.isArray(attachments) ? attachments : [],
+        }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || "Failed to generate PDF");
+      }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      const num = resolvedPrintContext.documentNumber || "Report";
+      a.download = `${machineType}-Datasheet-Report-${num}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      void alert({
+        title: "Error",
+        message: err?.message || "Failed to download PDF",
+        variant: "danger",
+      });
+    } finally {
+      setDownloadingPdf(false);
+    }
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setSaving(true);
+    try {
+      const current = formRef.current;
+      const normalized = isPump
+        ? normalizePumpDatasheet(current)
+        : isGenerator
+          ? normalizeGeneratorDatasheet(current)
+          : isDc
+            ? normalizeDcDatasheet(current)
+            : normalizeAcDatasheet(current);
+      await onSave?.(normalized);
+    } catch (err) {
+      await alert({
+        title: "Error",
+        message: err?.message || "Failed to save datasheet",
+        variant: "danger",
+      });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const techOptions = useMemo(() => {
+    const opts = Array.isArray(technicianOptions) ? technicianOptions : [];
+    const extra = datasheetTechnicianIds(form)
+      .filter((id) => id !== DATASHEET_TECHNICIAN_ALL)
+      .filter((id) => !opts.some((option) => String(option.value) === id || String(option.label) === id))
+      .map((id) => ({ value: id, label: id }));
+    return [...extra, ...opts];
+  }, [technicianOptions, form]);
+
+  const technicianLabel = useMemo(() => {
+    return datasheetTechnicianLabel(datasheetTechnicianIds(form), techOptions);
+  }, [techOptions, form]);
+
+  const resolvedPrintContext = useMemo(() => {
+    const ctx = printContext && typeof printContext === "object" ? printContext : {};
+    const jobStatusValue = String(ctx.jobStatus || jobStatus || "").trim();
+    const jobStatusHit = (Array.isArray(jobStatusOptions) ? jobStatusOptions : []).find(
+      (o) => String(o.value || "").trim().toLowerCase() === jobStatusValue.toLowerCase()
+    );
+    return {
+      customerName: String(ctx.customerName || ctx.companyName || form.company || "").trim(),
+      contactName: String(ctx.contactName || "").trim(),
+      companyName: String(ctx.companyName || form.company || ctx.customerName || "").trim(),
+      customerPhone: String(ctx.customerPhone || "").trim(),
+      customerEmail: String(ctx.customerEmail || "").trim(),
+      customerPo: String(ctx.customerPo || "").trim(),
+      documentNumber: String(ctx.documentNumber || form.jobNumber || "").trim(),
+      documentLabel: String(ctx.documentLabel || "RFQ#").trim() || "RFQ#",
+      jobStatus: jobStatusValue,
+      jobStatusLabel: jobStatusHit?.label || jobStatusValue,
+    };
+  }, [printContext, form.company, form.jobNumber, jobStatus, jobStatusOptions]);
+
+  const printDatasheet = useMemo(() => {
+    if (isPump) return normalizePumpDatasheet(form);
+    if (isGenerator) return normalizeGeneratorDatasheet(form);
+    return isDc ? normalizeDcDatasheet(form) : normalizeAcDatasheet(form);
+  }, [isDc, isPump, isGenerator, form]);
+
+  const dcVisibleTabs = useMemo(
+    () => (isDc ? dcDatasheetVisibleTabs(form.section) : []),
+    [isDc, form.section]
+  );
+  const acVisibleTabs = useMemo(
+    () => (!isDc && !isStructured ? acDatasheetVisibleTabs(form.section) : []),
+    [isDc, isStructured, form.section]
+  );
+
+  const activeDcTab = dcVisibleTabs.includes(form.activeTab) ? form.activeTab : dcVisibleTabs[0];
+  const isArmatureTab = activeDcTab === DC_DATASHEET_TAB_ARMATURE;
+  const dcBlockKey = isArmatureTab ? "armature" : "fieldFrame";
+  const dcColumns = isArmatureTab ? DC_ARMATURE_FIELD_COLUMNS : DC_FIELD_FRAME_FIELD_COLUMNS;
+  const dcBlock = form[dcBlockKey] && typeof form[dcBlockKey] === "object" ? form[dcBlockKey] : {};
+
+  const showAcTabStripe = !isDc && !isStructured && form.section === "Complete Motor";
+  const activeAcTab = acVisibleTabs.includes(form.activeTab) ? form.activeTab : acVisibleTabs[0];
+  const acBlockKey =
+    activeAcTab === AC_DATASHEET_TAB_DISASSEMBLY
+      ? "disassembly"
+      : activeAcTab === AC_DATASHEET_TAB_ASSEMBLY
+        ? "assembly"
+        : "dataSheet";
+  const structuredVisibleTabs = useMemo(() => {
+    if (isPump) return pumpDatasheetVisibleTabs(form.section);
+    if (isGenerator) return generatorDatasheetVisibleTabs(form.section);
+    return [];
+  }, [isPump, isGenerator, form.section]);
+  const activeStructuredTab = structuredVisibleTabs.includes(form.activeTab)
+    ? form.activeTab
+    : structuredVisibleTabs[0];
+  const showStructuredTabStripe = isStructured && structuredVisibleTabs.length > 1;
+  const acBlock = form[acBlockKey] && typeof form[acBlockKey] === "object" ? form[acBlockKey] : {};
+
+  const headerActions = (
+    <Button type="submit" form={FORM_ID} variant="primary" size="sm" disabled={saving || printing}>
+      {saving ? "Saving…" : "Save"}
+    </Button>
+  );
+
+  const handleSaveCmCalculation = async (snapshot) => {
+    if (typeof onSaveCmCalculation !== "function") return false;
+    setSavingCm(true);
+    try {
+      const ok = await onSaveCmCalculation(snapshot);
+      return Boolean(ok);
+    } finally {
+      setSavingCm(false);
+    }
+  };
+
+  return (
+    <>
+    <Modal
+      open={open && !printing}
+      onClose={() => !saving && !printing && onClose?.()}
+      title={
+        timeClock
+          ? `${machineType} Datasheet`
+          : isPump
+            ? "Add/Edit Pump Fields"
+            : isGenerator
+              ? "Add/Edit Generator Fields"
+              : isDc
+                ? "Add/Edit DC Fields"
+                : "Add/Edit AC Fields"
+      }
+      size="6xl"
+      width={timeClock ? undefined : "min(1100px, 96vw)"}
+      height={timeClock ? undefined : "min(90vh, 880px)"}
+      fullscreen={timeClock}
+      showClose={!saving && !printing}
+      closeOnOutsideClick={false}
+      headerClassName={timeClock ? "[&_h2]:!max-w-none [&_h2]:!whitespace-normal [&_h2]:text-base" : ""}
+      bodyClassName={timeClock ? "px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-4" : ""}
+      actions={headerActions}
+    >
+      <Form
+        id={FORM_ID}
+        onSubmit={handleSubmit}
+        className="flex min-h-0 flex-col gap-3 !space-y-0 !border-0 !bg-transparent !p-0 !shadow-none"
+      >
+        {timeClock ? (
+          <div className="flex flex-col gap-3">
+            <SectionChoices
+              label={isDc ? "DC section" : isStructured ? "Machine section" : "AC section"}
+              options={
+                isDc
+                  ? DC_DATASHEET_SECTIONS
+                  : isPump
+                    ? PUMP_DATASHEET_SECTIONS
+                    : isGenerator
+                      ? GENERATOR_DATASHEET_SECTIONS
+                      : AC_DATASHEET_SECTIONS
+              }
+              value={form.section}
+              onChange={
+                isDc
+                  ? handleDcSectionChange
+                  : isStructured
+                    ? handleStructuredSectionChange
+                    : handleAcSectionChange
+              }
+            />
+            <div className="grid grid-cols-2 gap-3 border border-border bg-primary/[0.04] p-3 dark:bg-primary/10">
+              <div>
+                <div className="text-[11px] font-bold uppercase tracking-wide text-secondary">Date</div>
+                <div className="mt-0.5 text-sm font-semibold text-title">
+                  {String(form.date || "").slice(0, 10) || "-"}
+                </div>
+              </div>
+              <div>
+                <div className="text-[11px] font-bold uppercase tracking-wide text-secondary">{jobNumberLabel}</div>
+                <div className="mt-0.5 text-sm font-semibold text-title">{form.jobNumber || "-"}</div>
+              </div>
+              <div className="col-span-2">
+                <div className="text-[11px] font-bold uppercase tracking-wide text-secondary">Company</div>
+                <div className="mt-0.5 text-sm font-semibold text-title">{form.company || "-"}</div>
+              </div>
+            </div>
+            <div>
+              <div className="mb-1 text-sm font-bold text-title">Technician</div>
+              <SimpleSelect
+                multiple
+                options={[{ value: DATASHEET_TECHNICIAN_ALL, label: "All" }, ...techOptions]}
+                value={datasheetTechnicianIds(form)}
+                onChange={(e) => {
+                  const nextIds = reconcileDatasheetTechnicians(datasheetTechnicianIds(form), e.target.value);
+                  const saved = datasheetTechniciansForSave(nextIds);
+                  const label = datasheetTechnicianLabel(saved.technicians, techOptions);
+                  setForm((f) => {
+                    const updated = { ...f, technician: saved.technician, technicians: saved.technicians };
+                    if (!isDc && f.assembly && typeof f.assembly === "object") {
+                      updated.assembly = { ...f.assembly, technicianName: label };
+                    }
+                    return updated;
+                  });
+                }}
+                placeholder="Select technicians"
+                searchable
+                disabled={saving || printing}
+                aria-label="Technician"
+                triggerClassName="!h-11 !px-3 !text-base"
+              />
+            </div>
+            {isDc && form.section === "Complete Motor" ? (
+              <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1" role="tablist" aria-label="DC datasheet tabs">
+                {dcVisibleTabs.map((tab) => {
+                  const active = tab === activeDcTab;
+                  return (
+                    <button
+                      key={tab}
+                      type="button"
+                      role="tab"
+                      aria-selected={active}
+                      className={`${TOUCH_TAB_BTN} ${
+                        active ? "bg-primary text-white" : "border border-border bg-primary/[0.06] text-title"
+                      }`}
+                      onClick={() => patch("activeTab", tab)}
+                    >
+                      {tab}
+                    </button>
+                  );
+                })}
+              </div>
+            ) : null}
+            {showAcTabStripe ? (
+              <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1" role="tablist" aria-label="AC datasheet tabs">
+                {acVisibleTabs.map((tab) => {
+                  const active = tab === activeAcTab;
+                  return (
+                    <button
+                      key={tab}
+                      type="button"
+                      role="tab"
+                      aria-selected={active}
+                      className={`${TOUCH_TAB_BTN} ${
+                        active ? "bg-primary text-white" : "border border-border bg-primary/[0.06] text-title"
+                      }`}
+                      onClick={() => patch("activeTab", tab)}
+                    >
+                      {tab}
+                    </button>
+                  );
+                })}
+              </div>
+            ) : null}
+            {showStructuredTabStripe ? (
+              <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1" role="tablist" aria-label="Datasheet tabs">
+                {structuredVisibleTabs.map((tab) => {
+                  const active = tab === activeStructuredTab;
+                  return (
+                    <button
+                      key={tab}
+                      type="button"
+                      role="tab"
+                      aria-selected={active}
+                      className={`${TOUCH_TAB_BTN} ${
+                        active ? "bg-primary text-white" : "border border-border bg-primary/[0.06] text-title"
+                      }`}
+                      onClick={() => patch("activeTab", tab)}
+                    >
+                      {tab}
+                    </button>
+                  );
+                })}
+              </div>
+            ) : null}
+          </div>
+        ) : null}
+        <div className={timeClock ? "hidden" : "flex flex-wrap items-center justify-between gap-2 border-b border-border pb-2"}>
+          <div className="flex min-w-0 flex-wrap items-center gap-1">
+            {isDc ? (
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-1" role="radiogroup" aria-label="DC section">
+                {DC_DATASHEET_SECTIONS.map((opt) => (
+                  <label key={opt} className="inline-flex cursor-pointer items-center gap-1.5 text-xs font-bold text-title">
+                    <input
+                      type="radio"
+                      name="dcSection"
+                      value={opt}
+                      checked={form.section === opt}
+                      onChange={() => handleDcSectionChange(opt)}
+                      className="h-3.5 w-3.5 accent-primary"
+                    />
+                    {opt}
+                  </label>
+                ))}
+              </div>
+            ) : isStructured ? (
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-1" role="radiogroup" aria-label="Machine section">
+                {(isPump ? PUMP_DATASHEET_SECTIONS : GENERATOR_DATASHEET_SECTIONS).map((opt) => (
+                  <label key={opt} className="inline-flex cursor-pointer items-center gap-1.5 text-xs font-bold text-title">
+                    <input
+                      type="radio"
+                      name="structuredSection"
+                      value={opt}
+                      checked={form.section === opt}
+                      onChange={() => handleStructuredSectionChange(opt)}
+                      className="h-3.5 w-3.5 accent-primary"
+                    />
+                    {opt}
+                  </label>
+                ))}
+              </div>
+            ) : (
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-1" role="radiogroup" aria-label="AC section">
+                {AC_DATASHEET_SECTIONS.map((opt) => (
+                  <label key={opt} className="inline-flex cursor-pointer items-center gap-1.5 text-xs font-bold text-title">
+                    <input
+                      type="radio"
+                      name="acSection"
+                      value={opt}
+                      checked={form.section === opt}
+                      onChange={() => handleAcSectionChange(opt)}
+                      className="h-3.5 w-3.5 accent-primary"
+                    />
+                    {opt}
+                  </label>
+                ))}
+              </div>
+            )}
+          </div>
+          <div className="flex flex-wrap items-center gap-1">
+            <Button type="button" variant="primary" size="sm" className={TOOLBAR_BTN} onClick={handlePrint}>
+              Print
+            </Button>
+            <Button
+              type="button"
+              variant="primary"
+              size="sm"
+              className={TOOLBAR_BTN}
+              disabled={downloadingPdf || saving || printing}
+              title={`Download ${machineType} report PDF with attached images`}
+              onClick={handleDownloadPdf}
+            >
+              {downloadingPdf ? "Generating PDF…" : "Download PDF"}
+            </Button>
+            <Button
+              type="button"
+              variant="primary"
+              size="sm"
+              className={TOOLBAR_BTN}
+              disabled={saving || printing}
+              title={`Email ${machineType} test and inspection report to customer`}
+              onClick={() => setEmailOpen(true)}
+            >
+              Email Report
+            </Button>
+            <Button
+              type="button"
+              variant="primary"
+              size="sm"
+              className={TOOLBAR_BTN}
+              disabled={!canAttach || saving || printing}
+              title={canAttach ? "Add attachments" : "Save the record before adding attachments"}
+              onClick={() => setAttachmentsOpen(true)}
+            >
+              Attachments{Array.isArray(attachments) && attachments.length ? ` (${attachments.length})` : ""}
+            </Button>
+            {diagramsEnabled ? (
+            <Button
+              type="button"
+              variant="primary"
+              size="sm"
+              className={TOOLBAR_BTN}
+              disabled={!canAttach || saving || printing}
+              title={
+                canAttach
+                  ? Array.isArray(jobDiagrams) && jobDiagrams.length
+                    ? "View or add job diagrams"
+                    : "Draw or view diagrams"
+                  : "Save the record before drawing a diagram"
+              }
+              onClick={() => setDiagramOpen(true)}
+            >
+              {Array.isArray(jobDiagrams) && jobDiagrams.length
+                ? `Diagrams (${jobDiagrams.length})`
+                : "Draw/View Diagram"}
+            </Button>
+            ) : null}
+            <Button
+              type="button"
+              variant="primary"
+              size="sm"
+              className={TOOLBAR_BTN}
+              disabled={saving || printing}
+              title={
+                typeof onSaveCmCalculation === "function"
+                  ? cmSummary
+                    ? "Open the circular mills calculator. The output is saved on this job."
+                    : "Open the circular mills calculator"
+                  : "Circular mills calculator"
+              }
+              onClick={() => setCmOpen(true)}
+            >
+              {cmSummary ? "Circular Mills (saved)" : "Circular Mills"}
+            </Button>
+          </div>
+        </div>
+        {cmSummary ? (
+          <p className="text-xs text-secondary">Saved circular mills match: {cmSummary}</p>
+        ) : null}
+
+        <div
+          className={
+            timeClock
+              ? "hidden"
+              : "flex flex-col gap-2 border-b-2 border-primary/40 pb-3 sm:flex-row sm:flex-wrap sm:items-end sm:gap-x-5 sm:gap-y-2"
+          }
+          aria-label="Shared job fields"
+        >
+          <div className="min-w-0 flex-1 basis-[10rem]">
+            <div className="mb-1 text-sm font-bold text-title">Date</div>
+            <input
+              type="date"
+              value={String(form.date || "").slice(0, 10)}
+              className={`${FIELD_INPUT} !border-0 !bg-transparent !px-0 !text-sm !font-semibold !text-title`}
+              aria-label="Date"
+              disabled
+              readOnly
+            />
+          </div>
+          <div className="hidden h-8 w-px shrink-0 bg-border sm:block" aria-hidden />
+          <div className="min-w-0 flex-[1.2] basis-[12rem]">
+            <div className="mb-1 text-sm font-bold text-title">Technician</div>
+            <SimpleSelect
+              multiple
+              options={[{ value: DATASHEET_TECHNICIAN_ALL, label: "All" }, ...techOptions]}
+              value={datasheetTechnicianIds(form)}
+              onChange={(e) => {
+                const nextIds = reconcileDatasheetTechnicians(datasheetTechnicianIds(form), e.target.value);
+                const saved = datasheetTechniciansForSave(nextIds);
+                const label = datasheetTechnicianLabel(saved.technicians, techOptions);
+                setForm((f) => {
+                  const updated = { ...f, technician: saved.technician, technicians: saved.technicians };
+                  if (!isDc && f.assembly && typeof f.assembly === "object") {
+                    updated.assembly = { ...f.assembly, technicianName: label };
+                  }
+                  return updated;
+                });
+              }}
+              placeholder="Select technicians"
+              searchable
+              disabled={saving || printing}
+              aria-label="Technician"
+              title="Choose technicians. All shows this job to every technician."
+            />
+          </div>
+          <div className="hidden h-8 w-px shrink-0 bg-border sm:block" aria-hidden />
+          <div className="min-w-0 flex-1 basis-[9rem]">
+            <div className="mb-1 text-sm font-bold text-title">{jobNumberLabel}</div>
+            <input
+              type="text"
+              value={form.jobNumber}
+              className={`${FIELD_INPUT} !border-0 !bg-transparent !px-0 !text-sm !font-semibold !text-title`}
+              aria-label={jobNumberLabel}
+              disabled
+              readOnly
+            />
+          </div>
+          <div className="hidden h-8 w-px shrink-0 bg-border sm:block" aria-hidden />
+          <div className="min-w-0 flex-[1.4] basis-[12rem]">
+            <div className="mb-1 text-sm font-bold text-title">Company</div>
+            <input
+              type="text"
+              value={form.company}
+              className={`${FIELD_INPUT} !border-0 !bg-transparent !px-0 !text-sm !font-semibold !text-title`}
+              aria-label="Company"
+              disabled
+              readOnly
+            />
+          </div>
+        </div>
+
+        {isDc && form.section === "Complete Motor" && !timeClock ? (
+          <div className="flex flex-wrap gap-1" role="tablist" aria-label="DC datasheet tabs">
+            {dcVisibleTabs.map((tab) => {
+              const active = tab === activeDcTab;
+              return (
+                <button
+                  key={tab}
+                  type="button"
+                  role="tab"
+                  aria-selected={active}
+                  className={`${TAB_BTN} ${
+                    active
+                      ? "bg-primary text-white"
+                      : "border border-border bg-primary/[0.06] text-title hover:bg-primary/15 dark:bg-primary/15"
+                  }`}
+                  onClick={() => patch("activeTab", tab)}
+                >
+                  {tab}
+                </button>
+              );
+            })}
+          </div>
+        ) : null}
+
+        {showAcTabStripe && !timeClock ? (
+          <div className="flex flex-wrap gap-1" role="tablist" aria-label="AC datasheet tabs">
+            {acVisibleTabs.map((tab) => {
+              const active = tab === activeAcTab;
+              return (
+                <button
+                  key={tab}
+                  type="button"
+                  role="tab"
+                  aria-selected={active}
+                  className={`${TAB_BTN} ${
+                    active
+                      ? "bg-primary text-white"
+                      : "border border-border bg-primary/[0.06] text-title hover:bg-primary/15 dark:bg-primary/15"
+                  }`}
+                  onClick={() => patch("activeTab", tab)}
+                >
+                  {tab}
+                </button>
+              );
+            })}
+          </div>
+        ) : null}
+
+        {showStructuredTabStripe && !timeClock ? (
+          <div className="flex flex-wrap gap-1" role="tablist" aria-label="Datasheet tabs">
+            {structuredVisibleTabs.map((tab) => {
+              const active = tab === activeStructuredTab;
+              return (
+                <button
+                  key={tab}
+                  type="button"
+                  role="tab"
+                  aria-selected={active}
+                  className={`${TAB_BTN} ${
+                    active
+                      ? "bg-primary text-white"
+                      : "border border-border bg-primary/[0.06] text-title hover:bg-primary/15 dark:bg-primary/15"
+                  }`}
+                  onClick={() => patch("activeTab", tab)}
+                >
+                  {tab}
+                </button>
+              );
+            })}
+          </div>
+        ) : null}
+
+        <div className={timeClock ? "tc-ds flex flex-col gap-4" : "contents"}>
+        {timeClock ? (
+          <style>{`
+            .tc-ds .flex.items-center.gap-2:has(> label),
+            .tc-ds .flex.items-start.gap-2:has(> label) {
+              flex-direction: column;
+              align-items: stretch;
+              gap: 0.35rem;
+            }
+            .tc-ds .flex.items-center.gap-2 > label,
+            .tc-ds .flex.items-start.gap-2 > label {
+              width: 100% !important;
+              text-align: left !important;
+              white-space: normal !important;
+            }
+            .tc-ds .flex.items-center.gap-2 > div,
+            .tc-ds .flex.items-start.gap-2 > div {
+              width: 100%;
+              min-width: 0;
+            }
+            .tc-ds input[type="text"] {
+              height: 2.75rem !important;
+              width: 100% !important;
+              max-width: none !important;
+              font-size: 1rem !important;
+              padding-left: 0.75rem !important;
+              padding-right: 0.75rem !important;
+            }
+            .tc-ds textarea {
+              min-height: 7rem !important;
+              font-size: 1rem !important;
+              padding: 0.75rem !important;
+            }
+            .tc-ds input[type="radio"],
+            .tc-ds input[type="checkbox"] {
+              width: 1.25rem !important;
+              height: 1.25rem !important;
+            }
+          `}</style>
+        ) : null}
+        {isStructured ? (
+          activeStructuredTab === GENERATOR_TAB_ROTOR ? (
+            <>
+              <DatasheetFieldGrid
+                columns={GENERATOR_ROTOR_COLUMNS}
+                values={form.rotorExciter || {}}
+                onFieldChange={(key, value) => patchNested("rotorExciter", key, value)}
+                labelWidth="12rem"
+                stacked={timeClock}
+                inputClassName={timeClock ? TOUCH_FIELD_INPUT : undefined}
+              />
+              <NotesPanel
+                label="Notes:"
+                value={form.rotorExciter?.notes ?? ""}
+                onChange={(v) => patchNested("rotorExciter", "notes", v)}
+                ariaLabel="Rotor and exciter notes"
+                touch={timeClock}
+              />
+            </>
+          ) : activeStructuredTab === GENERATOR_TAB_DISASSEMBLY || activeStructuredTab === "Disassembly" ? (
+            <SimpleStructuredDatasheetFields
+              groups={isPump ? PUMP_DISASSEMBLY_GROUPS : GENERATOR_DISASSEMBLY_GROUPS}
+              values={form.disassembly || {}}
+              onChange={(key, value) => patchNested("disassembly", key, value)}
+            />
+          ) : activeStructuredTab === GENERATOR_TAB_ASSEMBLY || activeStructuredTab === "Assembly" ? (
+            <SimpleStructuredDatasheetFields
+              groups={isPump ? PUMP_ASSEMBLY_GROUPS : GENERATOR_ASSEMBLY_GROUPS}
+              values={form.assembly || {}}
+              onChange={(key, value) => patchNested("assembly", key, value)}
+            />
+          ) : (
+            <>
+              <DatasheetFieldGrid
+                columns={isPump ? PUMP_DATASHEET_FIELD_COLUMNS : GENERATOR_DATASHEET_FIELD_COLUMNS}
+                values={form.dataSheet || {}}
+                onFieldChange={(key, value) => patchNested("dataSheet", key, value)}
+                labelWidth="11.5rem"
+                stacked={timeClock}
+                inputClassName={timeClock ? TOUCH_FIELD_INPUT : undefined}
+              />
+              <NotesPanel
+                label="Notes:"
+                value={form.dataSheet?.notes ?? ""}
+                onChange={(v) => patchNested("dataSheet", "notes", v)}
+                ariaLabel="DataSheet notes"
+                touch={timeClock}
+              />
+            </>
+          )
+        ) : isDc ? (
+          <>
+            <DatasheetFieldGrid
+              columns={dcColumns}
+              values={dcBlock}
+              onFieldChange={(key, value) => patchNested(dcBlockKey, key, value)}
+              stacked={timeClock}
+              inputClassName={timeClock ? TOUCH_FIELD_INPUT : undefined}
+            />
+            <NotesPanel
+              label="Notes:"
+              value={dcBlock.notes ?? ""}
+              onChange={(v) => patchNested(dcBlockKey, "notes", v)}
+              ariaLabel={`${activeDcTab || "DC"} notes`}
+              touch={timeClock}
+            />
+          </>
+        ) : acBlockKey === "dataSheet" ? (
+          <>
+            <DatasheetFieldGrid
+              columns={AC_DATASHEET_FIELD_COLUMNS}
+              values={acBlock}
+              onFieldChange={(key, value) => patchNested("dataSheet", key, value)}
+              labelWidth="10.5rem"
+              stacked={timeClock}
+              inputClassName={timeClock ? TOUCH_FIELD_INPUT : undefined}
+            />
+            <NotesPanel
+              label="Notes:"
+              value={acBlock.notes ?? ""}
+              onChange={(v) => patchNested("dataSheet", "notes", v)}
+              ariaLabel="DataSheet notes"
+              touch={timeClock}
+            />
+          </>
+        ) : acBlockKey === "disassembly" ? (
+          <SimpleAcDisassemblyFields
+            values={acBlock}
+            onChange={(key, value) => patchNested("disassembly", key, value)}
+            statusOptions={jobStatusOptions}
+            statusValue={jobStatus}
+            onStatusChange={onJobStatusChange}
+          />
+        ) : (
+          <SimpleAcAssemblyFields
+            values={acBlock}
+            onChange={(key, value) => patchNested("assembly", key, value)}
+          />
+        )}
+        </div>
+      </Form>
+    </Modal>
+
+    {printing ? (
+      <DocumentPrintOffscreenPortal open onClose={handlePrintDone}>
+        <SimpleDatasheetPrintSheet
+          motorType={machineType}
+          datasheet={printDatasheet}
+          printContext={resolvedPrintContext}
+          technicianLabel={technicianLabel}
+          jobDiagrams={Array.isArray(jobDiagrams) ? jobDiagrams : []}
+          attachments={Array.isArray(attachments) ? attachments : []}
+        />
+      </DocumentPrintOffscreenPortal>
+    ) : null}
+
+    <SimpleServiceProposalAttachmentsModal
+      open={attachmentsOpen}
+      onClose={() => setAttachmentsOpen(false)}
+      recordId={recordId || null}
+      attachments={Array.isArray(attachments) ? attachments : []}
+      onAttached={onAttached}
+    />
+
+    <SimpleDiagramModal
+      open={diagramOpen}
+      onClose={() => setDiagramOpen(false)}
+      recordId={recordId || null}
+      jobDiagrams={Array.isArray(jobDiagrams) ? jobDiagrams : []}
+      defaultToEmail={String(resolvedPrintContext.customerEmail || "").trim()}
+      defaultToName={String(resolvedPrintContext.customerName || resolvedPrintContext.companyName || "").trim()}
+      onSaved={(nextDiagrams) => {
+        onDiagramsChange?.(Array.isArray(nextDiagrams) ? nextDiagrams : []);
+      }}
+    />
+
+    <Modal
+      open={cmOpen}
+      onClose={() => !savingCm && setCmOpen(false)}
+      title="Circular mills calculator"
+      size="7xl"
+      width="min(1600px, 98vw)"
+      height="min(92vh, 960px)"
+      showClose={!savingCm}
+      closeOnOutsideClick={false}
+    >
+      {cmOpen ? (
+        <CmBestMatchCalculator
+          initialCalculation={cmCalculation}
+          onSaveToJob={typeof onSaveCmCalculation === "function" ? handleSaveCmCalculation : undefined}
+          savingToJob={savingCm}
+          jobNumber={String(form.jobNumber || printContext?.documentNumber || "").trim()}
+        />
+      ) : null}
+    </Modal>
+
+    <SimpleSendDatasheetModal
+      open={emailOpen}
+      onClose={() => setEmailOpen(false)}
+      motorType={machineType}
+      datasheet={printDatasheet}
+      printContext={resolvedPrintContext}
+      technicianLabel={technicianLabel}
+      jobDiagrams={Array.isArray(jobDiagrams) ? jobDiagrams : []}
+      attachments={Array.isArray(attachments) ? attachments : []}
+    />
+    </>
+  );
+}

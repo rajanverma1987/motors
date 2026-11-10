@@ -1,0 +1,168 @@
+/**
+ * CM Best Match print: landscape, top-aligned, full table width.
+ * Applied only while printing the results sheet (html.cm-best-match-printing).
+ */
+
+@page cm-best-match-page {
+  size: landscape;
+  margin: 6mm;
+}
+
+#cm-best-match-print-area {
+  page: cm-best-match-page;
+}
+
+@media print {
+  html.cm-best-match-printing,
+  html.cm-best-match-printing body {
+    background: white !important;
+    color: #111 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    height: auto !important;
+    min-height: 0 !important;
+    overflow: visible !important;
+  }
+
+  html.cm-best-match-printing body > *:not(.document-print-offscreen-root) {
+    display: none !important;
+  }
+
+  html.cm-best-match-printing .document-print-offscreen-root {
+    padding: 6mm !important;
+  }
+
+  html.cm-best-match-printing #cm-best-match-print-area {
+    position: relative !important;
+    top: auto !important;
+    left: auto !important;
+    width: 100% !important;
+    max-width: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: white !important;
+    color: #111 !important;
+    box-shadow: none !important;
+    border: none !important;
+    transform: none !important;
+  }
+
+  .cm-print-hide {
+    display: none !important;
+  }
+
+  html.cm-best-match-printing #cm-best-match-print-area .cm-print-title {
+    font-size: 14pt;
+    font-weight: 700;
+    margin: 0 0 4pt 0;
+    padding: 0;
+  }
+
+  html.cm-best-match-printing #cm-best-match-print-area .cm-print-meta {
+    font-size: 8pt;
+    color: #444;
+    margin: 0 0 8pt 0;
+  }
+
+  html.cm-best-match-printing #cm-best-match-print-area .cm-print-vars {
+    display: grid;
+    grid-template-columns: auto auto;
+    justify-content: start;
+    gap: 6pt;
+    width: auto;
+    max-width: 100%;
+    font-size: 8pt;
+    margin: 0 0 8pt 0;
+    padding: 0;
+    border: none;
+    background: transparent;
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  html.cm-best-match-printing #cm-best-match-print-area .cm-print-vars .cm-var-label {
+    display: inline;
+    font-weight: 500;
+    color: #333;
+    font-size: 9pt;
+    margin: 0;
+  }
+
+  html.cm-best-match-printing #cm-best-match-print-area .cm-print-vars .cm-var-value {
+    font-weight: 700;
+    font-size: 10pt;
+  }
+
+  html.cm-best-match-printing #cm-best-match-print-area .cm-results-table-wrap {
+    overflow: visible !important;
+    width: 100% !important;
+    max-width: none !important;
+    border: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  html.cm-best-match-printing #cm-best-match-print-area .cm-results-table {
+    width: 100% !important;
+    max-width: none !important;
+    min-width: 0 !important;
+    table-layout: fixed !important;
+    border-collapse: collapse !important;
+    font-size: 6.5pt !important;
+    line-height: 1.2 !important;
+    break-inside: auto;
+  }
+
+  html.cm-best-match-printing #cm-best-match-print-area .cm-results-table th,
+  html.cm-best-match-printing #cm-best-match-print-area .cm-results-table td {
+    border: 1px solid #222 !important;
+    padding: 2pt 3pt !important;
+    text-align: left !important;
+    vertical-align: top !important;
+    word-wrap: break-word !important;
+    overflow-wrap: break-word !important;
+    hyphens: auto;
+  }
+
+  html.cm-best-match-printing #cm-best-match-print-area .cm-results-table thead {
+    display: table-header-group;
+  }
+
+  html.cm-best-match-printing #cm-best-match-print-area .cm-results-table thead tr {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  /* Wrap header labels (screen uses whitespace-nowrap) — avoids overlap in narrow columns */
+  html.cm-best-match-printing #cm-best-match-print-area .cm-results-table thead th {
+    white-space: normal !important;
+    line-height: 1.2 !important;
+    overflow-wrap: anywhere !important;
+    word-break: break-word !important;
+    vertical-align: bottom !important;
+    padding: 3pt 2pt !important;
+    min-height: 2.4em;
+    background: #1d4ed8 !important;
+    color: white !important;
+    font-weight: 600;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  /* Strong contrast on tinted rows (avoids washed-out body text in print) */
+  html.cm-best-match-printing #cm-best-match-print-area .cm-results-table tbody td {
+    color: #111 !important;
+  }
+
+  html.cm-best-match-printing #cm-best-match-print-area tbody tr.cm-print-row-good {
+    background: #d1fae5 !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  html.cm-best-match-printing #cm-best-match-print-area tbody tr.cm-print-row-mid {
+    background: #fef3c7 !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+}

@@ -1,0 +1,14 @@
+---
+description: Mirror every cemotor code change into the demo shop copy
+alwaysApply: true
+---
+
+# Cemotor and demo stay in sync
+
+`clients/demo` is a code copy of `clients/cemotor`.
+
+When you change anything under `clients/cemotor`, apply the same change under `clients/demo` in the same turn. Match the edit. Do not leave demo behind.
+
+Keep demo-only identity as demo: slug, port, host, company name, `.env`, and tenant keys. Do not copy cemotor secrets, customer data, SMTP, logos, or tokens into demo.
+
+If a change is only for another shop (for example ramohlale), do not copy it into demo.

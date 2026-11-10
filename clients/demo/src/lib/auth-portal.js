@@ -1,0 +1,364 @@
+import { SignJWT, jwtVerify } from "jose";
+import bcrypt from "bcryptjs";
+import { connectDB } from "@/lib/db";
+import User from "@/models/User";
+import Employee from "@/models/Employee";
+import Policy from "@/models/Policy";
+import UserSettings from "@/models/UserSettings";
+import { mergeUserSettings } from "@/lib/user-settings";
+import { computeEffectiveFinancialAccess } from "@/lib/financial-access";
+import { normalizePortalUi, PORTAL_UI_COOKIE, PORTAL_UI_SIMPLE } from "@/lib/portal-view";
+import { recordPortalDailyUse } from "@/lib/portal-login-audit";
+
+let _portalSecret = null;
+function getPortalJwtSecret() {
+  if (_portalSecret) return _portalSecret;
+  const secret = process.env.JWT_SECRET || process.env.PORTAL_JWT_SECRET;
+  if (process.env.NODE_ENV === "production" && (!secret || secret.length < 32)) {
+    throw new Error("JWT_SECRET or PORTAL_JWT_SECRET must be set and at least 32 characters in production");
+  }
+  _portalSecret = new TextEncoder().encode(secret || "motors-portal-secret-change-in-production");
+  return _portalSecret;
+}
+const COOKIE_NAME = "motors_portal";
+const PORTAL_TIER_COOKIE = "motors_portal_tier";
+const PORTAL_TIER_CALCULATOR_ONLY = "calculator_only";
+const PORTAL_TIER_FULL = "full";
+
+export function getPortalTierCookieName() {
+  return PORTAL_TIER_COOKIE;
+}
+
+export function getPortalTokenFromCookieHeader(cookieHeader) {
+  const match = (cookieHeader || "").match(new RegExp(`${COOKIE_NAME}=([^;]+)`));
+  return match ? match[1] : null;
+}
+
+export function getPortalTierFromCookieHeader(cookieHeader) {
+  const match = (cookieHeader || "").match(new RegExp(`${PORTAL_TIER_COOKIE}=([^;]+)`));
+  return match ? decodeURIComponent(match[1]) : "";
+}
+
+export function isCalculatorOnlyPortalTierCookie(tier) {
+  return tier === PORTAL_TIER_CALCULATOR_ONLY;
+}
+
+export async function getPortalPayloadFromRequest(request) {
+  const token = getPortalTokenFromCookieHeader(request.headers.get("cookie") || "");
+  if (!token) return null;
+  return verifyPortalToken(token);
+}
+
+export async function hashPassword(password) {
+  return bcrypt.hash(password, 10);
+}
+
+export async function verifyPassword(password, hash) {
+  return bcrypt.compare(password, hash);
+}
+
+export async function createPortalToken(payload, options = {}) {
+  const expiresIn = options.expiresIn || (options.rememberMe ? "90d" : "7d");
+  return new SignJWT({ ...payload, typ: "motors_portal" })
+    .setProtectedHeader({ alg: "HS256" })
+    .setExpirationTime(expiresIn)
+    .sign(getPortalJwtSecret());
+}
+
+export async function verifyPortalToken(token) {
+  try {
+    const { payload } = await jwtVerify(token, getPortalJwtSecret());
+    if (!payload || typeof payload !== "object") return null;
+    if (payload.typ === "motors_admin") return null;
+    if (payload.typ === "motors_portal") return payload;
+    // Legacy portal tokens issued before typ claim.
+    if (payload.shopName || payload.authType || payload.employeeId) return payload;
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+export function getPortalCookieName() {
+  return COOKIE_NAME;
+}
+
+export function portalSessionCookieOptions({ rememberMe = false } = {}) {
+  return {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    path: "/",
+    maxAge: rememberMe ? 60 * 60 * 24 * 90 : 60 * 60 * 24 * 7,
+  };
+}
+
+export function getPortalUiCookieName() {
+  return PORTAL_UI_COOKIE;
+}
+
+export function setPortalUiCookie(cookieStore, portalUi, options = {}) {
+  cookieStore.set(PORTAL_UI_COOKIE, normalizePortalUi(portalUi), portalSessionCookieOptions(options));
+}
+
+export async function setPortalSessionCookies(
+  cookieStore,
+  { token, calculatorOnlyPortal, portalUi, rememberMe = false }
+) {
+  const common = portalSessionCookieOptions({ rememberMe: !!rememberMe });
+  cookieStore.set(getPortalCookieName(), token, common);
+  cookieStore.set(
+    getPortalTierCookieName(),
+    calculatorOnlyPortal ? PORTAL_TIER_CALCULATOR_ONLY : PORTAL_TIER_FULL,
+    common
+  );
+  setPortalUiCookie(cookieStore, calculatorOnlyPortal ? PORTAL_UI_SIMPLE : portalUi, {
+    rememberMe: !!rememberMe,
+  });
+}
+
+export function clearPortalSessionCookies(cookieStore) {
+  cookieStore.delete(getPortalCookieName());
+  cookieStore.delete(getPortalTierCookieName());
+  cookieStore.delete(PORTAL_UI_COOKIE);
+}
+
+export function isPortalEmployee(userOrPayload) {
+  if (!userOrPayload) return false;
+  return (
+    userOrPayload.authType === "employee" ||
+    Boolean(userOrPayload.employeeId && String(userOrPayload.employeeId).trim())
+  );
+}
+
+export function isPortalOwner(userOrPayload) {
+  if (!userOrPayload || !userOrPayload.email) return false;
+  return !isPortalEmployee(userOrPayload);
+}
+
+export async function getPortalPayloadFromCookies(cookieStore) {
+  if (!cookieStore) return null;
+  const cookieObj = typeof cookieStore.get === "function" ? cookieStore.get(getPortalCookieName()) : null;
+  const token = cookieObj?.value || null;
+  if (!token) return null;
+  return verifyPortalToken(token);
+}
+
+export async function getPortalUserFromRequest(request) {
+  const payload = await getPortalPayloadFromRequest(request);
+  if (!payload || !payload.email) return null;
+  const isEmployee = isPortalEmployee(payload);
+  if (isEmployee && payload.employeeId) {
+    await connectDB();
+    const emp = await Employee.findById(payload.employeeId)
+      .select("employmentStatus canLogin")
+      .lean();
+    if (!emp || emp.employmentStatus !== "Active" || !emp.canLogin) return null;
+  }
+  try {
+    await recordPortalDailyUse(payload.email);
+  } catch (_) {
+    /* usage stamp must not block the request */
+  }
+  return {
+    email: payload.email,
+    shopName: payload.shopName || "",
+    contactName: payload.contactName || "",
+    calculatorOnlyPortal: payload.calculatorOnlyPortal === true,
+    authType: payload.authType || (isEmployee ? "employee" : "owner"),
+    employeeId: payload.employeeId || "",
+    employeeEmail: payload.employeeEmail || "",
+    isEmployee,
+    isOwner: !isEmployee,
+  };
+}
+
+const TECH_JWT_TYP = "motors_technician";
+
+/**
+ * JWT for Motop Technician mobile app (Bearer). Not interchangeable with portal cookie tokens.
+ */
+export async function createTechnicianToken({ employeeId, shopEmail, name, employeeEmail }) {
+  return new SignJWT({
+    typ: TECH_JWT_TYP,
+    employeeId: String(employeeId || ""),
+    shopEmail: String(shopEmail || "").toLowerCase().trim(),
+    name: String(name || ""),
+    employeeEmail: String(employeeEmail || "").toLowerCase().trim(),
+  })
+    .setProtectedHeader({ alg: "HS256" })
+    .setExpirationTime("30d")
+    .sign(getPortalJwtSecret());
+}
+
+export async function verifyTechnicianToken(token) {
+  try {
+    const { payload } = await jwtVerify(token, getPortalJwtSecret());
+    if (payload.typ !== TECH_JWT_TYP) return null;
+    const shopEmail = String(payload.shopEmail || "")
+      .trim()
+      .toLowerCase();
+    const employeeId = String(payload.employeeId || "").trim();
+    if (!shopEmail || !employeeId) return null;
+    return {
+      employeeId,
+      shopEmail,
+      name: String(payload.name || ""),
+      employeeEmail: String(payload.employeeEmail || "").trim().toLowerCase(),
+    };
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Shop owner (User) must exist and have canLogin !== false, or employees cannot use the tech app.
+ */
+export async function isShopOwnerLoginAllowed(shopEmail) {
+  const email = String(shopEmail || "").trim().toLowerCase();
+  if (!email) return false;
+  await connectDB();
+  const owner = await User.findOne({ email }).select("canLogin").lean();
+  if (!owner) return false;
+  return owner.canLogin !== false;
+}
+
+export async function getTechnicianFromRequest(request) {
+  const auth = request.headers.get("authorization") || "";
+  const m = auth.match(/^Bearer\s+(.+)$/i);
+  const token = m ? m[1].trim() : "";
+  if (!token) return null;
+  const tech = await verifyTechnicianToken(token);
+  if (!tech) return null;
+  const allowed = await isShopOwnerLoginAllowed(tech.shopEmail);
+  if (!allowed) return null;
+  await connectDB();
+  const emp = await Employee.findById(tech.employeeId)
+    .select("employmentStatus technicianAppAccess")
+    .lean();
+  if (!emp || emp.employmentStatus !== "Active" || !emp.technicianAppAccess) return null;
+  try {
+    await recordPortalDailyUse(tech.shopEmail);
+  } catch (_) {
+    /* usage stamp must not block the request */
+  }
+  return tech;
+}
+
+const MOBILE_APP_JWT_TYP = "motors_mobile_app";
+const TRACK_JWT_TYP = "motors_iqmotortrack";
+
+/**
+ * JWT for 3PhaseWire mobile app (Bearer). Not interchangeable with portal or technician tokens.
+ */
+export async function createMobileAppToken({ accountId, email, name }) {
+  return new SignJWT({
+    typ: MOBILE_APP_JWT_TYP,
+    accountId: String(accountId || ""),
+    email: String(email || "").toLowerCase().trim(),
+    name: String(name || ""),
+  })
+    .setProtectedHeader({ alg: "HS256" })
+    .setExpirationTime("30d")
+    .sign(getPortalJwtSecret());
+}
+
+export async function verifyMobileAppToken(token) {
+  try {
+    const { payload } = await jwtVerify(token, getPortalJwtSecret());
+    if (payload.typ !== MOBILE_APP_JWT_TYP) return null;
+    const accountId = String(payload.accountId || "").trim();
+    const email = String(payload.email || "")
+      .trim()
+      .toLowerCase();
+    if (!accountId || !email) return null;
+    return {
+      accountId,
+      email,
+      name: String(payload.name || ""),
+    };
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * JWT for 3PhaseTrack plant PWA (Bearer).
+ */
+export async function createTrackToken({ facilityId, email, contactName }) {
+  return new SignJWT({
+    typ: TRACK_JWT_TYP,
+    facilityId: String(facilityId || ""),
+    email: String(email || "").toLowerCase().trim(),
+    contactName: String(contactName || ""),
+  })
+    .setProtectedHeader({ alg: "HS256" })
+    .setExpirationTime("30d")
+    .sign(getPortalJwtSecret());
+}
+
+export async function verifyTrackToken(token) {
+  try {
+    const { payload } = await jwtVerify(token, getPortalJwtSecret());
+    if (payload.typ !== TRACK_JWT_TYP) return null;
+    const facilityId = String(payload.facilityId || "").trim();
+    const email = String(payload.email || "")
+      .trim()
+      .toLowerCase();
+    if (!facilityId || !email) return null;
+    return {
+      facilityId,
+      email,
+      contactName: String(payload.contactName || ""),
+    };
+  } catch {
+    return null;
+  }
+}
+
+export function getBearerTokenFromRequest(request) {
+  const auth = request.headers.get("authorization") || "";
+  const m = auth.match(/^Bearer\s+(.+)$/i);
+  return m ? m[1].trim() : "";
+}
+
+/**
+ * Resolve effective financial access for an authenticated portal user on the server.
+ * @param {Record<string, unknown> | null} portalUser
+ */
+export async function resolveUserFinancialAccess(portalUser) {
+  if (!portalUser?.email) {
+    return { canViewFinancials: false, isRestricted: true, reason: "Unauthenticated" };
+  }
+  const email = String(portalUser.email).trim().toLowerCase();
+  const isEmployee = Boolean(
+    portalUser.isEmployee ||
+    portalUser.authType === "employee" ||
+    (portalUser.employeeId && String(portalUser.employeeId).trim())
+  );
+
+  await connectDB();
+  const userSettingsDoc = await UserSettings.findOne({ ownerEmail: email }).lean();
+  const userSettings = mergeUserSettings(userSettingsDoc?.settings);
+
+  let employeeDoc = null;
+  let policies = [];
+
+  if (isEmployee && portalUser.employeeId) {
+    employeeDoc = await Employee.findById(portalUser.employeeId).lean();
+    policies = await Policy.find({
+      createdByEmail: email,
+      effect: "allow",
+      subjectType: "employee",
+      subjectIds: String(portalUser.employeeId),
+    }).lean();
+  }
+
+  return computeEffectiveFinancialAccess({
+    isOwner: !isEmployee,
+    employee: employeeDoc,
+    policies,
+    userSettings,
+  });
+}
+

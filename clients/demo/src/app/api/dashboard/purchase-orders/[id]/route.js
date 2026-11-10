@@ -1,0 +1,344 @@
+import { NextResponse } from "next/server";
+import { randomBytes } from "crypto";
+import { connectDB } from "@/lib/db";
+import PurchaseOrder from "@/models/PurchaseOrder";
+import User from "@/models/User";
+import UserSettings from "@/models/UserSettings";
+import { mergeUserSettings } from "@/lib/user-settings";
+import { accountsPaymentTermsLabel } from "@/lib/accounts-display";
+import { getPortalUserFromRequest } from "@/lib/auth-portal";
+import { LIMITS, clampString } from "@/lib/validation";
+import Vendor from "@/models/Vendor";
+import { poBalanceDue, poGrandTotal, sumPoOtherCharges } from "@/lib/po-payable";
+import { reconcilePoOtherChargesFromLogistics } from "@/lib/logistics-po-charges";
+import { normalizePurchaseOrderAttachmentsFromClient } from "@/lib/dashboard-entity-attachments";
+import {
+  normalizePurchaseOrderLineItems,
+  normalizeLineItemStatus,
+} from "@/lib/purchase-order-line-items";
+import { sumPoLineItemsTaxInclusive } from "@/lib/po-line-item-totals";
+import {
+  computePoDeliveryStatus,
+  computePoInvoicedStatus,
+  computePoOverallStatus,
+  computePoPaidStatus,
+} from "@/lib/po-status";
+
+const MAX_INVOICES = 50;
+const MAX_PAYMENTS = 50;
+
+function normalizeVendorInvoices(arr) {
+  if (!Array.isArray(arr)) return [];
+  return arr.slice(0, MAX_INVOICES).map((row) => ({
+    invoiceNumber: clampString(row?.invoiceNumber, 100),
+    date: clampString(row?.date, 50),
+    amount: clampString(row?.amount, 50),
+    attachmentUrl: clampString(row?.attachmentUrl, LIMITS.url.max),
+    attachmentName: clampString(row?.attachmentName, 200),
+  }));
+}
+
+function normalizePayments(arr) {
+  if (!Array.isArray(arr)) return [];
+  return arr.slice(0, MAX_PAYMENTS).map((row) => ({
+    amount: clampString(row?.amount, 50),
+    date: clampString(row?.date, 50),
+    method: clampString(row?.method, 100),
+    reference: clampString(row?.reference, 200),
+  }));
+}
+
+function sumLineItems(lines) {
+  return sumPoLineItemsTaxInclusive(lines);
+}
+
+function sumAmounts(items, key = "amount") {
+  let sum = 0;
+  for (const row of items) {
+    const a = parseFloat(row?.[key]);
+    if (Number.isFinite(a)) sum += a;
+  }
+  return sum;
+}
+
+function getParams(context) {
+  return typeof context.params?.then === "function"
+    ? context.params
+    : Promise.resolve(context.params || {});
+}
+
+export async function GET(request, context) {
+  try {
+    const user = await getPortalUserFromRequest(request);
+    if (!user?.email) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    const params = await getParams(context);
+    const id = params?.id;
+    if (!id) {
+      return NextResponse.json({ error: "ID required" }, { status: 400 });
+    }
+    await connectDB();
+    const ownerEmail = user.email.trim().toLowerCase();
+    await reconcilePoOtherChargesFromLogistics(id, ownerEmail);
+    const doc = await PurchaseOrder.findOne({
+      _id: id,
+      createdByEmail: ownerEmail,
+    }).lean();
+    if (!doc) {
+      return NextResponse.json({ error: "Not found" }, { status: 404 });
+    }
+    const lineItems = Array.isArray(doc.lineItems) ? doc.lineItems : [];
+    const vendorInvoices = Array.isArray(doc.vendorInvoices) ? doc.vendorInvoices : [];
+    const payments = Array.isArray(doc.payments) ? doc.payments : [];
+    const lineItemsTotal = sumLineItems(lineItems);
+    const otherChargesTotal = sumPoOtherCharges(doc);
+    const grandTotal = poGrandTotal(doc);
+    const totalInvoiced = sumAmounts(vendorInvoices);
+    const totalPaid = sumAmounts(payments);
+    const lineItemsWithStatus = lineItems.map((item) => ({
+      ...item,
+      status: normalizeLineItemStatus(item),
+    }));
+    const deliveryStatus = computePoDeliveryStatus(lineItemsWithStatus);
+    const invoicedStatus = computePoInvoicedStatus(grandTotal, totalInvoiced);
+    const paidStatus = computePoPaidStatus(totalInvoiced, totalPaid, grandTotal);
+    const balanceDue = poBalanceDue(doc);
+    const vendorDoc = doc.vendorId
+      ? await Vendor.findOne({
+          _id: doc.vendorId,
+          createdByEmail: user.email.trim().toLowerCase(),
+        })
+          .select("name")
+          .lean()
+      : null;
+    const attachmentsRaw = Array.isArray(doc.attachments) ? doc.attachments : [];
+    const attachments = attachmentsRaw.map((a) => ({
+      url: String(a?.url ?? "").trim(),
+      name: String(a?.name ?? "").trim() || String(a?.url ?? "").trim(),
+    }));
+    const attachmentCount = attachments.length;
+
+    const out = {
+      id: doc._id.toString(),
+      poNumber: doc.poNumber ?? "",
+      vendorId: doc.vendorId ?? "",
+      vendorName: vendorDoc?.name?.trim() || doc.vendorId || "—",
+      type: doc.type ?? "shop",
+      quoteId: doc.quoteId ?? "",
+      repairFlowJobId: doc.repairFlowJobId ?? "",
+      lineItems: lineItemsWithStatus,
+      vendorInvoices,
+      payments,
+      attachments,
+      attachmentCount,
+      lineItemsTotal: lineItemsTotal.toFixed(2),
+      totalOrder: lineItemsTotal.toFixed(2),
+      otherChargesTotal: otherChargesTotal.toFixed(2),
+      grandTotal: grandTotal.toFixed(2),
+      otherCharges: (Array.isArray(doc.otherCharges) ? doc.otherCharges : []).map((row) => ({
+        label: row?.label || "Logistics charges",
+        amount: row?.amount || "",
+        logisticsEntryId: row?.logisticsEntryId ? String(row.logisticsEntryId) : "",
+      })),
+      totalInvoiced: totalInvoiced.toFixed(2),
+      totalPaid: totalPaid.toFixed(2),
+      status: computePoOverallStatus(grandTotal, totalInvoiced, totalPaid),
+      balanceDue,
+      deliveryStatus,
+      invoicedStatus,
+      paidStatus,
+      notes: doc.notes ?? "",
+      vendorShareToken: doc.vendorShareToken ?? "",
+      createdAt: doc.createdAt,
+      updatedAt: doc.updatedAt,
+    };
+
+    const [owner, settingsDoc] = await Promise.all([
+      User.findOne({ email: ownerEmail }).select("shopName contactName email").lean(),
+      UserSettings.findOne({ ownerEmail: ownerEmail }).lean(),
+    ]);
+    const merged = mergeUserSettings(settingsDoc?.settings);
+    const fromShopName = String(owner?.shopName || "").trim();
+    const ownerEmailDisplay = String(owner?.email || "").trim();
+    const fromShopContact = [owner?.contactName, ownerEmailDisplay].filter(Boolean).join(" · ");
+    out.fromShopName = fromShopName;
+    out.fromShopContact = fromShopContact;
+    out.fromShopLogoUrl = String(merged.logoUrl || "").trim();
+    out.logoDocumentScale = merged.logoDocumentScale;
+    out.fromAccountsBillingAddress = String(merged.accountsBillingAddress || "").trim();
+    out.fromAccountsShippingAddress = String(merged.accountsShippingAddress || "").trim();
+    out.fromPaymentTermsLabel = merged.accountsPaymentTerms
+      ? accountsPaymentTermsLabel(merged.accountsPaymentTerms)
+      : "";
+    out.invoicePaymentOptions = merged.invoicePaymentOptions ?? "";
+    out.invoiceThankYouNote = merged.invoiceThankYouNote ?? "";
+    out.formattedCreatedAt =
+      doc.createdAt != null
+        ? new Date(doc.createdAt).toLocaleDateString(undefined, {
+            year: "numeric",
+            month: "short",
+            day: "numeric",
+          })
+        : "";
+
+    return NextResponse.json(out);
+  } catch (err) {
+    console.error("Dashboard get purchase order error:", err);
+    return NextResponse.json({ error: "Failed to load purchase order" }, { status: 500 });
+  }
+}
+
+export async function PATCH(request, context) {
+  try {
+    const user = await getPortalUserFromRequest(request);
+    if (!user?.email) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    const params = await getParams(context);
+    const id = params?.id;
+    if (!id) {
+      return NextResponse.json({ error: "ID required" }, { status: 400 });
+    }
+    await connectDB();
+    const doc = await PurchaseOrder.findOne({
+      _id: id,
+      createdByEmail: user.email.trim().toLowerCase(),
+    });
+    if (!doc) {
+      return NextResponse.json({ error: "Not found" }, { status: 404 });
+    }
+    const body = await request.json();
+    const {
+      vendorId,
+      type,
+      quoteId,
+      repairFlowJobId: bodyRepairFlowJobId,
+      lineItems,
+      vendorInvoices,
+      payments,
+      notes,
+      attachments,
+      ensureVendorShareToken,
+    } = body;
+    if (ensureVendorShareToken && !doc.vendorShareToken?.trim()) {
+      let token;
+      let exists = true;
+      for (let i = 0; i < 5; i++) {
+        token = randomBytes(24).toString("hex");
+        const existing = await PurchaseOrder.findOne({ vendorShareToken: token }).lean();
+        if (!existing) {
+          exists = false;
+          break;
+        }
+      }
+      if (!exists && token) doc.vendorShareToken = token;
+      else doc.vendorShareToken = randomBytes(24).toString("hex");
+    }
+    if (vendorId !== undefined) {
+      if (!String(vendorId).trim()) {
+        return NextResponse.json({ error: "Vendor is required" }, { status: 400 });
+      }
+      doc.vendorId = vendorId.trim();
+    }
+    if (type !== undefined) doc.type = type === "job" ? "job" : "shop";
+    if (quoteId !== undefined) doc.quoteId = doc.type === "job" ? clampString(quoteId, 100) : "";
+    if (bodyRepairFlowJobId !== undefined) {
+      doc.repairFlowJobId = doc.type === "job" ? clampString(bodyRepairFlowJobId, 100) : "";
+    }
+    if (doc.type === "job" && doc.repairFlowJobId) {
+      const MotorRepairJob = (await import("@/models/MotorRepairJob")).default;
+      const email = user.email.trim().toLowerCase();
+      const job = await MotorRepairJob.findOne({ _id: doc.repairFlowJobId, createdByEmail: email }).select("_id").lean();
+      if (!job) {
+        return NextResponse.json({ error: "Repair job not found" }, { status: 400 });
+      }
+    }
+    if (lineItems !== undefined) {
+      doc.lineItems = normalizePurchaseOrderLineItems(lineItems);
+      doc.markModified("lineItems");
+    }
+    if (vendorInvoices !== undefined) {
+      doc.vendorInvoices = normalizeVendorInvoices(vendorInvoices);
+      doc.markModified("vendorInvoices");
+    }
+    if (payments !== undefined) {
+      doc.payments = normalizePayments(payments);
+      doc.markModified("payments");
+    }
+    if (notes !== undefined) doc.notes = clampString(notes, LIMITS.message.max);
+    if (attachments !== undefined) {
+      doc.attachments = normalizePurchaseOrderAttachmentsFromClient(attachments);
+      doc.markModified("attachments");
+    }
+    if (doc.type !== "job") {
+      doc.quoteId = "";
+      doc.repairFlowJobId = "";
+    }
+    await doc.save();
+    const po = doc.toObject();
+    const totalOrder = sumLineItems(po.lineItems ?? []);
+    const totalInvoiced = sumAmounts(po.vendorInvoices ?? []);
+    const totalPaid = sumAmounts(po.payments ?? []);
+    return NextResponse.json({
+      ok: true,
+      purchaseOrder: {
+        id: doc._id.toString(),
+        poNumber: doc.poNumber ?? "",
+        vendorId: po.vendorId,
+        type: po.type,
+        quoteId: po.quoteId ?? "",
+        repairFlowJobId: po.repairFlowJobId ?? "",
+        lineItems: (po.lineItems ?? []).map((item) => ({ ...item, status: normalizeLineItemStatus(item) })),
+        vendorInvoices: po.vendorInvoices ?? [],
+        payments: po.payments ?? [],
+        totalOrder: totalOrder.toFixed(2),
+        totalInvoiced: totalInvoiced.toFixed(2),
+        totalPaid: totalPaid.toFixed(2),
+        status: computePoOverallStatus(totalOrder, totalInvoiced, totalPaid),
+        deliveryStatus: computePoDeliveryStatus(
+          (po.lineItems ?? []).map((item) => ({ ...item, status: normalizeLineItemStatus(item) }))
+        ),
+        invoicedStatus: computePoInvoicedStatus(totalOrder, totalInvoiced),
+        paidStatus: computePoPaidStatus(totalInvoiced, totalPaid, totalOrder),
+        notes: po.notes ?? "",
+        vendorShareToken: doc.vendorShareToken ?? "",
+        attachments: Array.isArray(po.attachments)
+          ? po.attachments.map((a) => ({ url: a?.url ?? "", name: a?.name ?? "" }))
+          : [],
+        attachmentCount: Array.isArray(po.attachments) ? po.attachments.length : 0,
+        createdAt: doc.createdAt,
+        updatedAt: doc.updatedAt,
+      },
+    });
+  } catch (err) {
+    console.error("Dashboard update purchase order error:", err);
+    return NextResponse.json({ error: err.message || "Failed to update purchase order" }, { status: 500 });
+  }
+}
+
+export async function DELETE(request, context) {
+  try {
+    const user = await getPortalUserFromRequest(request);
+    if (!user?.email) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    const params = await getParams(context);
+    const id = params?.id;
+    if (!id) {
+      return NextResponse.json({ error: "ID required" }, { status: 400 });
+    }
+    await connectDB();
+    const result = await PurchaseOrder.deleteOne({
+      _id: id,
+      createdByEmail: user.email.trim().toLowerCase(),
+    });
+    if (!result?.deletedCount) {
+      return NextResponse.json({ error: "Not found" }, { status: 404 });
+    }
+    return NextResponse.json({ ok: true });
+  } catch (err) {
+    console.error("Dashboard delete purchase order error:", err);
+    return NextResponse.json({ error: err.message || "Failed to delete purchase order" }, { status: 500 });
+  }
+}

@@ -1,0 +1,59 @@
+import mongoose from "mongoose";
+
+const motorSchema = new mongoose.Schema(
+  {
+    /** Customer id (dashboard Customer) this motor belongs to */
+    customerId: { type: String, required: true, trim: true },
+    serialNumber: { type: String, default: "", trim: true },
+    manufacturer: { type: String, default: "", trim: true },
+    model: { type: String, default: "", trim: true },
+    hp: { type: String, default: "", trim: true },
+    rpm: { type: String, default: "", trim: true },
+    voltage: { type: String, default: "", trim: true },
+    kw: { type: String, default: "", trim: true },
+    amps: { type: String, default: "", trim: true },
+    frameSize: { type: String, default: "", trim: true },
+    motorType: { type: String, default: "", trim: true },
+    slots: { type: String, default: "", trim: true },
+    coreLength: { type: String, default: "", trim: true },
+    coreDiameter: { type: String, default: "", trim: true },
+    bars: { type: String, default: "", trim: true },
+    /** Optional motor photos (URLs or paths) */
+    motorPhotos: [{ type: String }],
+    /** Optional nameplate images */
+    nameplateImages: [{ type: String }],
+    notes: { type: String, default: "", trim: true },
+    /** Filled from AC work orders (technician) */
+    acSpecs: { type: mongoose.Schema.Types.Mixed, default: {} },
+    /** Filled from DC work order — DC tab */
+    dcSpecs: { type: mongoose.Schema.Types.Mixed, default: {} },
+    /** Filled from DC work order — Armature tab */
+    dcArmatureSpecs: { type: mongoose.Schema.Types.Mixed, default: {} },
+    /** Optional parent ref metadata for import traceability */
+    customerSourceSystem: { type: String, default: "", trim: true },
+    customerExternalRef: { type: String, default: "", trim: true },
+    /** Import metadata for external system linking */
+    sourceSystem: { type: String, default: "", trim: true },
+    externalRef: { type: String, default: "", trim: true },
+    importBatchId: { type: String, default: "", trim: true },
+    importedAt: { type: Date, default: null },
+    importStatus: { type: String, default: "", trim: true },
+    /** Shop that owns this motor (dashboard user email) */
+    createdByEmail: { type: String, required: true, trim: true },
+  },
+  { timestamps: true }
+);
+
+motorSchema.index({ createdByEmail: 1, createdAt: -1 });
+motorSchema.index({ createdByEmail: 1, customerId: 1 });
+motorSchema.index(
+  { createdByEmail: 1, sourceSystem: 1, externalRef: 1 },
+  { unique: true, partialFilterExpression: { externalRef: { $gt: "" } } }
+);
+
+// Recompile if cached model was created before new fields were added
+if (mongoose.models.Motor && !mongoose.models.Motor.schema.paths.acSpecs) {
+  delete mongoose.models.Motor;
+}
+
+export default mongoose.models.Motor || mongoose.model("Motor", motorSchema);
