@@ -30,11 +30,12 @@ async function optimizeLogoBuffer(buffer) {
 }
 
 /**
- * Save an uploaded logo file to public/uploads/logos. Returns path e.g. /uploads/logos/xxx.webp
- * @param {File} file - Web API File from FormData
+ * Save an uploaded image under public/uploads/{folder}. Returns a site path.
+ * @param {File} file
+ * @param {string} folder
  * @returns {Promise<string>}
  */
-export async function saveUploadedLogoFile(file) {
+async function savePublicImageFile(file, folder) {
   if (!file || typeof file.arrayBuffer !== "function") {
     throw new Error("No file provided");
   }
@@ -50,7 +51,7 @@ export async function saveUploadedLogoFile(file) {
   if (!validation.ok) {
     throw new Error(validation.error);
   }
-  const dir = path.join(getPublicUploadsRoot(), "logos");
+  const dir = path.join(getPublicUploadsRoot(), folder);
   mkdirSync(dir, { recursive: true });
 
   const optimized = await optimizeLogoBuffer(buffer);
@@ -61,7 +62,25 @@ export async function saveUploadedLogoFile(file) {
   const safeName = `${Date.now()}-${Math.random().toString(36).slice(2, 9)}${useExt}`.replace(/[^a-zA-Z0-9._-]/g, "_");
   const filePath = path.join(dir, safeName);
   writeFileSync(filePath, useBuffer);
-  return `/uploads/logos/${safeName}`;
+  return `/uploads/${folder}/${safeName}`;
+}
+
+/**
+ * Save an uploaded logo file to public/uploads/logos. Returns path e.g. /uploads/logos/xxx.webp
+ * @param {File} file - Web API File from FormData
+ * @returns {Promise<string>}
+ */
+export async function saveUploadedLogoFile(file) {
+  return savePublicImageFile(file, "logos");
+}
+
+/**
+ * Save a directory listing gallery photo. Returns path e.g. /uploads/listing-gallery/xxx.webp
+ * @param {File} file
+ * @returns {Promise<string>}
+ */
+export async function saveUploadedListingGalleryFile(file) {
+  return savePublicImageFile(file, "listing-gallery");
 }
 
 /** Only allow our hosted logo paths on listing create (no hotlinked URLs). */

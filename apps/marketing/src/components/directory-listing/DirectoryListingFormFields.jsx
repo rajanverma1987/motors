@@ -49,6 +49,8 @@ export default function DirectoryListingFormFields({
   clearLogo,
   logoError,
   handleGalleryPhotosChange,
+  existingGalleryUrls = [],
+  onRemoveGallery,
   emailReadOnly = false,
   emailLabel = "Email",
   emailHelpText,
@@ -215,6 +217,24 @@ export default function DirectoryListingFormFields({
         <p className="mb-4 text-sm text-secondary">
           Upload photos for your listing gallery. These will appear on your public listing page and help customers see your facility and work.
         </p>
+        {existingGalleryUrls.length > 0 ? (
+          <ul className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
+            {existingGalleryUrls.map((url) => (
+              <li key={url} className="overflow-hidden rounded border border-border bg-card">
+                <img src={url} alt="" className="h-28 w-full object-cover" />
+                {typeof onRemoveGallery === "function" ? (
+                  <button
+                    type="button"
+                    onClick={() => onRemoveGallery(url)}
+                    className="w-full px-2 py-1.5 text-xs font-medium text-danger hover:bg-danger/10"
+                  >
+                    Remove photo
+                  </button>
+                ) : null}
+              </li>
+            ))}
+          </ul>
+        ) : null}
         <div className="space-y-2">
           <label className="block text-sm font-medium text-title">Upload photos</label>
           <input

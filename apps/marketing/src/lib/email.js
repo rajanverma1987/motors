@@ -602,6 +602,23 @@ export async function sendContactUnlockNotificationToShop({
   return sendEmail(to, subject, wrapPlatformBrandedHtml(html));
 }
 
+/** One-time code to edit an existing directory listing. Does not create an account. */
+export async function sendListingOwnerEditCodeEmail(to, code, companyName) {
+  const esc = (v) =>
+    v == null ? "" : String(v).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  const company = String(companyName || "").trim();
+  const subject = "Your code to edit your 3PhaseFlow listing";
+  const html = `
+    <p>Your verification code to edit ${company ? `<strong>${esc(company)}</strong> on` : "your listing on"} 3PhaseFlow.com is:</p>
+    <p style="font-size:24px;font-weight:bold;letter-spacing:4px;font-family:monospace">${esc(code)}</p>
+    <p>Enter this code on the website to continue. The code expires in 15 minutes.</p>
+    <p>This code only opens the listing editor. It does not create an account.</p>
+    <p>If you did not request this, you can ignore this email.</p>
+    <p>3PhaseFlow.com</p>
+  `;
+  return sendEmail(to, subject, wrapPlatformBrandedHtml(html));
+}
+
 /** Send verification code for list-your-electric-motor-services email verification. */
 export async function sendVerificationCodeEmail(to, code) {
   const subject = "Your 3PhaseFlow.com verification code";

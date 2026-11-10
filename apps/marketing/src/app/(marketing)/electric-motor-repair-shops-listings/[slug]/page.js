@@ -683,14 +683,14 @@ export default async function ListingDetailPage({ params }) {
             <OwnAShopLikeThisModule className="mt-10" />
             <div className="mt-6 rounded-lg border border-border bg-muted/25 px-4 py-3 sm:px-5">
               <p className="text-sm text-secondary">
-                <span className="font-medium text-title">Is this your business?</span> Sign in to
-                your 3PhaseFlow account to update this directory listing, services, service area,
-                photos, and contact details, whenever they change.{" "}
+                <span className="font-medium text-title">Is this your business?</span> Enter the
+                email on this listing and a one-time code to update services, service area, photos,
+                and contact details whenever they change.{" "}
                 <Link
-                  href={`/login?next=${encodeURIComponent("/dashboards/settings?section=directory-listing")}`}
+                  href={`/electric-motor-repair-shops-listings/${canonicalSlug}/edit`}
                   className="font-medium text-primary underline-offset-2 hover:underline"
                 >
-                  Sign in to edit your listing
+                  Edit this listing
                 </Link>
                 .
               </p>
