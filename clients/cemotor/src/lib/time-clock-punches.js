@@ -192,16 +192,27 @@ export function summarizePunchSessions(punches, timeZone) {
   const sessions = [];
   let open = null;
 
-  const closeBreak = (atIso) => {
+  const punchId = (raw) => {
+    const id = raw?._id?.toString?.() || String(raw?.id || "");
+    return id && id !== "undefined" ? id : "";
+  };
+
+  const closeBreak = (atIso, endPunchId) => {
     if (!open?.breakStart) return;
-    open.breaks.push({ start: open.breakStart, end: atIso });
+    open.breaks.push({
+      start: open.breakStart,
+      end: atIso,
+      startPunchId: open.breakStartPunchId || "",
+      endPunchId: endPunchId || "",
+    });
     open.breakStart = null;
+    open.breakStartPunchId = "";
   };
 
   const remember = (raw) => {
     if (!open) return;
-    const id = raw._id?.toString?.() || String(raw.id || "");
-    if (id && id !== "undefined" && !open.punchIds.includes(id)) open.punchIds.push(id);
+    const id = punchId(raw);
+    if (id && !open.punchIds.includes(id)) open.punchIds.push(id);
   };
 
   for (const raw of list) {
@@ -209,17 +220,21 @@ export function summarizePunchSessions(punches, timeZone) {
     const at = raw.punchedAt ? new Date(raw.punchedAt) : null;
     if (!at || Number.isNaN(at.getTime())) continue;
     const atIso = at.toISOString();
+    const id = punchId(raw);
     if (type === "in") {
       if (open) {
-        if (open.breakStart) closeBreak(null);
+        if (open.breakStart) closeBreak(null, "");
         sessions.push(open);
       }
       open = {
         date: punchWorkDate(atIso, timeZone),
         inAt: atIso,
+        inPunchId: id,
         outAt: null,
+        outPunchId: "",
         breaks: [],
         breakStart: null,
+        breakStartPunchId: "",
         punchIds: [],
       };
       remember(raw);
@@ -228,22 +243,26 @@ export function summarizePunchSessions(punches, timeZone) {
     if (!open) continue;
     remember(raw);
     if (type === "break_start") {
-      if (!open.breakStart) open.breakStart = atIso;
+      if (!open.breakStart) {
+        open.breakStart = atIso;
+        open.breakStartPunchId = id;
+      }
       continue;
     }
     if (type === "break_end") {
-      closeBreak(atIso);
+      closeBreak(atIso, id);
       continue;
     }
     if (type === "out") {
-      closeBreak(atIso);
+      closeBreak(atIso, "");
       open.outAt = atIso;
+      open.outPunchId = id;
       sessions.push(open);
       open = null;
     }
   }
   if (open) {
-    if (open.breakStart) closeBreak(null);
+    if (open.breakStart) closeBreak(null, "");
     sessions.push(open);
   }
   return sessions.filter((session) => session.date && session.inAt);
@@ -272,17 +291,71 @@ export function punchSessionMetrics(session, now = new Date(), timeZone) {
     } else if (Number.isFinite(be) && item.end) {
       breakMs += Math.max(0, be - bs);
     }
-    breaks.push({ start: item.start, end: item.end || null });
+    breaks.push({
+      start: item.start,
+      end: item.end || null,
+      startPunchId: item.startPunchId || "",
+      endPunchId: item.endPunchId || "",
+    });
   }
 
   return {
     inAt: session.inAt,
     outAt: session.outAt || null,
+    inPunchId: session.inPunchId || "",
+    outPunchId: session.outPunchId || "",
+    punchIds: Array.isArray(session.punchIds) ? session.punchIds.filter(Boolean) : [],
     open,
     hours: Number.isFinite(end) ? roundHours(end - start - breakMs) : null,
     breakHours: roundHours(breakMs),
     breaks,
   };
+}
+
+function round2Hours(n) {
+  return Math.round((Number(n) + Number.EPSILON) * 100) / 100;
+}
+
+/** Worked hours keyed by the clock-in calendar date, plus manual hours by work date. */
+export function workedHoursByDate(punches, manuals, timeZone, now = new Date()) {
+  const map = new Map();
+  for (const session of summarizePunchSessions(punches, timeZone)) {
+    const metrics = punchSessionMetrics(session, now, timeZone);
+    const day = String(session.date || "");
+    const hours = Number(metrics?.hours);
+    if (!day || !Number.isFinite(hours) || hours <= 0) continue;
+    map.set(day, round2Hours((map.get(day) || 0) + hours));
+  }
+  for (const entry of Array.isArray(manuals) ? manuals : []) {
+    const day = String(entry.workDate || entry.date || "").slice(0, 10);
+    const hours = Number(entry.hours);
+    if (!day || !Number.isFinite(hours) || hours <= 0) continue;
+    map.set(day, round2Hours((map.get(day) || 0) + hours));
+  }
+  return map;
+}
+
+/**
+ * Paid hours already assigned to days before `beforeDate`.
+ * Days with an explicit paid-hours value use that number. Other days fill oldest work first.
+ */
+export function paidHoursAppliedBeforeDate(workedByDate, overrides, lifetimePaid, beforeDate) {
+  const worked = workedByDate instanceof Map ? workedByDate : new Map();
+  const explicit = overrides instanceof Map ? overrides : new Map();
+  const days = [...new Set([...worked.keys(), ...explicit.keys()])]
+    .filter((day) => day && day < beforeDate)
+    .sort();
+  let pool = Math.max(0, Number(lifetimePaid) || 0);
+  let consumed = 0;
+  for (const day of days) {
+    const dayWorked = Math.max(0, Number(worked.get(day)) || 0);
+    const paid = explicit.has(day)
+      ? Math.max(0, Number(explicit.get(day)) || 0)
+      : Math.min(dayWorked, pool);
+    consumed = round2Hours(consumed + paid);
+    pool = round2Hours(Math.max(0, pool - paid));
+  }
+  return consumed;
 }
 
 /** Inclusive local dates from `from` through `to`, capped. */
