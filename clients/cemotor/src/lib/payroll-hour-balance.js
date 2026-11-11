@@ -1,4 +1,5 @@
 import Employee from "@/models/Employee";
+import EmployeeDayPaidHours from "@/models/EmployeeDayPaidHours";
 import EmployeePayrollPayment from "@/models/EmployeePayrollPayment";
 import TimeClockManualHours from "@/models/TimeClockManualHours";
 import TimeClockPunch from "@/models/TimeClockPunch";
@@ -69,6 +70,30 @@ async function lifetimeWorkedByEmployee(owner, until, employeeId) {
   return hoursByEmployee;
 }
 
+/** Hours marked paid on the calendar. These correct a mistake and are not a payment. */
+async function markedPaidHoursByEmployee(owner, employeeId, from, to) {
+  const query = { createdByEmail: owner };
+  if (employeeId) query.employeeId = String(employeeId);
+  if (from || to) {
+    query.workDate = {};
+    if (from) query.workDate.$gte = String(from).slice(0, 10);
+    if (to) query.workDate.$lte = String(to).slice(0, 10);
+  }
+  const rows = await EmployeeDayPaidHours.find(query).select("employeeId paidHours").lean();
+  const map = new Map();
+  for (const row of rows) {
+    const id = String(row.employeeId || "").trim();
+    const hours = Number(row.paidHours) || 0;
+    if (!id || hours <= 0) continue;
+    map.set(id, round2((map.get(id) || 0) + hours));
+  }
+  return map;
+}
+
+function unpaidAfterMarked(worked, paid, marked) {
+  return Math.max(0, round2((Number(worked) || 0) - (Number(paid) || 0) - (Number(marked) || 0)));
+}
+
 function lifetimePaidByEmployee(payments) {
   const paidByEmployee = new Map();
   const latestByEmployee = new Map();
@@ -120,7 +145,7 @@ export async function hourlyUnpaidHoursForRange(owner, employeeId, from, to, now
   const id = String(employeeId || "").trim();
   if (!window || !id) return empty;
 
-  const [punches, manuals, payments] = await Promise.all([
+  const [punches, manuals, payments, markedMap] = await Promise.all([
     TimeClockPunch.find({
       createdByEmail: owner,
       employeeId: id,
@@ -141,6 +166,7 @@ export async function hourlyUnpaidHoursForRange(owner, employeeId, from, to, now
       employeeId: id,
       payType: "hourly",
     }).lean(),
+    markedPaidHoursByEmployee(owner, id, window.from, window.manualTo),
   ]);
 
   const before = workedHoursAfter(punches, manuals, new Date(0), window.after);
@@ -151,7 +177,7 @@ export async function hourlyUnpaidHoursForRange(owner, employeeId, from, to, now
   const paid = Math.min(worked, paidIntoRange);
   return {
     workedHours: round2(worked),
-    unpaidHours: Math.max(0, round2(worked - paid)),
+    unpaidHours: unpaidAfterMarked(worked, paid, markedMap.get(id) || 0),
   };
 }
 
@@ -161,18 +187,19 @@ export async function hourlyUnpaidHoursForRange(owner, employeeId, from, to, now
  */
 export async function hourlyUnpaidHoursForEmployee(owner, employeeId, _periodMonth, now = new Date()) {
   const until = now instanceof Date ? now : new Date(now);
-  const [workedByEmployee, payments] = await Promise.all([
+  const [workedByEmployee, payments, markedMap] = await Promise.all([
     lifetimeWorkedByEmployee(owner, until, employeeId),
     EmployeePayrollPayment.find({
       createdByEmail: owner,
       employeeId,
       payType: "hourly",
     }).lean(),
+    markedPaidHoursByEmployee(owner, employeeId),
   ]);
   const worked = workedByEmployee.get(String(employeeId)) || 0;
   const { paidByEmployee } = lifetimePaidByEmployee(payments);
   const paid = paidByEmployee.get(String(employeeId)) || 0;
-  return Math.max(0, round2(worked - paid));
+  return unpaidAfterMarked(worked, paid, markedMap.get(String(employeeId)) || 0);
 }
 
 function monthWindow(periodMonth, now) {
@@ -257,7 +284,8 @@ export async function hourlyUnpaidBalances(owner, now = new Date(), periodMonth)
   const window = monthWindow(periodMonth, until);
   if (!window) return [];
 
-  const [monthWorked, lifetimeWorked, workedBeforeMonth, payments] = await Promise.all([
+  const [monthWorked, lifetimeWorked, workedBeforeMonth, payments, monthMarked, allMarked] =
+    await Promise.all([
     monthWorkedByEmployee(owner, window),
     lifetimeWorkedByEmployee(owner, until),
     lifetimeWorkedByEmployee(owner, window.after),
@@ -267,6 +295,8 @@ export async function hourlyUnpaidBalances(owner, now = new Date(), periodMonth)
     })
       .sort({ paidAt: 1, createdAt: 1 })
       .lean(),
+    markedPaidHoursByEmployee(owner, null, window.from, window.manualTo),
+    markedPaidHoursByEmployee(owner),
   ]);
   const { paidByEmployee } = lifetimePaidByEmployee(payments);
 
@@ -292,10 +322,11 @@ export async function hourlyUnpaidBalances(owner, now = new Date(), periodMonth)
     const before = workedBeforeMonth.get(employeeId) || 0;
     const paidIntoMonth = Math.max(0, round2(lifetimePaid - before));
     const paid = Math.min(worked, paidIntoMonth);
-    const unpaidHours = Math.max(0, round2(worked - paid));
-    const allUnpaidHours = Math.max(
-      0,
-      round2((lifetimeWorked.get(employeeId) || 0) - (paidByEmployee.get(employeeId) || 0))
+    const unpaidHours = unpaidAfterMarked(worked, paid, monthMarked.get(employeeId) || 0);
+    const allUnpaidHours = unpaidAfterMarked(
+      lifetimeWorked.get(employeeId) || 0,
+      paidByEmployee.get(employeeId) || 0,
+      allMarked.get(employeeId) || 0
     );
     const lastPayment = monthLatest.get(employeeId) || null;
     if (unpaidHours <= 0 && !lastPayment) continue;
@@ -327,7 +358,7 @@ export async function settledInactiveEmployeeIds(owner, now = new Date()) {
   if (!inactive.length) return new Set();
 
   const ids = inactive.map((emp) => String(emp._id));
-  const [punches, manuals, payments] = await Promise.all([
+  const [punches, manuals, payments, markedRows] = await Promise.all([
     TimeClockPunch.find({
       createdByEmail: owner,
       employeeId: { $in: ids },
@@ -345,6 +376,12 @@ export async function settledInactiveEmployeeIds(owner, now = new Date()) {
       createdByEmail: owner,
       employeeId: { $in: ids },
     }).lean(),
+    EmployeeDayPaidHours.find({
+      createdByEmail: owner,
+      employeeId: { $in: ids },
+    })
+      .select("employeeId paidHours")
+      .lean(),
   ]);
 
   const punchesByEmployee = new Map();
@@ -364,6 +401,13 @@ export async function settledInactiveEmployeeIds(owner, now = new Date()) {
     const id = String(payment.employeeId || "");
     if (!paymentsByEmployee.has(id)) paymentsByEmployee.set(id, []);
     paymentsByEmployee.get(id).push(payment);
+  }
+  const markedByEmployee = new Map();
+  for (const row of markedRows) {
+    const id = String(row.employeeId || "");
+    const hours = Number(row.paidHours) || 0;
+    if (!id || hours <= 0) continue;
+    markedByEmployee.set(id, round2((markedByEmployee.get(id) || 0) + hours));
   }
 
   const settled = new Set();
@@ -393,7 +437,8 @@ export async function settledInactiveEmployeeIds(owner, now = new Date()) {
       new Date(0),
       now
     );
-    if (worked - paid <= 0.001) settled.add(id);
+    const marked = markedByEmployee.get(id) || 0;
+    if (worked - paid - marked <= 0.001) settled.add(id);
   }
   return settled;
 }
