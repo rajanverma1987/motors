@@ -10,7 +10,7 @@
  * Quote the pattern in PowerShell or cmd so the shell does not expand it.
  * Apps that share one folder are pulled and built once, then each process is restarted.
  *
- * Reads each app folder from D:\node\pm2\ecosystem.config (override with --config).
+ * Reads each app folder from D:\node\pm2\ecosystem.config.js (override with --config).
  * Prompts once for the git SSH password. Leave it blank to use the existing SSH key.
  * The password is not stored. You can also set GIT_SSH_PASSWORD for that command only.
  */
@@ -20,7 +20,7 @@ const os = require("os");
 const path = require("path");
 const Module = require("module");
 
-const DEFAULT_CONFIG = "D:\\node\\pm2\\ecosystem.config";
+const DEFAULT_CONFIG = "D:\\node\\pm2\\ecosystem.config.js";
 
 function fail(message) {
   console.error(message);
@@ -63,7 +63,8 @@ function targetMatches(target, proc) {
 }
 
 function loadEcosystem(filePath) {
-  const resolved = path.resolve(filePath);
+  let resolved = path.resolve(filePath);
+  if (!fs.existsSync(resolved) && fs.existsSync(`${resolved}.js`)) resolved = `${resolved}.js`;
   if (!fs.existsSync(resolved)) fail(`Ecosystem file not found: ${resolved}`);
   const source = fs.readFileSync(resolved, "utf8");
   const compiled = new Module(resolved);
@@ -205,7 +206,7 @@ async function gitPull(cwd, password) {
 async function main() {
   const { targets, config } = parseArgs(process.argv);
   if (!targets.length) {
-    fail('Usage: node dev\\scripts\\pm2-pull-build.js <pm2-id-or-name> [more...] [--config D:\\node\\pm2\\ecosystem.config]\nExample: node dev\\scripts\\pm2-pull-build.js 12 "3pf*"');
+    fail('Usage: node dev\\scripts\\pm2-pull-build.js <pm2-id-or-name> [more...] [--config D:\\node\\pm2\\ecosystem.config.js]\nExample: node dev\\scripts\\pm2-pull-build.js 12 "3pf*"');
   }
   for (const target of targets) {
     if (!/^[\w.*?-]+$/.test(target)) fail(`Unsupported characters in "${target}".`);
