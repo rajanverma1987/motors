@@ -57,10 +57,13 @@ export async function GET(request) {
     }
   }
   const entitlement = computeEntitlement({ status, expiresAt });
-  try {
-    await touchTenantLastLogin(auth.tenant.slug);
-  } catch {
-    /* non-fatal */
+  const openedFromAdmin = request.headers.get("x-support-session") === "1";
+  if (!openedFromAdmin) {
+    try {
+      await touchTenantLastLogin(auth.tenant.slug);
+    } catch {
+      /* non-fatal */
+    }
   }
   return NextResponse.json({
     slug: auth.tenant.slug,

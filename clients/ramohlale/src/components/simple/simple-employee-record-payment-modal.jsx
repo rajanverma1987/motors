@@ -18,7 +18,7 @@ import {
 import { mergeUserSettings } from "@/lib/user-settings";
 import { productDropdownSelectOptions } from "@/lib/product-dropdown-catalog";
 import { SIMPLE_INVOICE_PAYMENT_METHOD_OPTIONS } from "@/lib/simple-service-proposal-form";
-import { parsePayRate, periodMonthBounds } from "@/lib/employee-payroll-payment";
+import { hoursPaidForAmount, parsePayRate, periodMonthBounds } from "@/lib/employee-payroll-payment";
 import { shopWeekContaining } from "@/lib/shop-week";
 
 const PAY_FORM_ID = "simple-employee-record-payment-form";
@@ -109,6 +109,7 @@ export default function SimpleEmployeeRecordPaymentModal({ open, onClose, onSave
   const [maxUnpaidHours, setMaxUnpaidHours] = useState(0);
   const [payHours, setPayHours] = useState("");
   const [payAmount, setPayAmount] = useState("");
+  const [markedPay, setMarkedPay] = useState(null);
   const [payPaidAt, setPayPaidAt] = useState(localTodayIso);
   const [payPeriodFrom, setPayPeriodFrom] = useState("");
   const [payPeriodTo, setPayPeriodTo] = useState("");
@@ -121,6 +122,7 @@ export default function SimpleEmployeeRecordPaymentModal({ open, onClose, onSave
   const [payments, setPayments] = useState([]);
   const [historyPage, setHistoryPage] = useState(1);
   const [editingPayment, setEditingPayment] = useState(null);
+  const [calendarReload, setCalendarReload] = useState(0);
 
   const fmt = useCallback(
     (n) => {
@@ -189,6 +191,7 @@ export default function SimpleEmployeeRecordPaymentModal({ open, onClose, onSave
     setPayNotes("");
     setPayPendingFiles([]);
     setEditingPayment(null);
+    setMarkedPay(null);
     setHistoryPage(1);
 
     if (payType === "salary") {
@@ -251,6 +254,20 @@ export default function SimpleEmployeeRecordPaymentModal({ open, onClose, onSave
           );
           return;
         }
+        if (
+          markedPay &&
+          markedPay.from === from &&
+          markedPay.to === to &&
+          Number.isFinite(Number(markedPay.hours))
+        ) {
+          const seeded = Math.max(0, Number(markedPay.hours) || 0);
+          const hours = unpaid > 0.001 ? Math.min(seeded, unpaid) : seeded;
+          const hoursStr = hours.toFixed(2);
+          setMaxUnpaidHours(Math.max(unpaid, hours));
+          setPayHours(hoursStr);
+          setPayAmount(amountForHours(hoursStr, hourlyRate));
+          return;
+        }
         const forcedHours =
           employee?.hours != null && Number.isFinite(Number(employee.hours)) ? Number(employee.hours) : null;
         const initialFrom = String(employee?.periodFrom || "").slice(0, 10);
@@ -293,6 +310,7 @@ export default function SimpleEmployeeRecordPaymentModal({ open, onClose, onSave
     hourlyRate,
     alert,
     editingPayment,
+    markedPay,
   ]);
 
   const close = () => {
@@ -321,6 +339,55 @@ export default function SimpleEmployeeRecordPaymentModal({ open, onClose, onSave
     setPayPendingFiles([]);
   };
 
+  const deletePayment = async (row) => {
+    const id = String(row?.id || "").trim();
+    if (!id || paySaving || payUploading) return;
+    const ok = await confirm({
+      title: "Delete payment",
+      message: `Delete this ${fmt(row.amount)} payment for ${name}? Those hours go back to unpaid.`,
+      confirmLabel: "Delete",
+      variant: "danger",
+    });
+    if (!ok) return;
+    const ok2 = await confirm({
+      title: "Confirm delete",
+      message: "This removes the payment record. Continue?",
+      confirmLabel: "Delete payment",
+      variant: "danger",
+    });
+    if (!ok2) return;
+    try {
+      const res = await fetch(
+        `/api/dashboard/employee-payroll-payments/${encodeURIComponent(id)}`,
+        { method: "DELETE", credentials: "include" }
+      );
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || "Failed to delete payment");
+      if (String(editingPayment?.id || "") === id) cancelEdit();
+      setCalendarReload((n) => n + 1);
+      await loadHistory();
+    } catch (err) {
+      await alert({
+        title: "Error",
+        message: err?.message || "Failed to delete payment",
+        variant: "danger",
+      });
+    }
+  };
+
+  const markCalendarHoursPaid = (hours, day) => {
+    const iso = String(day || "").slice(0, 10);
+    const seeded = Math.round((Number(hours) + Number.EPSILON) * 100) / 100;
+    if (!iso || !(seeded > 0)) return;
+    setEditingPayment(null);
+    setMarkedPay({ hours: seeded, from: iso, to: iso });
+    setPayPeriodFrom(iso);
+    setPayPeriodTo(iso);
+    const hoursStr = seeded.toFixed(2);
+    setPayHours(hoursStr);
+    setPayAmount(amountForHours(hoursStr, hourlyRate));
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!employeeId) return;
@@ -338,7 +405,13 @@ export default function SimpleEmployeeRecordPaymentModal({ open, onClose, onSave
       await alert({ title: "Error", message: "Mode of payment is required.", variant: "danger" });
       return;
     }
-    const hoursToPay = payType === "hourly" ? Number.parseFloat(String(payHours)) : 0;
+    const derivedHours = payType === "hourly" ? hoursPaidForAmount(amount, hourlyRate) : null;
+    const hoursToPay =
+      payType === "hourly"
+        ? derivedHours == null
+          ? Number.parseFloat(String(payHours))
+          : derivedHours
+        : 0;
     if (payType === "hourly") {
       if (!Number.isFinite(hoursToPay) || hoursToPay <= 0) {
         await alert({ title: "Error", message: "Enter the hours to pay.", variant: "danger" });
@@ -384,7 +457,7 @@ export default function SimpleEmployeeRecordPaymentModal({ open, onClose, onSave
       ["Employee", name],
       employeeNumber ? ["Employee number", employeeNumber] : null,
       ["Pay period", `${formatDate(payPeriodFrom.trim())} to ${formatDate(payPeriodTo.trim())}`],
-      payType === "hourly" ? ["Hours to pay", hoursToPay.toFixed(2)] : ["Pay type", "Salary"],
+      payType === "hourly" ? ["Hours paid", hoursToPay.toFixed(2)] : ["Pay type", "Salary"],
       ["Amount", fmt(amount)],
       ["Paid date", formatDate(payPaidAt.trim())],
       ["Mode of payment", String(payMethod || "").trim()],
@@ -634,7 +707,7 @@ export default function SimpleEmployeeRecordPaymentModal({ open, onClose, onSave
                   aria-label="Hours to pay"
                 />
                 <p className="mt-1 text-xs text-secondary">
-                  Prefilled with unpaid hours for the selected pay period. Lower it to pay part. The rest stays unpaid.
+                  Prefilled with unpaid hours for the selected pay period. Change the amount and these hours update from that amount divided by the hourly rate.
                 </p>
               </FieldRow>
             ) : null}
@@ -644,7 +717,14 @@ export default function SimpleEmployeeRecordPaymentModal({ open, onClose, onSave
                 min="0"
                 step="0.01"
                 value={payAmount}
-                onChange={(e) => setPayAmount(e.target.value)}
+                onChange={(e) => {
+                  const next = e.target.value;
+                  setPayAmount(next);
+                  if (payType !== "hourly") return;
+                  const hours = hoursPaidForAmount(next, hourlyRate);
+                  if (hours == null) return;
+                  setPayHours(hours.toFixed(2));
+                }}
                 required
                 className={FIELD_INPUT}
               />
@@ -744,6 +824,7 @@ export default function SimpleEmployeeRecordPaymentModal({ open, onClose, onSave
               rowKey="id"
               loading={historyLoading}
               onEdit={startEdit}
+              onDelete={(row) => void deletePayment(row)}
               actionsColumnLabel=""
               fillHeight={false}
               paginateClientSide={false}
@@ -761,7 +842,12 @@ export default function SimpleEmployeeRecordPaymentModal({ open, onClose, onSave
             />
           </div>
           <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
-            <SimpleEmployeePunchCalendar employeeId={employeeId} open={open} />
+            <SimpleEmployeePunchCalendar
+              employeeId={employeeId}
+              open={open}
+              reloadToken={calendarReload}
+              onMarkPaid={payType === "hourly" ? markCalendarHoursPaid : undefined}
+            />
           </div>
         </div>
       </div>

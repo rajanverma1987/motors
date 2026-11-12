@@ -15,6 +15,7 @@ import {
 } from "@/lib/time-clock-punches";
 import { settledInactiveEmployeeIds } from "@/lib/payroll-hour-balance";
 import EmployeePayrollPayment from "@/models/EmployeePayrollPayment";
+import EmployeeDayPaidHours from "@/models/EmployeeDayPaidHours";
 import TimeClockManualHours from "@/models/TimeClockManualHours";
 import { payableManualHoursClause } from "@/lib/time-clock-payable-hours";
 import { maybeSendPayrollCommunicationAfterPunch } from "@/lib/time-clock-payroll-communication";
@@ -66,7 +67,7 @@ export async function GET(request) {
       };
       const punchEmployeeFilter = employeeId ? { employeeId } : {};
 
-      const [employees, punches, manualsInRange, manualsBefore, payments] = await Promise.all([
+      const [employees, punches, manualsInRange, manualsBefore, payments, dayPaidRows] = await Promise.all([
         Employee.find(employeeFilter)
           .select("name employeeNumber department employmentStatus timeClockEnabled payType hourlyRate")
           .sort({ name: 1 })
@@ -96,6 +97,10 @@ export async function GET(request) {
         EmployeePayrollPayment.find({
           createdByEmail: email,
           payType: "hourly",
+          ...punchEmployeeFilter,
+        }).lean(),
+        EmployeeDayPaidHours.find({
+          createdByEmail: email,
           ...punchEmployeeFilter,
         }).lean(),
       ]);
@@ -141,6 +146,21 @@ export async function GET(request) {
         manualsBeforeByEmployee.get(id).push(manual);
       }
 
+      const dayPaidByEmployee = new Map();
+      for (const row of dayPaidRows) {
+        const id = String(row.employeeId || "").trim();
+        const workDate = String(row.workDate || "").slice(0, 10);
+        const hours = Number(row.paidHours);
+        if (!id || !/^\d{4}-\d{2}-\d{2}$/.test(workDate) || !Number.isFinite(hours) || hours < 0) {
+          continue;
+        }
+        if (!dayPaidByEmployee.has(id)) dayPaidByEmployee.set(id, new Map());
+        dayPaidByEmployee.get(id).set(
+          workDate,
+          Math.round((hours + Number.EPSILON) * 100) / 100
+        );
+      }
+
       const paidByEmployee = new Map();
       for (const payment of payments) {
         const id = String(payment.employeeId || "").trim();
@@ -176,7 +196,7 @@ export async function GET(request) {
           const byDay = {};
           const ensureDay = (date) => {
             if (!byDay[date]) {
-              byDay[date] = { sessions: [], manualHours: 0, manualJobNumbers: [] };
+              byDay[date] = { sessions: [], manualHours: 0, manualEntries: [], manualJobNumbers: [] };
             }
             return byDay[date];
           };
@@ -192,6 +212,11 @@ export async function GET(request) {
             const day = ensureDay(workDate);
             day.manualHours =
               Math.round((day.manualHours + hours + Number.EPSILON) * 100) / 100;
+            day.manualEntries.push({
+              id: manual._id?.toString?.() || "",
+              hours,
+              note: String(manual.note || "").trim(),
+            });
             const jobNo = String(manual.documentNumber || "").trim();
             if (jobNo && !day.manualJobNumbers.includes(jobNo)) {
               day.manualJobNumbers.push(jobNo);
@@ -203,6 +228,12 @@ export async function GET(request) {
             new Date(0),
             beforeRangeEnd
           );
+          const explicitPaid = dayPaidByEmployee.get(id) || new Map();
+          const paidBefore = Math.min(paidByEmployee.get(id) || 0, workedBefore);
+          const dayPaidHours = {};
+          for (const [date, hours] of explicitPaid) {
+            if (daySet.has(date)) dayPaidHours[date] = hours;
+          }
           return {
             employeeId: id,
             employeeName: employee.name || "",
@@ -213,6 +244,8 @@ export async function GET(request) {
             hourlyRate: String(employee.hourlyRate || "").trim(),
             lifetimePaidHours: paidByEmployee.get(id) || 0,
             workedHoursBefore: workedBefore,
+            paidHoursAppliedBefore: paidBefore,
+            dayPaidHours,
             days: byDay,
           };
         })

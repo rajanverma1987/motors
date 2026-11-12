@@ -1474,6 +1474,7 @@ const IMPORT_COLLECTIONS = {
       const payments = payRaw.map((p) => ({
         id: s(p?.id) || newLineId("pop"),
         date: csvCalendarDateToMongo(p?.date),
+        invoiceNumber: s(p?.invoiceNumber ?? p?.invoice_number),
         amount: s(p?.amount),
         method: s(p?.method),
         paidBy: s(p?.paidBy ?? p?.paid_by),

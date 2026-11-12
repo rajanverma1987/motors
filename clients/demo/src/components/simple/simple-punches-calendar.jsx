@@ -188,27 +188,33 @@ function daysBetween(from, to) {
   return out;
 }
 
-/** FIFO: apply lifetime paid hours after hours worked before the range. */
-function allocatePaid(buckets, lifetimePaidHours, workedHoursBefore) {
+/** FIFO payments first. Hours marked paid on a day are left out of unpaid and do not use the payment pool. */
+function allocatePaid(buckets, lifetimePaidHours, workedHoursBefore, markedByDay) {
+  const markedMap = markedByDay && typeof markedByDay === "object" ? markedByDay : {};
   let remaining = Math.max(0, round2((Number(lifetimePaidHours) || 0) - (Number(workedHoursBefore) || 0)));
   const map = new Map();
   for (const bucket of buckets) {
     const hours = bucket.hours == null ? null : Number(bucket.hours) || 0;
+    const markedPaidHours = round2(Math.max(0, Number(markedMap[bucket.key]) || 0));
     if (hours == null || hours <= 0) {
       map.set(bucket.key, {
         hours,
         paidHours: 0,
-        unpaidHours: hours == null ? 0 : hours,
+        paymentPaidHours: 0,
+        markedPaidHours,
+        unpaidHours: 0,
         fullyPaid: false,
       });
       continue;
     }
-    const paidHours = Math.min(hours, remaining);
-    remaining = round2(remaining - paidHours);
-    const unpaidHours = round2(hours - paidHours);
+    const paymentPaidHours = Math.min(hours, remaining);
+    remaining = round2(remaining - paymentPaidHours);
+    const unpaidHours = round2(Math.max(0, hours - paymentPaidHours - markedPaidHours));
     map.set(bucket.key, {
       hours,
-      paidHours,
+      paidHours: round2(hours - unpaidHours),
+      paymentPaidHours,
+      markedPaidHours,
       unpaidHours,
       fullyPaid: unpaidHours <= 0.001,
     });
@@ -482,9 +488,13 @@ export default function SimplePunchesCalendar({
         key: day,
         hours: dayTotalHours(employee, day),
       }));
+      const before =
+        employee.paidHoursAppliedBefore != null
+          ? employee.paidHoursAppliedBefore
+          : employee.workedHoursBefore;
       byEmployee.set(
         employee.employeeId,
-        allocatePaid(buckets, employee.lifetimePaidHours, employee.workedHoursBefore)
+        allocatePaid(buckets, employee.lifetimePaidHours, before, employee.dayPaidHours)
       );
     }
     return byEmployee;
@@ -493,17 +503,34 @@ export default function SimplePunchesCalendar({
   const weekAllocations = useMemo(() => {
     const byEmployee = new Map();
     for (const employee of visibleEmployees) {
-      const buckets = weeks.map((week) => {
+      const dayMap = dayAllocations.get(employee.employeeId);
+      const map = new Map();
+      for (const week of weeks) {
         const weekDays = daysBetween(week.from, week.to).filter((day) => days.includes(day));
-        return { key: week.key, hours: hoursInDays(employee, weekDays) };
-      });
-      byEmployee.set(
-        employee.employeeId,
-        allocatePaid(buckets, employee.lifetimePaidHours, employee.workedHoursBefore)
-      );
+        let hours = 0;
+        let paid = 0;
+        let any = false;
+        for (const day of weekDays) {
+          const allocation = dayMap?.get(day);
+          if (!allocation || allocation.hours == null) continue;
+          any = true;
+          hours += Number(allocation.hours) || 0;
+          paid += Number(allocation.paidHours) || 0;
+        }
+        const total = any ? round2(hours) : null;
+        const paidHours = round2(paid);
+        const unpaidHours = total == null ? 0 : round2(Math.max(0, total - paidHours));
+        map.set(week.key, {
+          hours: total,
+          paidHours,
+          unpaidHours,
+          fullyPaid: total != null && total > 0 && unpaidHours <= 0.001,
+        });
+      }
+      byEmployee.set(employee.employeeId, map);
     }
     return byEmployee;
-  }, [visibleEmployees, weeks, days]);
+  }, [visibleEmployees, weeks, days, dayAllocations]);
 
   const openRecordPayment = (employee, options = {}) => {
     setPayEmployee({
@@ -851,7 +878,10 @@ export default function SimplePunchesCalendar({
       <SimpleEmployeeRecordPaymentModal
         open={Boolean(payEmployee?.employeeId)}
         employee={payEmployee}
-        onClose={() => setPayEmployee(null)}
+        onClose={() => {
+          setPayEmployee(null);
+          void load();
+        }}
         onSaved={() => {
           setPayEmployee(null);
           void load();

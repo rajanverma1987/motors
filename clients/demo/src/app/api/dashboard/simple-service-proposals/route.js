@@ -233,6 +233,13 @@ export async function GET(request) {
           { proposalType: rx },
           { internalNotes: rx },
           { notes: rx },
+          { "payments.checkNumber": rx },
+          { "payments.reference": rx },
+          { "payments.invoiceNumber": rx },
+          { "payments.method": rx },
+          { "payments.amount": rx },
+          { "payments.notes": rx },
+          { "payments.paidBy": rx },
         ],
       };
     }

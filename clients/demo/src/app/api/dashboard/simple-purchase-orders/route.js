@@ -22,6 +22,25 @@ function poDateRangeClause(from, to) {
   return mongoFieldInCalendarRange("poCutDate", from, to);
 }
 
+function poTextSearchClause(qText) {
+  const rx = new RegExp(String(qText).replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i");
+  return {
+    $or: [
+      { poNumber: rx },
+      { jobNumber: rx },
+      { vendorName: rx },
+      { paymentStatus: rx },
+      { "payments.invoiceNumber": rx },
+      { "payments.checkNumber": rx },
+      { "payments.reference": rx },
+      { "payments.method": rx },
+      { "payments.amount": rx },
+      { "payments.paidBy": rx },
+      { "payments.notes": rx },
+    ],
+  };
+}
+
 /**
  * Attach customerName / customerId (and resolve serviceProposalId) from the linked Job.
  * @param {string} email
@@ -206,15 +225,7 @@ export async function GET(request) {
       if (dateClause) andParts.push(dateClause);
     }
     if (qText) {
-      const rx = new RegExp(qText.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i");
-      andParts.push({
-        $or: [
-          { poNumber: rx },
-          { jobNumber: rx },
-          { vendorName: rx },
-          { paymentStatus: rx },
-        ],
-      });
+      andParts.push(poTextSearchClause(qText));
     }
     if (andParts.length === 1) Object.assign(q, andParts[0]);
     else if (andParts.length > 1) q.$and = andParts;
@@ -271,10 +282,7 @@ export async function GET(request) {
       if (dateClause) cardAnd.push(dateClause);
     }
     if (qText) {
-      const rx = new RegExp(qText.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i");
-      cardAnd.push({
-        $or: [{ poNumber: rx }, { jobNumber: rx }, { vendorName: rx }, { paymentStatus: rx }],
-      });
+      cardAnd.push(poTextSearchClause(qText));
     }
     if (cardAnd.length === 1) Object.assign(baseForCards, cardAnd[0]);
     else if (cardAnd.length > 1) baseForCards.$and = cardAnd;

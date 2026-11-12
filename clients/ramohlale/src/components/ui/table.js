@@ -6,7 +6,7 @@ import {
   FiChevronLeft,
   FiChevronRight,
   FiEdit2,
-  FiX,
+  FiTrash2,
   FiRotateCw,
   FiDownload,
   FiSearch,
@@ -502,7 +502,13 @@ export default function Table({
           key: "__actions",
           label: actionsColumnLabel ?? "Actions",
           isAction: true,
-          ...(actionsColumnLabel === "" ? { width: 52, minWidth: 52, maxWidth: 56 } : {}),
+          ...(actionsColumnLabel === ""
+            ? {
+                width: hasEdit && hasDelete ? 72 : 52,
+                minWidth: hasEdit && hasDelete ? 72 : 52,
+                maxWidth: hasEdit && hasDelete ? 80 : 56,
+              }
+            : {}),
         },
       ]
     : [];
@@ -682,7 +688,7 @@ export default function Table({
               className={`cursor-pointer rounded ${actionPad} text-danger hover:bg-danger/10 outline-none focus:outline-none focus:ring-0 focus-visible:ring-2 focus-visible:ring-danger`}
               aria-label="Delete"
             >
-              <FiX className={`${actionIcon} shrink-0`} aria-hidden />
+              <FiTrash2 className={`${actionIcon} shrink-0`} aria-hidden />
             </button>
           )}
         </div>

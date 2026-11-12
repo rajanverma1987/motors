@@ -1359,7 +1359,9 @@ export default function ServiceProposalsPanel({
               setPage(1);
               setSearchQuery(q);
             }}
-            searchPlaceholder={isInvoices ? "Search invoices…" : "Search proposals…"}
+            searchPlaceholder={
+              isInvoices ? "Search invoices, check #, reference…" : "Search proposals…"
+            }
             sortState={tableSort}
             onSort={(key, direction) => {
               setPage(1);

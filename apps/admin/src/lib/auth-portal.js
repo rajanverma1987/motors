@@ -155,10 +155,12 @@ export async function getPortalUserFromRequest(request) {
       .lean();
     if (!emp || emp.employmentStatus !== "Active" || !emp.canLogin) return null;
   }
-  try {
-    await recordPortalDailyUse(payload.email);
-  } catch (_) {
-    /* usage stamp must not block the request */
+  if (payload.supportMode !== true) {
+    try {
+      await recordPortalDailyUse(payload.email);
+    } catch (_) {
+      /* usage stamp must not block the request */
+    }
   }
   return {
     email: payload.email,

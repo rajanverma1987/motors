@@ -184,6 +184,7 @@ export function emptyPoPayment(overrides = {}) {
   return {
     id: newId("pop"),
     date: todayIsoDate(),
+    invoiceNumber: "",
     amount: "",
     method: "",
     paidBy: "",
@@ -420,6 +421,7 @@ export function storedPoToForm(row) {
         ...p,
         id: String(p?.id || "").trim() || newId("pop"),
         date: String(p?.date || "").slice(0, 10),
+        invoiceNumber: String(p?.invoiceNumber || "").trim(),
         amount: p?.amount != null ? String(p.amount) : "",
         method: String(p?.method || ""),
         paidBy: String(p?.paidBy || ""),
@@ -547,6 +549,7 @@ export function formToSimplePurchaseOrderRow(form, meta = {}) {
     .map((p) => ({
       id: String(p?.id || "").trim() || newId("pop"),
       date: String(p?.date || "").slice(0, 10),
+      invoiceNumber: String(p?.invoiceNumber || "").trim(),
       amount: String(p?.amount ?? "").trim(),
       method: String(p?.method || "").trim(),
       paidBy: String(p?.paidBy || "").trim(),

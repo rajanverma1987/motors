@@ -113,6 +113,7 @@ export function emptyInvoicePayment(overrides = {}) {
     date: todayISODate(),
     amount: "",
     method: "",
+    checkNumber: "",
     reference: "",
     notes: "",
     ...overrides,
@@ -132,6 +133,7 @@ export function normalizeInvoicePayments(payments) {
     date: toInputDateValue(p?.date) || "",
     amount: String(p?.amount ?? "").trim(),
     method: String(p?.method || "").trim(),
+    checkNumber: String(p?.checkNumber || "").trim(),
     reference: String(p?.reference || p?.referenceNumber || "").trim(),
     notes: String(p?.notes || "").trim(),
   }));

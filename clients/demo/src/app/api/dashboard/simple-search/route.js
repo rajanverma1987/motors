@@ -29,6 +29,26 @@ function matchesQuery(doc, fields, rx) {
   });
 }
 
+const PAYMENT_SEARCH_FIELDS = [
+  "checkNumber",
+  "reference",
+  "invoiceNumber",
+  "method",
+  "amount",
+  "paidBy",
+  "notes",
+];
+
+function matchesPayments(payments, rx) {
+  if (!Array.isArray(payments)) return false;
+  return payments.some((payment) =>
+    PAYMENT_SEARCH_FIELDS.some((field) => {
+      const value = payment?.[field];
+      return value != null && value !== "" && rx.test(String(value));
+    })
+  );
+}
+
 function pushLimited(arr, r, limitPerType, typeKey) {
   const n = arr.filter((x) => x._type === typeKey).length;
   if (n >= limitPerType) return;
@@ -124,7 +144,8 @@ export async function GET(request) {
           { ...p, documentNumber: docNum, companyName: company },
           ["documentNumber", "companyName", "customerPo", "status", "jobStatus", "customerEmail", "customerPhone"],
           rx
-        )
+        ) &&
+        !matchesPayments(p.payments, rx)
       ) {
         continue;
       }
@@ -161,7 +182,8 @@ export async function GET(request) {
     for (const po of purchaseOrders) {
       const id = po._id.toString();
       if (
-        !matchesQuery(po, ["poNumber", "jobNumber", "vendorName", "paymentStatus", "comments"], rx)
+        !matchesQuery(po, ["poNumber", "jobNumber", "vendorName", "paymentStatus", "comments"], rx) &&
+        !matchesPayments(po.payments, rx)
       ) {
         continue;
       }

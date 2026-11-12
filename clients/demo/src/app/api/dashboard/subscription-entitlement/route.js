@@ -27,11 +27,13 @@ export async function GET() {
   }
 
   try {
+    const headers = {
+      Authorization: `Bearer ${tenantKey}`,
+      "x-tenant-slug": slug,
+    };
+    if (payload.supportMode === true) headers["x-support-session"] = "1";
     const res = await fetch(`${base}/api/tenant/subscription`, {
-      headers: {
-        Authorization: `Bearer ${tenantKey}`,
-        "x-tenant-slug": slug,
-      },
+      headers,
       cache: "no-store",
     });
     const data = await res.json().catch(() => ({}));

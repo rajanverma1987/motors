@@ -201,6 +201,7 @@ export default function SimpleInvoicePaymentModal({
         date: String(draft.date || "").trim(),
         amount: String(amount),
         method: String(draft.method || "").trim(),
+        checkNumber: String(draft.checkNumber || "").trim(),
         reference: String(draft.reference || "").trim(),
         notes: String(draft.notes || "").trim(),
       },
@@ -219,6 +220,7 @@ export default function SimpleInvoicePaymentModal({
       date: String(payment.date || "").slice(0, 10),
       amount: String(payment.amount ?? ""),
       method: String(payment.method || ""),
+      checkNumber: String(payment.checkNumber || ""),
       reference: String(payment.reference || ""),
       notes: String(payment.notes || ""),
     });
@@ -255,6 +257,7 @@ export default function SimpleInvoicePaymentModal({
             date: String(editing.date || "").trim(),
             amount: String(amount),
             method: String(editing.method || "").trim(),
+            checkNumber: String(editing.checkNumber || "").trim(),
             reference: String(editing.reference || "").trim(),
             notes: String(editing.notes || "").trim(),
           }
@@ -388,6 +391,19 @@ export default function SimpleInvoicePaymentModal({
               />
             </div>
             <div className="min-w-0 sm:col-span-2">
+              <label className={FIELD_LABEL} htmlFor="inv-pay-check-number">
+                Check number
+              </label>
+              <input
+                id="inv-pay-check-number"
+                type="text"
+                value={draft.checkNumber}
+                onChange={(e) => setDraft((d) => ({ ...d, checkNumber: e.target.value }))}
+                className={FIELD_INPUT}
+                placeholder="Check number"
+              />
+            </div>
+            <div className="min-w-0 sm:col-span-2">
               <label className={FIELD_LABEL} htmlFor="inv-pay-reference">
                 Payment reference number
               </label>
@@ -447,6 +463,9 @@ export default function SimpleInvoicePaymentModal({
                     Method
                   </th>
                   <th className="border-r border-border px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-wide">
+                    Check #
+                  </th>
+                  <th className="border-r border-border px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-wide">
                     Reference #
                   </th>
                   <th className="px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-wide">
@@ -457,7 +476,7 @@ export default function SimpleInvoicePaymentModal({
               <tbody>
                 {paymentList.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="px-4 py-10 text-center text-sm text-secondary">
+                    <td colSpan={8} className="px-4 py-10 text-center text-sm text-secondary">
                       No payments recorded yet.
                     </td>
                   </tr>
@@ -496,6 +515,9 @@ export default function SimpleInvoicePaymentModal({
                         {formatMoney(balanceByPaymentId.get(String(p.id)) ?? summary.balance)}
                       </td>
                       <td className="border-r border-border px-3 py-2.5 text-title">{p.method || "-"}</td>
+                      <td className="border-r border-border px-3 py-2.5 text-title">
+                        {p.checkNumber || "-"}
+                      </td>
                       <td className="border-r border-border px-3 py-2.5 text-title">
                         {p.reference || "-"}
                       </td>
@@ -582,6 +604,19 @@ export default function SimpleInvoicePaymentModal({
               value={formatMoney(editBalanceDue)}
               className={`${FIELD_INPUT} text-right font-semibold tabular-nums`}
               aria-label="Balance due at the payment date"
+            />
+          </div>
+          <div className="min-w-0 sm:col-span-2">
+            <label className={FIELD_LABEL} htmlFor="inv-pay-edit-check-number">
+              Check number
+            </label>
+            <input
+              id="inv-pay-edit-check-number"
+              type="text"
+              value={editing.checkNumber}
+              onChange={(e) => setEditing((row) => ({ ...row, checkNumber: e.target.value }))}
+              className={FIELD_INPUT}
+              placeholder="Check number"
             />
           </div>
           <div className="min-w-0 sm:col-span-2">

@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { FiCheck } from "react-icons/fi";
 import { useAlert } from "@/components/confirm-provider";
 import { useUserSettings } from "@/contexts/user-settings-context";
+import SimpleEmployeeDayEditor from "@/components/simple/simple-employee-day-editor";
 import { clampWeekday } from "@/lib/shop-week";
 import { dateIsoInTimeZone, formatClockInTimeZone } from "@/lib/time-clock-clock";
 import { ianaTimeZoneForShop } from "@/lib/windows-time-zones";
@@ -72,16 +73,24 @@ function round2(n) {
 
 function dayEntry(daysMap, day) {
   const raw = daysMap?.[day];
-  if (!raw) return { sessions: [], manualHours: 0, manualJobNumbers: [] };
+  if (!raw) return { sessions: [], manualHours: 0, manualEntries: [], manualJobNumbers: [] };
   if (Array.isArray(raw)) {
-    return { sessions: raw, manualHours: 0, manualJobNumbers: [] };
+    return { sessions: raw, manualHours: 0, manualEntries: [], manualJobNumbers: [] };
   }
   const jobNumbers = Array.isArray(raw.manualJobNumbers)
     ? raw.manualJobNumbers.map((n) => String(n || "").trim()).filter(Boolean)
     : [];
+  const manualEntries = Array.isArray(raw.manualEntries)
+    ? raw.manualEntries.map((entry) => ({
+        id: String(entry?.id || ""),
+        hours: Math.max(0, Number(entry?.hours) || 0),
+        note: String(entry?.note || ""),
+      }))
+    : [];
   return {
     sessions: Array.isArray(raw.sessions) ? raw.sessions : [],
     manualHours: Math.max(0, Number(raw.manualHours) || 0),
+    manualEntries,
     manualJobNumbers: [...new Set(jobNumbers)],
   };
 }
@@ -100,7 +109,8 @@ function dayTotalHours(daysMap, day) {
   return round2((clocked || 0) + manualHours);
 }
 
-function allocatePaid(buckets, lifetimePaidHours, workedHoursBefore) {
+function allocatePaid(buckets, lifetimePaidHours, workedHoursBefore, markedByDay) {
+  const markedMap = markedByDay && typeof markedByDay === "object" ? markedByDay : {};
   let remaining = Math.max(
     0,
     round2((Number(lifetimePaidHours) || 0) - (Number(workedHoursBefore) || 0))
@@ -108,21 +118,26 @@ function allocatePaid(buckets, lifetimePaidHours, workedHoursBefore) {
   const map = new Map();
   for (const bucket of buckets) {
     const hours = bucket.hours == null ? null : Number(bucket.hours) || 0;
+    const markedPaidHours = round2(Math.max(0, Number(markedMap[bucket.key]) || 0));
     if (hours == null || hours <= 0) {
       map.set(bucket.key, {
         hours,
         paidHours: 0,
-        unpaidHours: hours == null ? 0 : hours,
+        paymentPaidHours: 0,
+        markedPaidHours,
+        unpaidHours: 0,
         fullyPaid: false,
       });
       continue;
     }
-    const paidHours = Math.min(hours, remaining);
-    remaining = round2(remaining - paidHours);
-    const unpaidHours = round2(hours - paidHours);
+    const paymentPaidHours = Math.min(hours, remaining);
+    remaining = round2(remaining - paymentPaidHours);
+    const unpaidHours = round2(Math.max(0, hours - paymentPaidHours - markedPaidHours));
     map.set(bucket.key, {
       hours,
-      paidHours,
+      paidHours: round2(hours - unpaidHours),
+      paymentPaidHours,
+      markedPaidHours,
       unpaidHours,
       fullyPaid: unpaidHours <= 0.001,
     });
@@ -139,10 +154,10 @@ function sessionLine(session, day, timeZone) {
   return inTime || "-";
 }
 
-function sessionsAllPunchedOut(sessions) {
-  const list = Array.isArray(sessions) ? sessions : [];
-  if (list.length === 0) return false;
-  return list.every((session) => Boolean(session?.outAt) && !session?.open);
+function dayShiftStillOpen(sessions) {
+  return (Array.isArray(sessions) ? sessions : []).some(
+    (session) => !session?.outAt || session.open
+  );
 }
 
 /** Build Outlook-style weeks covering from..to, padded to weekStartDay. */
@@ -192,6 +207,8 @@ function OutlookDayCell({
   payEnabled,
   today,
   timeZone,
+  onMarkPaid,
+  onOpen,
 }) {
   const clocked = dayClockedHours(sessions);
   const total =
@@ -207,14 +224,34 @@ function OutlookDayCell({
     allocation?.hours != null &&
     (allocation.fullyPaid || unpaidHours <= 0.001);
   const hoursPartial = payEnabled && allocation?.hours != null && !hoursPaid && paidHours > 0.001;
+  const shiftOpen = dayShiftStillOpen(sessions);
+  const canMark =
+    typeof onMarkPaid === "function" && !shiftOpen && unpaidHours > 0.001;
+  const showPay = payEnabled && (allocation?.hours != null || paidHours > 0.001);
   const isToday = cell.iso === today;
   const muted = !cell.inRange;
+  const editable = cell.inRange && typeof onOpen === "function";
 
   return (
     <div
-      className={`flex min-h-[6.5rem] flex-col gap-0.5 border border-border p-1.5 ${
+      role={editable ? "button" : undefined}
+      tabIndex={editable ? 0 : undefined}
+      title={editable ? "Edit this day" : undefined}
+      onClick={() => {
+        if (editable) onOpen(cell.iso);
+      }}
+      onKeyDown={(event) => {
+        if (!editable) return;
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          onOpen(cell.iso);
+        }
+      }}
+      className={`flex min-h-[6.5rem] flex-col gap-0.5 border border-border p-1.5 text-left ${
         muted ? "bg-bg/60 text-secondary" : "bg-card"
-      } ${isToday ? "ring-1 ring-inset ring-primary/50" : ""}`}
+      } ${isToday ? "ring-1 ring-inset ring-primary/50" : ""} ${
+        editable ? "cursor-pointer hover:bg-primary/[0.06]" : ""
+      }`}
     >
       <div className="flex items-start justify-between gap-1">
         <div className="min-w-0">
@@ -244,24 +281,39 @@ function OutlookDayCell({
         ) : null}
       </div>
 
-      {payEnabled && allocation?.hours != null ? (
+      {showPay ? (
         hoursPaid ? (
           <span className="inline-flex w-fit items-center gap-0.5 rounded-sm bg-success/15 px-1 py-0.5 text-[10px] font-bold text-success">
             <FiCheck className="h-2.5 w-2.5 shrink-0" aria-hidden />
             Paid
           </span>
-        ) : hoursPartial ? (
+        ) : hoursPartial || !shiftOpen ? (
           <span className="flex w-fit flex-col gap-0.5">
-            <span className="inline-flex w-fit rounded-sm bg-success/15 px-1 py-0.5 text-[10px] font-bold tabular-nums text-success">
-              {paidHours.toFixed(2)} paid
-            </span>
-            <span className="inline-flex w-fit rounded-sm border border-primary/30 bg-primary/10 px-1 py-0.5 text-[10px] font-semibold tabular-nums text-primary">
-              {unpaidHours.toFixed(2)} unpaid
-            </span>
-          </span>
-        ) : sessionsAllPunchedOut(sessions) ? (
-          <span className="inline-flex w-fit rounded-sm border border-primary/30 bg-primary/10 px-1 py-0.5 text-[10px] font-semibold text-primary">
-            Unpaid
+            {paidHours > 0.001 ? (
+              <span className="inline-flex w-fit rounded-sm bg-success/15 px-1 py-0.5 text-[10px] font-bold tabular-nums text-success">
+                {paidHours.toFixed(2)} paid
+              </span>
+            ) : null}
+            {canMark ? (
+              <button
+                type="button"
+                className="inline-flex w-fit items-center rounded-sm border border-primary/40 bg-primary/10 px-1 py-0.5 text-[10px] font-semibold tabular-nums text-primary hover:bg-primary/15"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  onMarkPaid(unpaidHours, cell.iso);
+                }}
+              >
+                Mark {unpaidHours.toFixed(2)} paid
+              </button>
+            ) : unpaidHours > 0.001 ? (
+              <span className="inline-flex w-fit rounded-sm border border-primary/30 bg-primary/10 px-1 py-0.5 text-[10px] font-semibold tabular-nums text-primary">
+                {unpaidHours.toFixed(2)} unpaid
+              </span>
+            ) : paidHours <= 0.001 ? (
+              <span className="inline-flex w-fit rounded-sm border border-primary/30 bg-primary/10 px-1 py-0.5 text-[10px] font-semibold tabular-nums text-primary">
+                Unpaid
+              </span>
+            ) : null}
           </span>
         ) : null
       ) : null}
@@ -318,6 +370,8 @@ export default function SimpleEmployeePunchCalendar({
   const [customTo, setCustomTo] = useState(thisMonth.to);
   const [loading, setLoading] = useState(false);
   const [employee, setEmployee] = useState(null);
+  const [editor, setEditor] = useState(null);
+  const [markingDay, setMarkingDay] = useState("");
   const requestSeq = useRef(0);
 
   const range = useMemo(() => {
@@ -382,6 +436,33 @@ export default function SimpleEmployeePunchCalendar({
     void load();
   }, [load]);
 
+  const markUnpaidPaid = async (iso, unpaidHours, markedPaidHours) => {
+    const add = round2(unpaidHours);
+    const id = String(employeeId || "").trim();
+    if (!id || !iso || !(add > 0.001) || markingDay) return;
+    const next = round2((Number(markedPaidHours) || 0) + add);
+    setMarkingDay(iso);
+    try {
+      const res = await fetch("/api/dashboard/time-clock/day", {
+        method: "PUT",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ employeeId: id, workDate: iso, markedPaidHours: next }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || "Failed to mark hours paid");
+      await load();
+    } catch (err) {
+      await alert({
+        title: "Error",
+        message: err?.message || "Failed to mark hours paid",
+        variant: "danger",
+      });
+    } finally {
+      setMarkingDay("");
+    }
+  };
+
   const daysMap = employee?.days || {};
   const payEnabled = employee ? employee.payType !== "salary" : false;
 
@@ -400,7 +481,11 @@ export default function SimpleEmployeePunchCalendar({
       key: day,
       hours: dayTotalHours(daysMap, day),
     }));
-    return allocatePaid(buckets, employee.lifetimePaidHours, employee.workedHoursBefore);
+    const before =
+      employee.paidHoursAppliedBefore != null
+        ? employee.paidHoursAppliedBefore
+        : employee.workedHoursBefore;
+    return allocatePaid(buckets, employee.lifetimePaidHours, before, employee.dayPaidHours);
   }, [employee, daysMap, range.from, range.to, rangeOk]);
 
   const periodLabel = useMemo(() => {
@@ -479,7 +564,7 @@ export default function SimpleEmployeePunchCalendar({
               week.map((cell) => {
                 const entry = cell.inRange
                   ? dayEntry(daysMap, cell.iso)
-                  : { sessions: [], manualHours: 0, manualJobNumbers: [] };
+                  : { sessions: [], manualHours: 0, manualEntries: [], manualJobNumbers: [] };
                 const { sessions, manualHours, manualJobNumbers } = entry;
                 return (
                   <OutlookDayCell
@@ -492,6 +577,25 @@ export default function SimpleEmployeePunchCalendar({
                     payEnabled={payEnabled}
                     today={today}
                     timeZone={timeZone}
+                    onMarkPaid={
+                      payEnabled
+                        ? (unpaidHours, iso) => {
+                            const allocation = dayAllocations.get(iso);
+                            void markUnpaidPaid(iso, unpaidHours, allocation?.markedPaidHours);
+                          }
+                        : undefined
+                    }
+                    onOpen={(iso) => {
+                      const day = dayEntry(daysMap, iso);
+                      const allocation = dayAllocations.get(iso);
+                      setEditor({
+                        workDate: iso,
+                        sessions: day.sessions,
+                        manualEntries: day.manualEntries,
+                        paymentPaidHours: Number(allocation?.paymentPaidHours) || 0,
+                        markedPaidHours: Number(allocation?.markedPaidHours) || 0,
+                      });
+                    }}
                   />
                 );
               })
@@ -499,6 +603,25 @@ export default function SimpleEmployeePunchCalendar({
           </div>
         </div>
       )}
+      {editor ? (
+        <SimpleEmployeeDayEditor
+          key={editor.workDate}
+          open
+          onClose={() => setEditor(null)}
+          onSaved={() => {
+            setEditor(null);
+            void load();
+          }}
+          employeeId={employeeId}
+          workDate={editor.workDate}
+          timeZone={timeZone}
+          sessions={editor.sessions}
+          manualEntries={editor.manualEntries}
+          paymentPaidHours={editor.paymentPaidHours}
+          markedPaidHours={editor.markedPaidHours}
+          payEnabled={payEnabled}
+        />
+      ) : null}
     </div>
   );
 }

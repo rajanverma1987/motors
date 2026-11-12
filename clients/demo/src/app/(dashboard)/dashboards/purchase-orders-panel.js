@@ -739,10 +739,10 @@ export default function PurchaseOrdersPanel({ createNonce = 0 }) {
             }}
             searchPlaceholder={
               isPhone
-                ? "Search purchase orders…"
+                ? "Search PO, invoice #, check #…"
                 : isJobTab
-                  ? "Search job purchase orders…"
-                  : "Search shop purchase orders…"
+                  ? "Search job POs, invoice #, check #…"
+                  : "Search shop POs, invoice #, check #…"
             }
             sortState={tableSort}
             onSort={(key, direction) => {
