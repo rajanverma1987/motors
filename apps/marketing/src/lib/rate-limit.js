@@ -8,7 +8,11 @@ const CLEANUP_INTERVAL_MS = 5 * 60 * 1000;
 
 export function getRateLimitClientKey(request, routeId) {
   const forwarded = request.headers.get("x-forwarded-for");
-  const ip = forwarded ? forwarded.split(",")[0].trim() : request.headers.get("x-real-ip") || "unknown";
+  const ip =
+    (forwarded ? forwarded.split(",")[0].trim() : "") ||
+    request.headers.get("x-real-ip") ||
+    request.ip ||
+    "unknown";
   return `${routeId}:${ip}`;
 }
 
@@ -40,4 +44,11 @@ export async function checkRateLimit(request, routeId, maxPerWindow = 10) {
   const allowed = data.count <= maxPerWindow;
   const remaining = Math.max(0, maxPerWindow - data.count);
   return { allowed, remaining };
+}
+
+/** Per-IP ceiling for page and API traffic. Does not apply when the client IP is unknown. */
+export async function checkFloodLimit(request, maxPerWindow) {
+  const key = getRateLimitClientKey(request, "flood");
+  if (key.endsWith(":unknown")) return { allowed: true, remaining: maxPerWindow };
+  return checkRateLimit(request, "flood", maxPerWindow);
 }

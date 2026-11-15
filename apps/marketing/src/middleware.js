@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { checkFloodLimit } from "@/lib/rate-limit";
 
 function hostAllowedEdge(hostHeader) {
   const raw = process.env.ALLOWED_HOSTS || "";
@@ -14,7 +15,15 @@ function hostAllowedEdge(hostHeader) {
 /**
  * Marketing host only: no shop portal (/dashboard, /dashboards, /login) or admin UI.
  */
-export function middleware(request) {
+export async function middleware(request) {
+  const flood = await checkFloodLimit(request, 240);
+  if (!flood.allowed) {
+    return new NextResponse("Too many requests. Try again in a minute.", {
+      status: 429,
+      headers: { "Retry-After": "60", "Cache-Control": "no-store" },
+    });
+  }
+
   if (!hostAllowedEdge(request.headers.get("host"))) {
     return new NextResponse("Host not allowed for this app", { status: 421 });
   }

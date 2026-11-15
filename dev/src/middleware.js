@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { checkFloodLimit } from "@/lib/rate-limit";
 import { assertSameOriginApiMutation } from "@/lib/api-origin-guard";
 import {
   CALCULATOR_ONLY_DASHBOARD_HREF,
@@ -30,7 +31,15 @@ function hostAllowedEdge(hostHeader) {
   return Boolean(host && allowed.includes(host));
 }
 
-export function middleware(request) {
+export async function middleware(request) {
+  const flood = await checkFloodLimit(request, 900);
+  if (!flood.allowed) {
+    return new NextResponse("Too many requests. Try again in a minute.", {
+      status: 429,
+      headers: { "Retry-After": "60", "Cache-Control": "no-store" },
+    });
+  }
+
   const { pathname } = request.nextUrl;
   const cookieHeader = request.headers.get("cookie") || "";
   const hasAdminCookie = cookieHeader.includes("motors_admin=");
@@ -94,27 +103,6 @@ export function middleware(request) {
 
 export const config = {
   matcher: [
-    "/admin",
-    "/admin/listings/:path*",
-    "/admin/leads/:path*",
-    "/admin/clients/:path*",
-    "/admin/active-clients/:path*",
-    "/admin/location-pages/:path*",
-    "/admin/marketing/:path*",
-    "/admin/marketplace/:path*",
-    "/admin/support",
-    "/admin/support/:path*",
-    "/admin/iqwirecalculator",
-    "/admin/iqwirecalculator/:path*",
-    "/admin/iqmotortrack",
-    "/admin/iqmotortrack/:path*",
-    "/admin/subscription-plans",
-    "/admin/subscription-plans/:path*",
-    "/dashboard",
-    "/dashboard/:path*",
-    "/dashboards",
-    "/dashboards/:path*",
-    "/api/dashboard/:path*",
-    "/api/admin/:path*",
+    "/((?!_next/static|_next/image|favicon.ico|icons/|uploads/|videos/|.*\\.(?:png|jpg|jpeg|gif|webp|svg|ico|txt|xml|webmanifest)$).*)",
   ],
 };
