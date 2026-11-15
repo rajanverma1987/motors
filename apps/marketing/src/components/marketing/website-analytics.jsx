@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
 import Script from "next/script";
 import {
@@ -8,6 +8,7 @@ import {
   GA_MEASUREMENT_ID,
   enableGoogleAnalytics,
   isClarityExcludedPath,
+  isLikelyBot,
   isPrivateAppPath,
   isSelfReferrer,
   sendGaPageView,
@@ -27,6 +28,7 @@ export default function WebsiteAnalytics() {
   const lastPageKey = useRef("");
   const privatePath = isPrivateAppPath(pathname);
   const clarityExcluded = isClarityExcludedPath(pathname);
+  const [recordClarity, setRecordClarity] = useState(false);
 
   useEffect(() => {
     if (privatePath) {
@@ -37,7 +39,12 @@ export default function WebsiteAnalytics() {
   }, [privatePath]);
 
   useEffect(() => {
-    if (clarityExcluded) stopClarityCollect();
+    if (clarityExcluded || isLikelyBot()) {
+      stopClarityCollect();
+      setRecordClarity(false);
+      return;
+    }
+    setRecordClarity(true);
   }, [clarityExcluded]);
 
   useEffect(() => {
@@ -114,7 +121,7 @@ gtag('js', new Date());
           `.trim(),
         }}
       />
-      {!clarityExcluded ? (
+      {recordClarity ? (
         <Script
           id="clarity-init"
           strategy="afterInteractive"

@@ -60,6 +60,27 @@ export function gaDisableKey() {
   return `ga-disable-${GA_MEASUREMENT_ID}`;
 }
 
+const BOT_UA =
+  /bot|crawl|spider|slurp|headless|phantomjs|puppeteer|playwright|selenium|webdriver|lighthouse|pagespeed|gtmetrix|pingdom|uptimerobot|statuscake|semrush|ahrefs|mj12|dotbot|petalbot|bytespider|gptbot|claudebot|amazonbot|applebot|facebookexternal|embedly|wget|curl\/|python-requests|go-http-client|scrapy|node-fetch|postmanruntime|dataprovider|screaming frog|previewbot|libwww|okhttp|adsbot|mediapartners|bingpreview/i;
+
+/**
+ * True for crawlers and headless browsers that still run JavaScript.
+ * Used only to skip Clarity. The page itself still loads.
+ */
+export function isLikelyBot() {
+  if (typeof navigator === "undefined") return false;
+  try {
+    if (navigator.webdriver) return true;
+    const ua = String(navigator.userAgent || "");
+    if (!ua) return false;
+    if (/HeadlessChrome/i.test(ua)) return true;
+    if (/\bCubot\b/i.test(ua)) return false;
+    return BOT_UA.test(ua);
+  } catch {
+    return false;
+  }
+}
+
 /** Stop Clarity if a prior marketing page already loaded the script. */
 export function stopClarityCollect() {
   if (typeof window === "undefined") return;
