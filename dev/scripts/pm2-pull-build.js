@@ -8,7 +8,7 @@
  *
  * A * in a name matches any text. 3pf* restarts every app whose name starts with 3pf.
  * Quote the pattern in PowerShell or cmd so the shell does not expand it.
- * Apps that share one folder are pulled and built once, then each process is restarted.
+ * Apps that share one folder are pulled, installed, and built once, then each process is restarted.
  *
  * Reads each app folder from D:\node\pm2\ecosystem.config.js (override with --config).
  * Prompts once for the git SSH password. Leave it blank to use the existing SSH key.
@@ -264,6 +264,8 @@ async function main() {
     console.log(`Folder ${group.cwd}`);
     console.log("git pull");
     await gitPull(group.cwd, password);
+    console.log("npm install");
+    await run("npm", ["install"], { cwd: group.cwd });
     console.log("npm run build");
     await run("npm", ["run", "build"], { cwd: group.cwd });
     for (const item of group.procs) {
