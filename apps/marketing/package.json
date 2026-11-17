@@ -8,7 +8,6 @@
     "build": "next build",
     "postbuild": "node ./scripts/indexnow-submit.mjs",
     "start": "next start -p 5081",
-    "lint": "eslint",
     "sitemap": "node ./scripts/generate-sitemap.js"
   },
   "dependencies": {
@@ -36,8 +35,6 @@
     "@tailwindcss/postcss": "^4",
     "braces": "file:../../dev/vendor/braces",
     "dotenv": "^16.6.1",
-    "eslint": "^9",
-    "eslint-config-next": "16.4.6",
     "jiti": "^2.6.1",
     "tailwindcss": "^4"
   },

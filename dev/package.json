@@ -14,7 +14,6 @@
     "build:cemotor": "npm run build --prefix ../clients/cemotor",
     "postbuild": "node scripts/indexnow-submit.mjs",
     "start": "next start -p 5066",
-    "lint": "eslint",
     "lint:client-isolation": "node scripts/check-client-isolation.mjs",
     "bootstrap:multi-host": "node scripts/bootstrap-multi-host-apps.mjs",
     "provision-client": "node scripts/provision-client.mjs",
@@ -59,8 +58,6 @@
     "@tailwindcss/postcss": "^4",
     "braces": "file:vendor/braces",
     "dotenv": "^16.6.1",
-    "eslint": "^9",
-    "eslint-config-next": "16.4.6",
     "jiti": "^2.6.1",
     "tailwindcss": "^4"
   },

@@ -193,7 +193,6 @@ if (existsSync(pkgPath)) {
     dev: `next dev --hostname 0.0.0.0 -p ${port}`,
     build: "next build",
     start: `next start -p ${port}`,
-    lint: "eslint",
   };
   writeFileSync(pkgPath, JSON.stringify(pkg, null, 2) + "\n");
 }

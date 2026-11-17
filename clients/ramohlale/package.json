@@ -5,8 +5,7 @@
   "scripts": {
     "dev": "next dev --hostname 0.0.0.0 -p 5083",
     "build": "next build",
-    "start": "next start -p 5083",
-    "lint": "eslint"
+    "start": "next start -p 5083"
   },
   "dependencies": {
     "@simplewebauthn/browser": "^14.0.0",
@@ -33,8 +32,6 @@
     "@tailwindcss/postcss": "^4",
     "braces": "file:../../dev/vendor/braces",
     "dotenv": "^16.6.1",
-    "eslint": "^9",
-    "eslint-config-next": "16.4.6",
     "jiti": "^2.6.1",
     "tailwindcss": "^4"
   },
