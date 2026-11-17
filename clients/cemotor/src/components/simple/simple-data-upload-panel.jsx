@@ -2,8 +2,9 @@
 
 import { useMemo, useRef, useState } from "react";
 import Button from "@/components/ui/button";
+import Input from "@/components/ui/input";
 import Modal from "@/components/ui/modal";
-import { FormContainer, FormSectionTitle } from "@/components/ui/form-layout";
+import { Form, FormContainer, FormSectionTitle } from "@/components/ui/form-layout";
 import { useAlert, useConfirm } from "@/components/confirm-provider";
 import { FiDownload, FiUpload, FiFilePlus, FiTrash2 } from "react-icons/fi";
 
@@ -67,6 +68,10 @@ export default function SimpleDataUploadPanel() {
   });
   const [clearingAll, setClearingAll] = useState(false);
   const [clearingByCollection, setClearingByCollection] = useState({});
+  const [downloading, setDownloading] = useState(false);
+  const [passwordOpen, setPasswordOpen] = useState(false);
+  const [adminPassword, setAdminPassword] = useState("");
+  const [passwordError, setPasswordError] = useState("");
 
   async function ensureCollectionsLoaded() {
     if (loadedCollections) return allowedCollections;
@@ -192,12 +197,47 @@ export default function SimpleDataUploadPanel() {
     }
   }
 
+  function closePasswordModal() {
+    if (clearingAll) return;
+    setPasswordOpen(false);
+    setAdminPassword("");
+    setPasswordError("");
+  }
+
+  async function downloadYourData() {
+    if (downloading || clearingAll || uploadModal.running) return;
+    setDownloading(true);
+    try {
+      const res = await fetch("/api/dashboard/simple-import/export", { cache: "no-store" });
+      if (!res.ok) {
+        const json = await res.json().catch(() => ({}));
+        throw new Error(json?.error || "Download failed");
+      }
+      const blob = await res.blob();
+      const match = /filename="([^"]+)"/i.exec(res.headers.get("Content-Disposition") || "");
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = match?.[1] || "your-data.xlsx";
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      await alert({
+        title: "Error",
+        message: err.message || "Download failed",
+        variant: "danger",
+      });
+    } finally {
+      setDownloading(false);
+    }
+  }
+
   async function clearAllCollections() {
-    if (uploadModal.running || clearingAll) return;
+    if (uploadModal.running || clearingAll || passwordOpen) return;
     const first = await confirm({
-      title: "Clear all collections?",
+      title: "Clear all tables?",
       message:
-        "This will permanently delete ALL records from Simple Data Upload collections for your account. Do you want to continue?",
+        "This will permanently delete your shop data: customers, vendors, inventory, employees, sales persons, jobs, invoices, and purchase orders. Do you want to continue?",
       confirmLabel: "Continue",
       cancelLabel: "Cancel",
       variant: "danger",
@@ -205,33 +245,54 @@ export default function SimpleDataUploadPanel() {
     if (!first) return;
     const second = await confirm({
       title: "Please confirm again",
-      message: "Delete ALL records now? This action cannot be undone.",
+      message: "Delete all tables now? This action cannot be undone.",
       confirmLabel: "Delete all",
       cancelLabel: "Cancel",
       variant: "danger",
     });
     if (!second) return;
+    setAdminPassword("");
+    setPasswordError("");
+    setPasswordOpen(true);
+  }
 
+  async function submitClearAll(event) {
+    event.preventDefault();
+    if (clearingAll) return;
+    const password = adminPassword;
+    if (!password) {
+      setPasswordError("Enter the admin login password.");
+      return;
+    }
     setClearingAll(true);
+    setPasswordError("");
     try {
       const res = await fetch("/api/dashboard/simple-import/clear", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ confirmPhrase: "CLEAR_ALL_SIMPLE_IMPORT_DATA" }),
+        body: JSON.stringify({ confirmPhrase: "CLEAR_ALL_SIMPLE_IMPORT_DATA", password }),
       });
       const json = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(json?.error || "Failed to clear collections.");
+      if (!res.ok) {
+        if (res.status === 401 || res.status === 400 || res.status === 429) {
+          setPasswordError(json?.error || "Incorrect admin password.");
+          return;
+        }
+        throw new Error(json?.error || "Failed to clear tables.");
+      }
 
       setFiles({});
       setStatsByCollection({});
+      setPasswordOpen(false);
+      setAdminPassword("");
       await alert({
         title: "Cleared",
-        message: `Cleared records successfully (${json?.deletedCount || 0} deleted).`,
+        message: `Cleared tables successfully (${json?.deletedCount || 0} deleted).`,
       });
     } catch (err) {
       await alert({
         title: "Error",
-        message: err.message || "Failed to clear collections.",
+        message: err.message || "Failed to clear tables.",
         variant: "danger",
       });
     } finally {
@@ -296,26 +357,38 @@ export default function SimpleDataUploadPanel() {
   return (
     <div className="flex flex-col gap-8 pb-24">
       <FormContainer>
-        <FormSectionTitle as="h2">Data Upload</FormSectionTitle>
+        <FormSectionTitle as="h2">Your Data</FormSectionTitle>
         <p className="mb-4 text-sm text-secondary">
-          Import Simple portal data collection-by-collection in parent→child order. Download each template (columns
-          match that collection&apos;s form/model), fill it, and upload — only valid rows import. Invalid rows are
-          exported with error reasons. Recommended sequence: Customers → Vendors → Inventory / Employees / Sales
-          Persons → Service Proposals → Scope Details → Other Items → AC/DC Datasheets → Purchase Orders.
-          Vendor/customer/PO file links can use JSON URL columns where the template includes them.
+          Download every table as one Excel file, or import data collection by collection. Download each template
+          (columns match that collection&apos;s form), fill it, and upload. Only valid rows import. Invalid rows are
+          exported with error reasons. Recommended sequence: Customers, Vendors, Inventory / Employees / Sales
+          Persons, Service Proposals, Scope Details, Other Items, AC/DC Datasheets, Purchase Orders.
         </p>
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-md border border-border bg-form-bg/70 p-3">
-          <p className="text-xs text-secondary">Use this only when you need to reset all uploaded collection data.</p>
-          <Button
-            type="button"
-            size="sm"
-            variant="danger"
-            onClick={clearAllCollections}
-            disabled={clearingAll || uploadModal.running}
-          >
-            <FiTrash2 className="h-4 w-4 shrink-0" />
-            {clearingAll ? "Clearing..." : "Clear all collections"}
-          </Button>
+          <p className="text-xs text-secondary">
+            Download your tables, or clear all tables after entering the admin login password.
+          </p>
+          <div className="flex flex-wrap items-center gap-2">
+            <Button
+              type="button"
+              size="sm"
+              onClick={downloadYourData}
+              disabled={downloading || clearingAll || uploadModal.running}
+            >
+              <FiDownload className="h-4 w-4 shrink-0" />
+              {downloading ? "Preparing..." : "Download Your Data"}
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant="danger"
+              onClick={clearAllCollections}
+              disabled={clearingAll || uploadModal.running || downloading}
+            >
+              <FiTrash2 className="h-4 w-4 shrink-0" />
+              {clearingAll ? "Clearing..." : "Clear all tables"}
+            </Button>
+          </div>
         </div>
         <div className="mb-4 rounded-md border border-border bg-form-bg/70 p-3 text-xs text-secondary">
           Recommended sequence: Customers → Vendors → Inventory / Employees / Sales Persons → Service Proposals →
@@ -426,6 +499,43 @@ export default function SimpleDataUploadPanel() {
           })}
         </div>
       </FormContainer>
+      <Modal
+        open={passwordOpen}
+        onClose={closePasswordModal}
+        title="Clear all tables"
+        size="md"
+        showClose={!clearingAll}
+        actions={
+          <Button
+            type="submit"
+            form="clear-tables-password"
+            size="sm"
+            variant="danger"
+            disabled={clearingAll || !adminPassword}
+          >
+            {clearingAll ? "Deleting..." : "Delete all"}
+          </Button>
+        }
+      >
+        <Form id="clear-tables-password" onSubmit={submitClearAll} className="border-0 bg-transparent p-0 shadow-none">
+          <p className="text-sm text-secondary">
+            Enter the admin login password to delete your shop data tables. This cannot be undone.
+          </p>
+          <Input
+            label="Admin password"
+            type="password"
+            name="adminPassword"
+            autoComplete="current-password"
+            value={adminPassword}
+            onChange={(e) => {
+              setAdminPassword(e.target.value);
+              if (passwordError) setPasswordError("");
+            }}
+            required
+          />
+          {passwordError ? <p className="text-sm text-danger">{passwordError}</p> : null}
+        </Form>
+      </Modal>
       <Modal
         open={uploadModal.open}
         onClose={() => {

@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/db";
-import { getPortalUserFromRequest } from "@/lib/auth-portal";
+import { getPortalUserFromRequest, verifyPassword } from "@/lib/auth-portal";
+import { checkRateLimit } from "@/lib/rate-limit";
+import User from "@/models/User";
 import Customer from "@/models/Customer";
 import Vendor from "@/models/Vendor";
 import InventoryItem from "@/models/InventoryItem";
@@ -49,6 +51,22 @@ export async function POST(request) {
     await connectDB();
     const ownerEmail = user.email.trim().toLowerCase();
     const requestedCollection = String(body?.collection || "").trim();
+
+    if (!requestedCollection) {
+      const { allowed } = await checkRateLimit(request, "simple-import-clear-all", 8);
+      if (!allowed) {
+        return NextResponse.json({ error: "Too many attempts. Try again later." }, { status: 429 });
+      }
+      const password = String(body?.password || "");
+      if (!password) {
+        return NextResponse.json({ error: "Admin password is required." }, { status: 400 });
+      }
+      const owner = await User.findOne({ email: ownerEmail }).select("passwordHash").lean();
+      const valid = owner?.passwordHash ? await verifyPassword(password, owner.passwordHash) : false;
+      if (!valid) {
+        return NextResponse.json({ error: "Incorrect admin password." }, { status: 401 });
+      }
+    }
 
     const deleteOne = async (collection) => {
       switch (collection) {

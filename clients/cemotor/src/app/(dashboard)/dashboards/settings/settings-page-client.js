@@ -1156,7 +1156,7 @@ export default function SettingsPageClient() {
       },
       {
         id: "data-upload",
-        label: "Data Upload",
+        label: "Your Data",
         children: <SimpleDataUploadPanel />,
       },
       {
@@ -1309,7 +1309,7 @@ export default function SettingsPageClient() {
         </Link>
         <h1 className="text-xl font-semibold tracking-tight text-title">Settings</h1>
         <p className="mt-1 text-sm text-secondary">
-          Shop defaults, masters, data upload, billing, and support.
+          Shop defaults, masters, your data, billing, and support.
         </p>
       </div>
 

@@ -21,7 +21,7 @@ export const SIMPLE_SETTINGS_SECTIONS = [
   { id: "job-postings", label: "Job Postings" },
   { id: "access-controls", label: "Access Controls" },
   { id: "deleted", label: "Deleted" },
-  { id: "data-upload", label: "Data Upload" },
+  { id: "data-upload", label: "Your Data" },
   { id: "api-integration", label: "API Integration" },
   { id: "subscription", label: "Subscription" },
   { id: "support", label: "Support" },

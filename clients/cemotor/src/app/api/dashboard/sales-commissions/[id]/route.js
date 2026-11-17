@@ -103,6 +103,12 @@ export async function PATCH(request, context) {
       }
 
       doc.salesPersonId = salesPersonId;
+      const namedPerson = await SalesPerson.findOne({ _id: salesPersonId, createdByEmail: owner })
+        .select("name email phone")
+        .lean();
+      if (namedPerson) {
+        doc.salesPersonName = namedPerson.name || namedPerson.email || namedPerson.phone || "";
+      }
       doc.jobNumber = jobNumber;
       doc.quoteId = quoteId;
       doc.rfqNumber = rfqNumber;

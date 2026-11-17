@@ -14,7 +14,13 @@ const sessionKey = (shopId) => `contact_unlocked_${shopId}`;
 
 /**
  * Gated contact reveal for public shop listing pages.
- * Contact data stays in server HTML for SEO; this component controls what users see.
+ *
+ * The phone and email are NOT props: the server no longer sends them to the browser,
+ * because anything passed to a client component is serialized into the page HTML and
+ * was being scraped straight out of the page source, gate or no gate. The page passes
+ * only hasPhone / hasEmail so this component knows whether to offer the unlock; the
+ * values arrive in the /api/leads/contact-unlock response and are kept for the rest of
+ * the session in sessionStorage.
  */
 export default function ContactReveal({
   shopId,
@@ -22,13 +28,14 @@ export default function ContactReveal({
   shopName,
   shopCity = "",
   shopState = "",
-  phone = "",
-  email = "",
+  hasPhone = false,
+  hasEmail = false,
   website = "",
   address = "",
   listing = null,
 }) {
-  const hasContact = Boolean(phone || email || website);
+  const hasContact = Boolean(hasPhone || hasEmail || website);
+  const [contact, setContact] = useState(null);
   const [unlocked, setUnlocked] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const [modalTab, setModalTab] = useState("unlock");
@@ -39,7 +46,16 @@ export default function ContactReveal({
   useEffect(() => {
     if (!shopId) return;
     try {
-      if (sessionStorage.getItem(sessionKey(shopId)) === "true") {
+      const cached = sessionStorage.getItem(sessionKey(shopId));
+      if (!cached) return;
+      // Legacy value from before the contact moved into this store.
+      if (cached === "true") {
+        setUnlocked(true);
+        return;
+      }
+      const parsed = JSON.parse(cached);
+      if (parsed && typeof parsed === "object") {
+        setContact(parsed);
         setUnlocked(true);
       }
     } catch (_) {}
@@ -68,6 +84,9 @@ export default function ContactReveal({
     window.addEventListener("contact-reveal:open", onOpenRequest);
     return () => window.removeEventListener("contact-reveal:open", onOpenRequest);
   }, [shopId, unlocked]);
+
+  const revealedPhone = String(contact?.phone || "").trim();
+  const revealedEmail = String(contact?.email || "").trim();
 
   const setField = (field, value) => setForm((prev) => ({ ...prev, [field]: value }));
 
@@ -111,10 +130,12 @@ export default function ContactReveal({
         city: shopCity,
         state: shopState,
       });
+      const revealed = data.contact && typeof data.contact === "object" ? data.contact : {};
+      setContact(revealed);
       setUnlocked(true);
       setModalOpen(false);
       try {
-        sessionStorage.setItem(sessionKey(shopId), "true");
+        sessionStorage.setItem(sessionKey(shopId), JSON.stringify(revealed));
       } catch (_) {}
     } catch (err) {
       setError(err.message || "Something went wrong. Please try again.");
@@ -148,22 +169,25 @@ export default function ContactReveal({
           Contact info
         </div>
         <dl className="grid grid-cols-[5.5rem_1fr] gap-x-3 gap-y-2 text-sm">
-          {phone ? (
+          {revealedPhone ? (
             <>
               <dt className="text-secondary">Phone</dt>
               <dd className="m-0">
-                <a href={`tel:${String(phone).replace(/\D/g, "")}`} className="font-medium text-primary hover:underline">
-                  {phone}
+                <a
+                  href={`tel:${revealedPhone.replace(/\D/g, "")}`}
+                  className="font-medium text-primary hover:underline"
+                >
+                  {revealedPhone}
                 </a>
               </dd>
             </>
           ) : null}
-          {email ? (
+          {revealedEmail ? (
             <>
               <dt className="text-secondary">Email</dt>
               <dd className="m-0">
-                <a href={`mailto:${email}`} className="font-medium text-primary hover:underline">
-                  {email}
+                <a href={`mailto:${revealedEmail}`} className="font-medium text-primary hover:underline">
+                  {revealedEmail}
                 </a>
               </dd>
             </>
@@ -227,7 +251,7 @@ export default function ContactReveal({
         }}>
           View contact info
         </Button>
-        <p className="mt-2 text-xs text-secondary">Enter your details to reveal phone, email, and website</p>
+        <p className="mt-2 text-xs text-secondary">Enter your details to reveal the phone number and email</p>
       </div>
 
       <Modal
@@ -244,7 +268,7 @@ export default function ContactReveal({
               children: (
                 <div className="flex flex-col gap-4">
                   <p className="text-sm text-secondary">
-                    Enter your details to reveal {shopName}&apos;s phone, email, and website. We&apos;ll also send you a
+                    Enter your details to reveal {shopName}&apos;s phone number and email. We&apos;ll also send you a
                     copy of their contact info.
                   </p>
                   <Input
