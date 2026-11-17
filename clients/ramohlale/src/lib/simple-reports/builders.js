@@ -21,6 +21,7 @@ import {
   computeSpMoney,
   dayInRange,
   formatReportDate,
+  isFullyPaidInvoice,
   isInvoiceSp,
   isPipelineSp,
   isSpInvoicePaid,
@@ -820,12 +821,17 @@ async function buildCustomers(ownerEmail, filters, reportOpts = {}) {
   });
 }
 
+function salesPersonLabel(person) {
+  return String(person?.name || person?.email || person?.phone || "").trim();
+}
+
 async function buildSalesCommissions(ownerEmail, from, to, currency, filters, reportOpts = {}) {
-  const [serviceProposals, salesPeople, mergedSettings] = await Promise.all([
+  const [serviceProposals, mergedSettings] = await Promise.all([
     SimpleServiceProposal.find({ createdByEmail: ownerEmail, ...notRemovedClause() })
-      .select("_id documentNumber quote companyName recordType status payments invoicePaidDate")
+      .select(
+        "_id documentNumber quote companyName recordType status payments invoicePaidDate scopeDetails otherItems customerTaxExempt taxPercent"
+      )
       .lean(),
-    SalesPerson.find({ createdByEmail: ownerEmail }).select("_id name email phone").lean(),
     loadOwnerSettings(ownerEmail),
   ]);
 
@@ -863,9 +869,21 @@ async function buildSalesCommissions(ownerEmail, from, to, currency, filters, re
     .limit(FETCH_LIMIT)
     .lean();
 
+  const personIds = [];
+  const seenPersonIds = new Set();
+  for (const doc of commissions) {
+    const id = String(doc.salesPersonId || "").trim();
+    if (!/^[a-f0-9]{24}$/i.test(id) || seenPersonIds.has(id)) continue;
+    seenPersonIds.add(id);
+    personIds.push(id);
+  }
+  const salesPeople = personIds.length
+    ? await SalesPerson.find({ _id: { $in: personIds } }).select("_id name email phone").lean()
+    : [];
   const nameById = {};
   for (const sp of salesPeople) {
-    nameById[String(sp._id)] = sp.name || sp.email || sp.phone || String(sp._id);
+    const label = salesPersonLabel(sp);
+    if (label) nameById[String(sp._id)] = label;
   }
 
   const statusFilter = String(filters.status || "").toLowerCase();
@@ -892,22 +910,27 @@ async function buildSalesCommissions(ownerEmail, from, to, currency, filters, re
     const inPaid = dayInRange(doc.paidAt, from, to);
     if (!inCreated && !inPaid) continue;
     const isPaid = String(doc.status || "unpaid").toLowerCase() === "paid";
+    const invoiceMoney = computeSpInvoiceMoney(linkedSp);
     if (statusFilter === "paid" && !isPaid) continue;
     if (statusFilter === "unpaid" && isPaid) continue;
+    if (statusFilter === "owed_on_paid_invoices" && (isPaid || !isFullyPaidInvoice(linkedSp))) continue;
+    const salesPersonFilter = String(filters.salesPerson || "").trim();
+    if (salesPersonFilter && String(doc.salesPersonId || "").trim() !== salesPersonFilter) continue;
 
     const jobNumber =
       String(linkedSp.documentNumber || linkedSp.quote || "").trim() ||
       String(doc.jobNumber || doc.rfqNumber || "").trim();
-    const invoiceMoney = computeSpInvoiceMoney(linkedSp);
     const invoiceStatusLabel = resolveQuoteInvoiceStatusDisplayLabel(
       linkedSp.status,
       mergedSettings
     );
+    const salesPerson =
+      nameById[String(doc.salesPersonId || "").trim()] || String(doc.salesPersonName || "").trim();
 
     pushReportRow(rows, sortKeys, doc.createdAt, [
       jobNumber,
       String(linkedSp.companyName || "").trim(),
-      nameById[String(doc.salesPersonId)] || "",
+      salesPerson,
       moneyCell(Number(doc.amount) || 0),
       isPaid ? "Paid" : "Unpaid",
       formatReportDate(doc.paidAt, currency),

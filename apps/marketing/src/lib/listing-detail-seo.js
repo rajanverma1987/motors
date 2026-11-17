@@ -288,7 +288,7 @@ export function buildListingDetailFaqs(listing, ctx, siteBase) {
       question: `How do I contact ${name}?`,
       answer: `Submit a repair request through the form on this 3PhaseFlow listing, or`,
       contactCta: true,
-      contactCtaSuffix: " to reveal phone, email, and website.",
+      contactCtaSuffix: " to reveal the phone number and email.",
     });
   } else {
     items.push({
@@ -366,9 +366,6 @@ export function buildListingDetailJsonLdGraph(opts) {
   const name = String(listing.companyName || "").trim() || "Motor repair center";
   const description = String(listing.shortDescription || "").trim().slice(0, 5000);
   const images = listingImageAbsoluteUrls(listing, siteBase);
-  const phoneRaw = String(listing.phone || "").trim();
-  const phone = phoneRaw ? formatListingPhoneE164(phoneRaw) || phoneRaw : undefined;
-  const email = String(listing.email || "").trim() || undefined;
   const website = String(listing.website || "").trim();
   const sameAs = /^https?:\/\//i.test(website) ? [website] : undefined;
   const modified = listingModifiedIso(listing);
@@ -420,8 +417,11 @@ export function buildListingDetailJsonLdGraph(opts) {
     ...(description ? { description } : {}),
     url: canonicalUrl,
     ...(images.length ? { image: images, logo: images[0] } : {}),
-    ...(phone ? { telephone: phone } : {}),
-    ...(email ? { email } : {}),
+    // telephone / email are deliberately NOT published here. The contact details are
+    // the directory's gated asset (contact-unlock), and JSON-LD is the easiest thing in
+    // the page for a scraper to parse — emitting them here defeated the gate entirely.
+    // Google sources a local business's phone from its own Business Profile, not from a
+    // third-party directory's markup, so there is little to lose by omitting them.
     ...(address ? { address } : {}),
     ...(sameAs ? { sameAs } : {}),
     ...(aggregateRating ? { aggregateRating } : {}),

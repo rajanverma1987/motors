@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { getPublicListings } from "@/lib/listings-public";
+import { toPublicListing } from "@/lib/listing-public-fields";
 import { resolveListing } from "./resolve-listing";
 import { getListingReviewStats } from "@/lib/reviews-public";
 import { getLocationPageForArea } from "@/lib/location-pages-public";
@@ -53,8 +54,13 @@ const LABELS = {
 };
 
 /** Plain JSON object for Client Components (no ObjectId / BSON / Mongoose toJSON). */
+/**
+ * Props for client components on this page. Anything handed to a client component is
+ * serialized into the page HTML, so this strips contact and internal fields first —
+ * the full document used to be readable straight out of the page source.
+ */
 function toClientListingProps(listing) {
-  return JSON.parse(JSON.stringify(listing));
+  return JSON.parse(JSON.stringify(toPublicListing(listing)));
 }
 
 export async function generateMetadata({ params }) {
@@ -363,27 +369,10 @@ export default async function ListingDetailPage({ params }) {
                         </address>
                       ) : null}
 
-                      {/* Hidden contact data for Google crawlers, keep in HTML */}
-                      <div className="contact-seo-hidden" aria-hidden="true">
-                        {listing.phone ? (
-                          <a
-                            href={`tel:${String(listing.phone).replace(/\D/g, "")}`}
-                            className="seo-phone"
-                          >
-                            {listing.phone}
-                          </a>
-                        ) : null}
-                        {listing.email ? (
-                          <a href={`mailto:${listing.email}`} className="seo-email">
-                            {listing.email}
-                          </a>
-                        ) : null}
-                        {listing.website ? (
-                          <a href={listing.website} className="seo-website">
-                            {listing.website}
-                          </a>
-                        ) : null}
-                      </div>
+                      {/* The hidden tel:/mailto: block that used to sit here was removed: it put the
+                          gated phone and email in the page source for anyone to scrape, and
+                          hidden text served only to crawlers is a cloaking risk. Contact details
+                          are released by /api/leads/contact-unlock. */}
 
                       <ContactReveal
                         shopId={listing.id}
@@ -391,8 +380,8 @@ export default async function ListingDetailPage({ params }) {
                         shopName={listing.companyName}
                         shopCity={listing.city || ""}
                         shopState={listing.state || ""}
-                        phone={listing.phone || ""}
-                        email={listing.email || ""}
+                        hasPhone={Boolean(String(listing.phone || "").trim())}
+                        hasEmail={Boolean(String(listing.email || "").trim())}
                         website={listing.website || ""}
                         address={addressLine}
                         listing={listingForClient}

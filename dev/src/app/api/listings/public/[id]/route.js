@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/db";
 import Listing from "@/models/Listing";
+import { checkRateLimit } from "@/lib/rate-limit";
+import { toPublicListing } from "@/lib/listing-public-fields";
 
 function getParams(context) {
   return typeof context.params?.then === "function"
@@ -10,6 +12,10 @@ function getParams(context) {
 
 export async function GET(request, context) {
   try {
+    const { allowed } = await checkRateLimit(request, "listing-public-detail", 60);
+    if (!allowed) {
+      return NextResponse.json({ error: "Too many requests." }, { status: 429 });
+    }
     const params = await getParams(context);
     const id = params?.id;
     if (!id) {
@@ -20,12 +26,9 @@ export async function GET(request, context) {
     if (!doc) {
       return NextResponse.json({ error: "Not found" }, { status: 404 });
     }
-    const { isSeed, _id, ...rest } = doc;
+    // Contact details are released only by the contact-unlock flow, never here.
     return NextResponse.json(
-      {
-        ...rest,
-        id: _id.toString(),
-      },
+      toPublicListing(doc),
       {
         headers: {
           "Cache-Control": "public, s-maxage=60, stale-while-revalidate=120",

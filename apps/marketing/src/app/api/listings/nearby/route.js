@@ -3,6 +3,8 @@ import { getListingsFilteredByLocationPaginated } from "@/lib/listings-public";
 import { getListingLocationMatchType } from "@/lib/location-filter";
 import { normalizeLocationInput } from "@/lib/us-state-normalize";
 import { comparePublicListings } from "@/lib/listing-premium";
+import { checkRateLimit } from "@/lib/rate-limit";
+import { toPublicListing } from "@/lib/listing-public-fields";
 
 const MAX_RESULTS = 100;
 
@@ -18,6 +20,10 @@ function matchRank(type) {
  */
 export async function GET(request) {
   try {
+    const { allowed } = await checkRateLimit(request, "listings-nearby", 60);
+    if (!allowed) {
+      return NextResponse.json({ error: "Too many requests." }, { status: 429 });
+    }
     const { searchParams } = new URL(request.url);
     const location = normalizeLocationInput({
       city: searchParams.get("city"),
@@ -44,7 +50,8 @@ export async function GET(request) {
     const ranked = listings
       .map((listing) => {
         const locationMatchType = getListingLocationMatchType(listing, area);
-        return { ...listing, locationMatchType };
+        // Sanitize before the response: this used to spread the whole document.
+        return { ...toPublicListing(listing), locationMatchType };
       })
       .sort((a, b) => {
         const premA = a.isPremium ? 1 : 0;

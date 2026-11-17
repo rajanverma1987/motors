@@ -141,7 +141,14 @@ export const SIMPLE_REPORT_FILTERS = {
         { value: "", label: "All" },
         { value: "unpaid", label: "Unpaid" },
         { value: "paid", label: "Paid" },
+        { value: "owed_on_paid_invoices", label: "Owed on paid Invoices" },
       ],
+    },
+    {
+      key: "salesPerson",
+      label: "Sales person",
+      allowAny: true,
+      options: [{ value: "", label: "All" }],
     },
   ],
   "sales-tax": [

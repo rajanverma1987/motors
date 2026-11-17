@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { checkFloodLimit } from "@/lib/rate-limit";
+import { evaluateBotRequest, isListingDataPath, LISTING_PATH_FLOOD_LIMIT } from "@/lib/bot-guard";
 import { assertSameOriginApiMutation } from "@/lib/api-origin-guard";
 import {
   CALCULATOR_ONLY_DASHBOARD_HREF,
@@ -32,6 +33,28 @@ function hostAllowedEdge(hostHeader) {
 }
 
 export async function middleware(request) {
+  const { pathname } = request.nextUrl;
+
+  // Scrapers first: cheapest check, and it keeps them out of the rate-limit store.
+  const bot = evaluateBotRequest(request.headers.get("user-agent"), pathname);
+  if (bot.blocked) {
+    return new NextResponse("Forbidden", {
+      status: 403,
+      headers: { "Cache-Control": "no-store", "X-Blocked-Reason": bot.reason },
+    });
+  }
+
+  // Listing data gets a tighter per-IP ceiling than the rest of the site.
+  if (isListingDataPath(pathname)) {
+    const listingFlood = await checkFloodLimit(request, LISTING_PATH_FLOOD_LIMIT);
+    if (!listingFlood.allowed) {
+      return new NextResponse("Too many requests. Try again in a minute.", {
+        status: 429,
+        headers: { "Retry-After": "60", "Cache-Control": "no-store" },
+      });
+    }
+  }
+
   const flood = await checkFloodLimit(request, 900);
   if (!flood.allowed) {
     return new NextResponse("Too many requests. Try again in a minute.", {
@@ -40,7 +63,6 @@ export async function middleware(request) {
     });
   }
 
-  const { pathname } = request.nextUrl;
   const cookieHeader = request.headers.get("cookie") || "";
   const hasAdminCookie = cookieHeader.includes("motors_admin=");
   const hasPortalCookie = cookieHeader.includes("motors_portal=");

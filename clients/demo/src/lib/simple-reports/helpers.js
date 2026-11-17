@@ -121,6 +121,23 @@ export function isInvoiceSp(doc) {
   return String(doc?.recordType || "").toUpperCase() === RECORD_TYPE_INVOICE;
 }
 
+/** Invoice status slug Fully Paid, including invoice:fully_paid. */
+export function invoiceStatusIsFullyPaid(status) {
+  const bare = String(status || "")
+    .trim()
+    .toLowerCase()
+    .replace(/^invoice:/, "")
+    .replace(/[\s-]+/g, "_");
+  return bare === "fully_paid" || bare.endsWith("_fully_paid");
+}
+
+/** Fully paid invoice: status is Fully Paid, or recorded payments cover the total. */
+export function isFullyPaidInvoice(doc) {
+  if (!isInvoiceSp(doc)) return false;
+  if (invoiceStatusIsFullyPaid(doc?.status)) return true;
+  return computeSpInvoiceMoney(doc).paymentStatus === "Paid";
+}
+
 export function isPipelineSp(doc) {
   const t = String(doc?.recordType || RECORD_TYPE_RFQ).toUpperCase();
   return t === RECORD_TYPE_RFQ || t === RECORD_TYPE_JOB;

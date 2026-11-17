@@ -1,6 +1,8 @@
 #!/usr/bin/env node
 /**
- * Upsert GoDaddy DNS CNAME (or A) for {slug}.3phaseflow.com → CLIENT_SERVER_HOST.
+ * Upsert DNS for {slug}.3phaseflow.com.
+ * GoDaddy gets the A or CNAME. Cloudflare gets the same name as DNS only
+ * (grey cloud) when CLOUDFLARE_API_TOKEN is set. Shop hosts stay off the proxy.
  * Secrets from env only (never commit).
  *
  * Usage: node scripts/dns-upsert.mjs --slug cemotor
@@ -83,4 +85,68 @@ if (!res.ok) {
   process.exit(1);
 }
 
-console.log(`OK: ${slug}.${domain} ${recordType} → ${recordType === "A" ? ip : hostTarget}`);
+const target = recordType === "A" ? ip : hostTarget.replace(/\.$/, "");
+console.log(`OK: ${slug}.${domain} ${recordType} → ${target} (GoDaddy)`);
+
+await upsertCloudflare({ domain, slug, recordType, content: target });
+
+async function upsertCloudflare({ domain, slug, recordType, content }) {
+  const token = process.env.CLOUDFLARE_API_TOKEN || "";
+  if (!token) {
+    console.warn("CLOUDFLARE_API_TOKEN not set. Cloudflare DNS was not updated.");
+    return;
+  }
+  if (!content) {
+    console.error("Cloudflare record content is empty");
+    process.exit(1);
+  }
+
+  const headers = {
+    Authorization: `Bearer ${token}`,
+    "Content-Type": "application/json",
+  };
+  const zoneRes = await fetch(
+    `https://api.cloudflare.com/client/v4/zones?name=${encodeURIComponent(domain)}`,
+    { headers }
+  );
+  const zoneBody = await zoneRes.json();
+  const zone = zoneBody.result && zoneBody.result[0];
+  if (!zoneBody.success || !zone) {
+    console.error("Cloudflare zone lookup failed", JSON.stringify(zoneBody.errors || []));
+    process.exit(1);
+  }
+
+  const name = `${slug}.${domain}`;
+  const listUrl =
+    `https://api.cloudflare.com/client/v4/zones/${zone.id}/dns_records` +
+    `?type=${encodeURIComponent(recordType)}&name=${encodeURIComponent(name)}`;
+  const listRes = await fetch(listUrl, { headers });
+  const listBody = await listRes.json();
+  if (!listBody.success) {
+    console.error("Cloudflare list failed", JSON.stringify(listBody.errors || []));
+    process.exit(1);
+  }
+
+  const existing = listBody.result && listBody.result[0];
+  const payload = {
+    type: recordType,
+    name,
+    content,
+    ttl: 1,
+    proxied: false,
+  };
+  const writeUrl = existing
+    ? `https://api.cloudflare.com/client/v4/zones/${zone.id}/dns_records/${existing.id}`
+    : `https://api.cloudflare.com/client/v4/zones/${zone.id}/dns_records`;
+  const writeRes = await fetch(writeUrl, {
+    method: existing ? "PUT" : "POST",
+    headers,
+    body: JSON.stringify(payload),
+  });
+  const writeBody = await writeRes.json();
+  if (!writeBody.success) {
+    console.error("Cloudflare error", JSON.stringify(writeBody.errors || []));
+    process.exit(1);
+  }
+  console.log(`OK: ${name} ${recordType} → ${content} (Cloudflare, DNS only)`);
+}

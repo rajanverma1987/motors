@@ -94,11 +94,8 @@ function EmergencyShopPhone({ shop, phone, href }) {
 
   return (
     <>
-      <div className="contact-seo-hidden" aria-hidden="true">
-        <a href={href} className="seo-phone">
-          {phone}
-        </a>
-      </div>
+      {/* No hidden tel: link here: it leaked the gated phone number into the page
+          source and showed crawlers text users cannot see. */}
       {unlocked ? (
         <a
           href={href}

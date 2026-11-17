@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { checkFloodLimit } from "@/lib/rate-limit";
+import { evaluateBotRequest, isListingDataPath, LISTING_PATH_FLOOD_LIMIT } from "@/lib/bot-guard";
 
 function hostAllowedEdge(hostHeader) {
   const raw = process.env.ALLOWED_HOSTS || "";
@@ -16,6 +17,28 @@ function hostAllowedEdge(hostHeader) {
  * Marketing host only: no shop portal (/dashboard, /dashboards, /login) or admin UI.
  */
 export async function middleware(request) {
+  const { pathname } = request.nextUrl;
+
+  // Scrapers first: cheapest check, and it keeps them out of the rate-limit store.
+  const bot = evaluateBotRequest(request.headers.get("user-agent"), pathname);
+  if (bot.blocked) {
+    return new NextResponse("Forbidden", {
+      status: 403,
+      headers: { "Cache-Control": "no-store", "X-Blocked-Reason": bot.reason },
+    });
+  }
+
+  // Listing data gets a tighter per-IP ceiling than the rest of the site.
+  if (isListingDataPath(pathname)) {
+    const listingFlood = await checkFloodLimit(request, LISTING_PATH_FLOOD_LIMIT);
+    if (!listingFlood.allowed) {
+      return new NextResponse("Too many requests. Try again in a minute.", {
+        status: 429,
+        headers: { "Retry-After": "60", "Cache-Control": "no-store" },
+      });
+    }
+  }
+
   const flood = await checkFloodLimit(request, 240);
   if (!flood.allowed) {
     return new NextResponse("Too many requests. Try again in a minute.", {
@@ -28,7 +51,6 @@ export async function middleware(request) {
     return new NextResponse("Host not allowed for this app", { status: 421 });
   }
 
-  const { pathname } = request.nextUrl;
   if (
     pathname === "/login" ||
     pathname.startsWith("/login/") ||

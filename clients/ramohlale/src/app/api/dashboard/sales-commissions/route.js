@@ -110,7 +110,8 @@ export async function GET(request) {
     }
     const enriched = rows.map((row) => ({
       ...row,
-      salesPersonName: salesPersonNameMap[String(row.salesPersonId)] || "",
+      salesPersonName:
+        salesPersonNameMap[String(row.salesPersonId)] || String(row.salesPersonName || "").trim(),
     }));
 
     let quoteById = new Map();
@@ -209,12 +210,14 @@ export async function POST(request) {
     const salesPerson = await SalesPerson.findOne({ _id: salesPersonId, createdByEmail: owner }).lean();
     if (!salesPerson) return NextResponse.json({ error: "Sales person not found" }, { status: 404 });
 
+    const spName = salesPerson.name || salesPerson.email || salesPerson.phone || "";
     const doc = await SalesCommission.create({
       quoteId,
       rfqNumber,
       repairFlowJobId,
       jobNumber,
       salesPersonId,
+      salesPersonName: spName,
       amount,
       status,
       attachments,
@@ -225,7 +228,6 @@ export async function POST(request) {
       createdByEmail: owner,
     });
 
-    const spName = salesPerson.name || salesPerson.email || salesPerson.phone || String(salesPerson._id);
     return NextResponse.json({
       ok: true,
       commission: commissionToJson({ ...doc.toObject(), salesPersonName: spName }, { includeAttachments: true }),

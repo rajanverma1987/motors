@@ -9,6 +9,8 @@ const salesCommissionSchema = new mongoose.Schema(
     repairFlowJobId: { type: String, default: "", trim: true },
     jobNumber: { type: String, default: "", trim: true },
     salesPersonId: { type: String, required: true, trim: true },
+    /** Name at save time, so the report still shows it if the sales person row is removed. */
+    salesPersonName: { type: String, default: "", trim: true },
     salesPersonSourceSystem: { type: String, default: "manual_csv", trim: true },
     salesPersonExternalRef: { type: String, default: "", trim: true },
     jobSourceSystem: { type: String, default: "manual_csv", trim: true },

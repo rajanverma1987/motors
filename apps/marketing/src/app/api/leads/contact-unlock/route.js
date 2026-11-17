@@ -8,6 +8,7 @@ import { isValidEmail, LIMITS, clampString } from "@/lib/validation";
 import { getPublicSiteUrl } from "@/lib/public-site-url";
 import { sendContactUnlockNotificationToShop } from "@/lib/email";
 import { sendToListingNotifyEmails } from "@/lib/listing-notify-emails";
+import { toUnlockedContact } from "@/lib/listing-public-fields";
 
 export async function POST(request) {
   const { allowed } = await checkRateLimit(request, "contact-unlock", 15);
@@ -55,7 +56,7 @@ export async function POST(request) {
     }
 
     const listingDoc = await Listing.findOne({ _id: rawListingId, status: "approved" })
-      .select("_id email companyName city state notificationEmails crmUserId")
+      .select("_id email phone website primaryContactPerson companyName city state notificationEmails crmUserId")
       .lean();
 
     if (!listingDoc) {
@@ -106,7 +107,13 @@ export async function POST(request) {
       console.warn("Contact unlock shop notification email failed:", e);
     }
 
-    return NextResponse.json({ success: true, id: doc._id.toString() });
+    // The contact details are released here and nowhere else — the listing page no
+    // longer ships them to the browser, so this response is what reveals them.
+    return NextResponse.json({
+      success: true,
+      id: doc._id.toString(),
+      contact: toUnlockedContact(listingDoc),
+    });
   } catch (err) {
     console.error("Contact unlock error:", err);
     return NextResponse.json(

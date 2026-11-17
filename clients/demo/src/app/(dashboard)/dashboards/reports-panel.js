@@ -67,6 +67,9 @@ export default function ReportsPanel() {
   const [customerFilterOptions, setCustomerFilterOptions] = useState([
     { value: "", label: "All customers" },
   ]);
+  const [salesPersonFilterOptions, setSalesPersonFilterOptions] = useState([
+    { value: "", label: "All" },
+  ]);
   const [customerEmailById, setCustomerEmailById] = useState({});
   const viewOpenRef = useRef(false);
   const viewReportIdRef = useRef("");
@@ -109,6 +112,34 @@ export default function ReportsPanel() {
           setCustomerFilterOptions([{ value: "", label: "All customers" }]);
           setCustomerEmailById({});
         }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const list = await fetchAllPaginatedDashboardItems("/api/dashboard/sales-persons");
+        if (cancelled) return;
+        const opts = [{ value: "", label: "All" }];
+        for (const person of Array.isArray(list) ? list : []) {
+          const id = String(person.id || person._id || "").trim();
+          if (!id) continue;
+          const label = String(person.name || person.email || person.phone || id).trim() || id;
+          opts.push({ value: id, label });
+        }
+        opts.sort((a, b) => {
+          if (!a.value) return -1;
+          if (!b.value) return 1;
+          return a.label.localeCompare(b.label);
+        });
+        setSalesPersonFilterOptions(opts);
+      } catch {
+        if (!cancelled) setSalesPersonFilterOptions([{ value: "", label: "All" }]);
       }
     })();
     return () => {
@@ -496,7 +527,12 @@ export default function ReportsPanel() {
                       >
                         {filters.map((filter) => {
                           const isCustomer = filter.key === "customer";
-                          const options = isCustomer ? customerFilterOptions : filter.options;
+                          const isSalesPerson = filter.key === "salesPerson";
+                          const options = isCustomer
+                            ? customerFilterOptions
+                            : isSalesPerson
+                              ? salesPersonFilterOptions
+                              : filter.options;
                           return (
                             <label key={filter.key} className="grid min-w-0 gap-1">
                               <span className="text-[11px] font-medium text-secondary">
@@ -507,7 +543,7 @@ export default function ReportsPanel() {
                                 options={options}
                                 value={values[filter.key] ?? ""}
                                 onChange={(e) => setFilter(report.id, filter.key, e.target.value)}
-                                searchable={isCustomer}
+                                searchable={isCustomer || isSalesPerson}
                                 disabled={Boolean(busyId)}
                               />
                             </label>
