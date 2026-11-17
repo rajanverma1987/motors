@@ -2,6 +2,9 @@
 const nextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
+  experimental: {
+    agentUpgrade: "security",
+  },
   // Allow tablets / phones on LAN to load /_next assets during `next dev`.
   // Without this, JS never hydrates and login falls back to a plain GET form.
   // Wildcards cover typical home/office LAN IPs so you do not re-edit per Wi‑Fi.
