@@ -489,7 +489,9 @@ export default function ServiceProposalsPanel({
 
   const handleSave = async (form, options = {}) => {
     const forceNew = options?.forceNew === true;
-    const id = forceNew ? undefined : editingId || form.id || undefined;
+    const pinToTop = options?.pinToTop === true;
+    const formId = String(form?.id || "").trim();
+    const id = forceNew ? undefined : formId || String(editingId || "").trim() || undefined;
     let documentNumber = forceNew ? "" : String(form.documentNumber ?? "").trim();
     // Job numbers are assigned on the server from the full DB (not paginated list rows).
     const row = formToServiceProposalListRow(
@@ -508,15 +510,25 @@ export default function ServiceProposalsPanel({
       { ...row, id: id || undefined },
       { forceNew: forceNew || !id }
     );
+    if (pinToTop) {
+      setPage(1);
+      setTableSort((current) =>
+        current?.key === "date" && current?.direction === "desc"
+          ? current
+          : { key: "date", direction: "desc" }
+      );
+    }
     setRows((prev) => {
       const sid = String(saved?.id || "").trim();
       const idx = sid ? prev.findIndex((r) => r.id === sid) : -1;
-      if (idx >= 0) {
+      if (idx >= 0 && !pinToTop) {
         const next = [...prev];
         next[idx] = { ...prev[idx], ...saved };
         return next;
       }
-      return [saved, ...prev];
+      const rest = idx >= 0 ? prev.filter((_, i) => i !== idx) : prev;
+      const nextRow = idx >= 0 ? { ...prev[idx], ...saved } : saved;
+      return [nextRow, ...rest];
     });
     setEditingId(saved.id);
     return saved;

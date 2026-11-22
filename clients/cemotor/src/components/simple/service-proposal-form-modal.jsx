@@ -1456,7 +1456,7 @@ export default function ServiceProposalFormModal({
 
     try {
       const cloned = cloneServiceProposalAsNewRfq(form);
-      const saved = await onSave?.(cloned, { forceNew: true });
+      const saved = await onSave?.(cloned, { forceNew: true, pinToTop: true });
       const savedId = String(saved?.id || "").trim();
       if (!savedId) throw new Error("Failed to create copied record");
 
@@ -1717,7 +1717,7 @@ export default function ServiceProposalFormModal({
     <div
       className={`grid min-w-0 ${
         statusInModalHeader
-          ? "mr-auto w-2/3 max-w-full grid-cols-[10.25rem_minmax(0,1fr)_minmax(0,2fr)_minmax(0,1fr)] gap-2 sm:gap-3"
+          ? "mr-auto w-[calc(1.25*(66.666667%-10.25rem)+10.25rem)] max-w-full grid-cols-[10.25rem_minmax(0,1fr)_minmax(0,2fr)_minmax(0,2fr)] gap-2 sm:gap-3"
           : "w-full grid-cols-1 gap-3 sm:grid-cols-3"
       }`}
     >
@@ -1870,7 +1870,7 @@ export default function ServiceProposalFormModal({
             type="button"
             variant="primary"
             size="sm"
-            className="text-xs"
+            className="text-xs !px-5"
             disabled={saving || copying}
             title="Print"
             aria-label="Print"
@@ -1886,7 +1886,7 @@ export default function ServiceProposalFormModal({
         form={FORM_ID}
         variant="primary"
         size="sm"
-        className="text-xs"
+        className="text-xs !px-5"
         disabled={saving || copying || loadingRecord || pagingRecord}
       >
         <FiSave className="h-4 w-4 shrink-0" aria-hidden />

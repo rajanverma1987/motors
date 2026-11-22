@@ -405,6 +405,8 @@ export function cloneServiceProposalAsNewRfq(form) {
     trackDatasheetSharedPowerType: "",
     trackProposalSentAt: "",
     trackProposalVersion: 0,
+    dateCreated: todayISODate(),
+    date: todayISODate(),
   };
 }
 

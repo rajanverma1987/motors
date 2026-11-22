@@ -121,7 +121,6 @@ export default function Footer() {
               <FacebookFollowCta variant="compact" />
               <p className="shrink-0 text-center text-sm text-secondary sm:text-right">
                 © {year} 3PhaseFlow.com. All rights reserved.
-                <span className="mt-1 block text-xs text-secondary/90">Formerly known as IQMotorBase</span>
               </p>
             </div>
           </div>
