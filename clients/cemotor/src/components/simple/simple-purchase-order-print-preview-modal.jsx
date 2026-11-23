@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { FiPrinter, FiSend } from "react-icons/fi";
 import Modal from "@/components/ui/modal";
 import Button from "@/components/ui/button";
@@ -30,6 +30,7 @@ export default function SimplePurchaseOrderPrintPreviewModal({
   sendMeta = null,
   sendBodyExtra = null,
   onSent = null,
+  startOnSend = false,
   title = "Purchase order print preview",
 }) {
   const fmt = useFormatMoney();
@@ -37,6 +38,14 @@ export default function SimplePurchaseOrderPrintPreviewModal({
   const { canViewFinancials } = useFinancialAccess();
   const [printing, setPrinting] = useState(false);
   const [sendOpen, setSendOpen] = useState(false);
+
+  useEffect(() => {
+    if (!open) {
+      setSendOpen(false);
+      return;
+    }
+    if (startOnSend) setSendOpen(true);
+  }, [open, startOnSend]);
 
   const documentReady = Boolean(po);
 
@@ -53,7 +62,7 @@ export default function SimplePurchaseOrderPrintPreviewModal({
   return (
     <>
       <Modal
-        open={open && !printing && !sendOpen}
+        open={open && !printing && !sendOpen && !startOnSend}
         onClose={onClose}
         title={title}
         size="6xl"
@@ -116,7 +125,10 @@ export default function SimplePurchaseOrderPrintPreviewModal({
 
       <SendDocumentPreviewModal
         open={sendOpen}
-        onClose={() => setSendOpen(false)}
+        onClose={() => {
+          setSendOpen(false);
+          if (startOnSend) onClose?.();
+        }}
         title={
           po?.poNumber ? `Send PO ${po.poNumber} to vendor` : "Send purchase order to vendor"
         }

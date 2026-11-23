@@ -6,7 +6,8 @@ import { FiRotateCw, FiSend } from "react-icons/fi";
 import Modal from "@/components/ui/modal";
 import Button from "@/components/ui/button";
 import Input from "@/components/ui/input";
-import Textarea from "@/components/ui/textarea";
+import HelpIcon from "@/components/ui/help-icon";
+import SimpleRichTextEditor from "@/components/admin/simple-rich-text-editor";
 import { useToast } from "@/components/toast-provider";
 import { useAuth } from "@/contexts/auth-context";
 import { useFormatMoney, useUserSettings } from "@/contexts/user-settings-context";
@@ -17,11 +18,16 @@ import {
   fetchQuotePreviewPayload,
 } from "@/lib/document-preview-payload";
 import {
-  SEND_DOCUMENT_CUSTOM_MESSAGE_MAX,
   SEND_DOCUMENT_CC_MAX_LENGTH,
   SEND_DOCUMENT_TO_EMAIL_MAX,
   isSendToEmail,
 } from "@/lib/send-document-custom-message";
+import {
+  buildDefaultSendDocumentEmailBody,
+  mergeSavedEmailBody,
+  plainEmailBodyToHtml,
+  referenceFromDocumentLabel,
+} from "@/lib/send-document-email-body";
 
 const SEND_EMAIL_DRAFT_PREFIX = "motors-send-email-draft:";
 const SEND_EMAIL_DRAFT_DEBOUNCE_MS = 400;
@@ -48,7 +54,7 @@ function readSendEmailDraft(key) {
   }
 }
 
-function writeSendEmailDraft(key, draft, baselineTo) {
+function writeSendEmailDraft(key, draft, baselineTo, baselineMessage) {
   if (!key || typeof localStorage === "undefined" || !draft) return;
   const toEmail = String(draft.toEmail || "");
   const emailCc = String(draft.emailCc || "");
@@ -56,7 +62,7 @@ function writeSendEmailDraft(key, draft, baselineTo) {
   const unchanged =
     toEmail.trim() === String(baselineTo || "").trim() &&
     !emailCc.trim() &&
-    !emailCustomMessage.trim();
+    emailCustomMessage.trim() === String(baselineMessage || "").trim();
   if (unchanged) {
     localStorage.removeItem(key);
     return;
@@ -103,7 +109,7 @@ export default function SendDocumentPreviewModal({
 }) {
   const toast = useToast();
   const fmt = useFormatMoney();
-  const { isOwner } = useAuth();
+  const { isOwner, user } = useAuth();
   const { settings: accountSettings } = useUserSettings();
   const [loading, setLoading] = useState(false);
   const [sending, setSending] = useState(false);
@@ -120,7 +126,13 @@ export default function SendDocumentPreviewModal({
   const draftAppliedRef = useRef(false);
   const sentRef = useRef(false);
   const baselineToRef = useRef("");
+  const baselineMessageRef = useRef("");
+  const shopNameRef = useRef("");
+  const bodyExtraRef = useRef(sendBodyExtra);
   const draftFieldsRef = useRef({ toEmail: "", emailCc: "", emailCustomMessage: "" });
+
+  shopNameRef.current = String(user?.shopName || "").trim();
+  bodyExtraRef.current = sendBodyExtra;
 
   const useLocalDocument = Boolean(localQuote || localInvoicePayload || localPo);
   const draftLabel = String(
@@ -130,25 +142,53 @@ export default function SendDocumentPreviewModal({
 
   draftFieldsRef.current = { toEmail, emailCc, emailCustomMessage };
 
-  const applyEmailDraft = (defaultTo) => {
+  const defaultEmailBody = (meta) => {
+    const extra = bodyExtraRef.current && typeof bodyExtraRef.current === "object" ? bodyExtraRef.current : {};
+    const documentLabel = String(meta?.documentLabel || extra.documentLabel || "").trim();
+    const explicitRef =
+      documentType === "po"
+        ? String(extra.poNumber || "").trim()
+        : documentType === "invoice"
+          ? referenceFromDocumentLabel("invoice", documentLabel)
+          : referenceFromDocumentLabel("quote", documentLabel);
+    return buildDefaultSendDocumentEmailBody({
+      documentType,
+      attachedPdf: useLocalDocument,
+      toName: meta?.toName || extra.toName || "",
+      shopName: shopNameRef.current,
+      kindLabel: extra.kindLabel || "",
+      documentLabel,
+      reference: explicitRef || referenceFromDocumentLabel(documentType, documentLabel),
+    });
+  };
+
+  const applyEmailDraft = (defaultTo, meta) => {
     const baseline = String(defaultTo || "").trim();
+    const defaultMessage = defaultEmailBody(meta);
+    const defaultHtml = plainEmailBodyToHtml(defaultMessage);
     baselineToRef.current = baseline;
+    baselineMessageRef.current = defaultHtml;
     const draft = readSendEmailDraft(draftKey);
     if (draft) {
       setToEmail(draft.toEmail);
       setEmailCc(draft.emailCc);
-      setEmailCustomMessage(draft.emailCustomMessage);
+      setEmailCustomMessage(mergeSavedEmailBody(defaultMessage, draft.emailCustomMessage));
     } else {
       setToEmail(baseline);
       setEmailCc("");
-      setEmailCustomMessage("");
+      setEmailCustomMessage(defaultHtml);
     }
     draftReadyRef.current = Boolean(draftKey);
   };
 
   const flushEmailDraft = () => {
     if (!draftReadyRef.current || sentRef.current) return;
-    writeSendEmailDraft(draftKey, draftFieldsRef.current, baselineToRef.current);
+    writeSendEmailDraft(
+      draftKey,
+      draftFieldsRef.current,
+      baselineToRef.current,
+      baselineMessageRef.current
+    );
   };
 
   useEffect(() => {
@@ -181,7 +221,7 @@ export default function SendDocumentPreviewModal({
       setPo(localPo || null);
       setVendor(localVendor || null);
       if (!draftAppliedRef.current) {
-        applyEmailDraft(localSendMeta?.toEmail || "");
+        applyEmailDraft(localSendMeta?.toEmail || "", localSendMeta);
         draftAppliedRef.current = true;
       }
       return;
@@ -238,7 +278,7 @@ export default function SendDocumentPreviewModal({
         const meta = results[0];
         setSendMeta(meta);
         if (!draftAppliedRef.current) {
-          applyEmailDraft(meta?.toEmail || "");
+          applyEmailDraft(meta?.toEmail || "", meta);
           draftAppliedRef.current = true;
         }
 
@@ -284,7 +324,12 @@ export default function SendDocumentPreviewModal({
     if (!open || !draftReadyRef.current || !draftKey || sentRef.current) return undefined;
     const handle = setTimeout(() => {
       if (!draftReadyRef.current || sentRef.current) return;
-      writeSendEmailDraft(draftKey, draftFieldsRef.current, baselineToRef.current);
+      writeSendEmailDraft(
+        draftKey,
+        draftFieldsRef.current,
+        baselineToRef.current,
+        baselineMessageRef.current
+      );
     }, SEND_EMAIL_DRAFT_DEBOUNCE_MS);
     return () => clearTimeout(handle);
   }, [open, draftKey, toEmail, emailCc, emailCustomMessage]);
@@ -337,8 +382,11 @@ export default function SendDocumentPreviewModal({
       open={open}
       onClose={onClose}
       title={title}
-      size="6xl"
-      width="min(960px, 96vw)"
+      size="7xl"
+      width="min(1800px, 98vw)"
+      className="lg:h-[min(90vh,960px)]"
+      bodyClassName="lg:overflow-hidden lg:flex lg:flex-col"
+      titleClassName="pointer-events-none max-w-[min(40rem,46vw)] truncate text-base font-semibold leading-snug text-title sm:text-lg"
       zIndex={zIndex}
       showClose={!busy}
       closeOnOutsideClick={false}
@@ -373,7 +421,8 @@ export default function SendDocumentPreviewModal({
       ) : loadError ? (
         <p className="py-8 text-center text-sm text-danger">{loadError}</p>
       ) : documentReady ? (
-        <div className="flex flex-col gap-4">
+        <div className="grid min-h-0 flex-1 grid-cols-1 gap-4 lg:grid-cols-[minmax(420px,46%)_minmax(0,1fr)] lg:items-stretch">
+          <div className="flex min-h-0 flex-col gap-4 lg:overflow-y-auto lg:pr-1">
           {sendMeta?.smtp?.message ? (
             <div
               className={
@@ -425,17 +474,35 @@ export default function SendDocumentPreviewModal({
             help="Separate multiple addresses with a comma or semicolon."
           />
 
-          <Textarea
-            id="send-document-custom-message"
-            label="Message for email (optional)"
-            value={emailCustomMessage}
-            onChange={(e) => setEmailCustomMessage(e.target.value)}
-            placeholder="Add a personal note included in the email body…"
-            rows={3}
-            maxLength={SEND_DOCUMENT_CUSTOM_MESSAGE_MAX}
-            disabled={busy}
-            textareaClassName="min-h-[5rem]"
-          />
+          <div className="flex flex-col gap-1">
+            <label
+              htmlFor="send-document-custom-message"
+              className={`inline-flex items-center gap-1.5 text-sm text-title ${busy ? "opacity-70" : ""}`}
+            >
+              Email body
+              <HelpIcon text="Format the message before sending. Bold, italic, lists, and links are kept. The view link or PDF, shop logo, and account details are added automatically." />
+            </label>
+            <SimpleRichTextEditor
+              id="send-document-custom-message"
+              value={emailCustomMessage}
+              onChange={setEmailCustomMessage}
+              disabled={busy}
+              minHeight="16rem"
+            />
+          </div>
+
+          <p className="text-xs text-secondary">
+            {smtpBlocked
+              ? "Complete workspace SMTP settings before sending."
+              : documentType === "po"
+                ? useLocalDocument
+                  ? "The vendor will receive an email with the purchase order attached as a PDF."
+                  : "The vendor will receive an email with a link to view and update delivery status."
+                : useLocalDocument
+                  ? "The customer will receive an email with this document attached as a PDF."
+                  : "The customer will receive an email with a link to view this document."}
+          </p>
+          </div>
 
           <DocumentPreviewSheet
             documentType={documentType}
@@ -445,19 +512,8 @@ export default function SendDocumentPreviewModal({
             vendor={vendor}
             accountSettings={accountSettings}
             fmt={fmt}
+            frameClassName="h-full max-h-[min(60vh,640px)] lg:max-h-full"
           />
-
-          <p className="text-xs text-secondary">
-            {smtpBlocked
-              ? "Complete workspace SMTP settings before sending."
-              : documentType === "po"
-                ? useLocalDocument
-                  ? "Review the purchase order above. The vendor will receive an email with the PO attached as a PDF."
-                  : "Review the purchase order above. The vendor will receive an email with a link to view and update delivery status."
-                : useLocalDocument
-                  ? "Review the document above. The customer will receive an email with this document attached as a PDF."
-                  : "Review the document above. The customer will receive an email with a link to view it."}
-          </p>
         </div>
       ) : null}
     </Modal>

@@ -272,6 +272,7 @@ export default function SimplePurchaseOrderFormModal({
   const [vendorForm, setVendorForm] = useState(INITIAL_VENDOR_FORM);
   const [savingVendor, setSavingVendor] = useState(false);
   const [printOpen, setPrintOpen] = useState(false);
+  const [printStartSend, setPrintStartSend] = useState(false);
   const [printPo, setPrintPo] = useState(null);
   const [printVendor, setPrintVendor] = useState(null);
   const [printSendMeta, setPrintSendMeta] = useState(null);
@@ -1188,8 +1189,9 @@ export default function SimplePurchaseOrderFormModal({
     }
   };
 
-  const openPrintPreview = async () => {
+  const openPrintPreview = async ({ send = false } = {}) => {
     if (!canViewFinancials) {
+      setPrintStartSend(false);
       await alert({
         title: "Access Restricted",
         message: "Printing purchase orders is restricted for your employee role.",
@@ -1198,13 +1200,24 @@ export default function SimplePurchaseOrderFormModal({
       return;
     }
     if (!String(form.vendorId || "").trim()) {
-      await alert({ title: "Vendor required", message: "Select a vendor before printing.", variant: "danger" });
+      setPrintStartSend(false);
+      await alert({
+        title: "Vendor required",
+        message: send ? "Select a vendor before sending." : "Select a vendor before printing.",
+        variant: "danger",
+      });
       return;
     }
     if (!String(form.poNumber || "").trim()) {
-      await alert({ title: "PO# required", message: "Enter a PO number before printing.", variant: "danger" });
+      setPrintStartSend(false);
+      await alert({
+        title: "PO# required",
+        message: send ? "Enter a PO number before sending." : "Enter a PO number before printing.",
+        variant: "danger",
+      });
       return;
     }
+    setPrintStartSend(send);
     const vendor = vendors.find((v) => String(v.id) === String(form.vendorId)) || null;
     const { po, vendor: vendorPayload, documentLabel } = buildSimplePurchaseOrderPrintPayload({
       form,
@@ -1333,7 +1346,7 @@ export default function SimplePurchaseOrderFormModal({
             }
             disabled={saving || loadingForm || loadingMeta || !form.id}
             title={!form.id ? "Save the purchase order first" : undefined}
-            onClick={openPrintPreview}
+            onClick={() => void openPrintPreview()}
           >
             <FiPrinter className={isPage ? "h-3.5 w-3.5 shrink-0" : "h-4 w-4 shrink-0"} aria-hidden />
             Print
@@ -1349,7 +1362,7 @@ export default function SimplePurchaseOrderFormModal({
             }
             disabled={saving || loadingForm || loadingMeta || !form.id}
             title={!form.id ? "Save the purchase order first" : undefined}
-            onClick={openPrintPreview}
+            onClick={() => void openPrintPreview({ send: true })}
           >
             <FiSend className={isPage ? "h-3.5 w-3.5 shrink-0" : "h-4 w-4 shrink-0"} aria-hidden />
             {isPage ? "Send" : "Send To Vendor"}
@@ -2882,6 +2895,7 @@ export default function SimplePurchaseOrderFormModal({
         open={printOpen}
         onClose={() => {
           setPrintOpen(false);
+          setPrintStartSend(false);
           setPrintPo(null);
           setPrintVendor(null);
           setPrintSendMeta(null);
@@ -2889,6 +2903,7 @@ export default function SimplePurchaseOrderFormModal({
         po={printPo}
         vendor={printVendor}
         sendMeta={printSendMeta}
+        startOnSend={printStartSend}
         sendBodyExtra={{ poId: String(form.id || printPo?.id || "").trim() }}
         onSent={(meta) => {
           const sentAt = new Date().toISOString();

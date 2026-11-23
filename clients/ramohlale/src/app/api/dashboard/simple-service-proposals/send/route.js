@@ -4,9 +4,10 @@ import { connectDB } from "@/lib/db";
 import UserSettings from "@/models/UserSettings";
 import { mergeUserSettings } from "@/lib/user-settings";
 import { getWorkspaceSmtpDeliveryNotice } from "@/lib/workspace-smtp-fields";
-import { resolveOutboundFromPreview, withDashboardOutboundEmailFooter } from "@/lib/customer-facing-email-content";
+import { composeEditableEmailHtml, resolveOutboundFromPreview } from "@/lib/customer-facing-email-content";
 import { clampString } from "@/lib/validation";
-import { parseCcEmailList } from "@/lib/send-document-custom-message";
+import { parseCcEmailList, SEND_DOCUMENT_CUSTOM_MESSAGE_MAX } from "@/lib/send-document-custom-message";
+import { buildDefaultSendDocumentEmailBody, emailBodyHasText } from "@/lib/send-document-email-body";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { resolveCustomerMailDelivery } from "@/lib/workspace-smtp";
 import { getTransporter } from "@/lib/email-transport";
@@ -16,16 +17,6 @@ import {
   pdfFileAttachment,
   safePdfFilename,
 } from "@/lib/simple-send-document-pdf";
-
-function esc(v) {
-  return v == null
-    ? ""
-    : String(v)
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;");
-}
 
 function shopCompanyNameFromUser(user) {
   return (user.shopName && String(user.shopName).trim()) || process.env.MOTOR_SHOP_COMPANY_NAME?.trim() || "";
@@ -84,7 +75,7 @@ export async function POST(request) {
     }
 
     const body = await request.json().catch(() => ({}));
-    const customMessage = clampString(body?.customMessage, 2000);
+    const customMessage = clampString(body?.customMessage, SEND_DOCUMENT_CUSTOM_MESSAGE_MAX);
     const { ccEmails, error: ccError } = parseCcEmailList(body?.cc);
     if (ccError) {
       return NextResponse.json({ error: ccError }, { status: 400 });
@@ -106,21 +97,23 @@ export async function POST(request) {
       return NextResponse.json({ error: smtpNotice.message || "SMTP is not configured." }, { status: 400 });
     }
 
-    const noteHtml = customMessage
-      ? `<p style="white-space:pre-wrap;margin:12px 0">${esc(customMessage)}</p>`
-      : "";
     const kind = documentType === "invoice" ? "invoice" : "quote";
     const kindLabelRaw =
       kind === "invoice"
         ? "invoice"
         : String(body?.kindLabel || "").trim() || "quotation";
     const kindLabel = kindLabelRaw;
-    const html = withDashboardOutboundEmailFooter(`
-      <p>Please review your ${esc(kindLabel)} <strong>${esc(documentLabel)}</strong>. The document is attached as a PDF.</p>
-      ${noteHtml}
-      <p>If you have questions, reply to this email or contact us.</p>
-      <p>— ${esc(shopCompanyName || "Our shop")}</p>
-    `);
+    const shop = shopCompanyName || "Our shop";
+    const prose = emailBodyHasText(customMessage)
+      ? customMessage.trim()
+      : buildDefaultSendDocumentEmailBody({
+        documentType: kind,
+        attachedPdf: true,
+        shopName: shop,
+        kindLabel,
+        documentLabel,
+      });
+    const html = composeEditableEmailHtml(prose);
     const subject = `${shopCompanyName || "Shop"}: ${documentLabel}`;
 
     const mail = resolveCustomerMailDelivery(uSettings, shopCompanyName);

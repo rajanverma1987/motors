@@ -4,9 +4,10 @@ import { getPortalUserFromRequest } from "@/lib/auth-portal";
 import UserSettings from "@/models/UserSettings";
 import { mergeUserSettings } from "@/lib/user-settings";
 import { getWorkspaceSmtpDeliveryNotice } from "@/lib/workspace-smtp-fields";
-import { resolveOutboundFromPreview, withDashboardOutboundEmailFooter } from "@/lib/customer-facing-email-content";
+import { composeEditableEmailHtml, resolveOutboundFromPreview } from "@/lib/customer-facing-email-content";
 import { clampString } from "@/lib/validation";
-import { parseCcEmailList } from "@/lib/send-document-custom-message";
+import { parseCcEmailList, SEND_DOCUMENT_CUSTOM_MESSAGE_MAX } from "@/lib/send-document-custom-message";
+import { buildDefaultSendDocumentEmailBody, emailBodyHasText } from "@/lib/send-document-email-body";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { resolveCustomerMailDelivery } from "@/lib/workspace-smtp";
 import { getTransporter } from "@/lib/email-transport";
@@ -90,7 +91,7 @@ export async function POST(request) {
     }
 
     const body = await request.json().catch(() => ({}));
-    const customMessage = clampString(body?.customMessage, 2000);
+    const customMessage = clampString(body?.customMessage, SEND_DOCUMENT_CUSTOM_MESSAGE_MAX);
     const { ccEmails, error: ccError } = parseCcEmailList(body?.cc);
     if (ccError) {
       return NextResponse.json({ error: ccError }, { status: 400 });
@@ -124,22 +125,21 @@ export async function POST(request) {
       billingAddress: uSettings.accountsBillingAddress,
       shippingAddress: uSettings.accountsShippingAddress,
     });
-    const noteHtml = customMessage
-      ? `<p style="white-space:pre-wrap;margin:12px 0">${esc(customMessage)}</p>`
-      : "";
     const logoStyle = shopEmailLogoInlineStyle(uSettings.logoDocumentScale);
     const logoHtml = shopLogo?.logoSrc
       ? `<p style="margin-top:16px"><img src="${esc(shopLogo.logoSrc)}" alt="" height="${logoStyle.heightPx}" style="${logoStyle.style}" /></p>`
       : "";
-    const html = withDashboardOutboundEmailFooter(`
-      <p>Hi${toName ? ` ${esc(toName)}` : ""},</p>
-      <p>Please find your purchase order ${poNumber ? `(PO# ${esc(poNumber)})` : ""} from ${esc(shopCompanyName || "our shop")}. The purchase order is attached as a PDF.</p>
-      ${noteHtml}
-      <p>If you have questions, reply to this email or contact us.</p>
-      ${addressesHtml || ""}
-      ${logoHtml}
-      <p style="margin-top:16px">— ${esc(shopCompanyName || "Our shop")}</p>
-    `);
+    const shop = shopCompanyName || "Our shop";
+    const prose = emailBodyHasText(customMessage)
+      ? customMessage.trim()
+      : buildDefaultSendDocumentEmailBody({
+        documentType: "po",
+        attachedPdf: true,
+        toName,
+        shopName: shop,
+        reference: poNumber,
+      });
+    const html = composeEditableEmailHtml(prose, `${addressesHtml || ""}${logoHtml}`);
     const subject = `Purchase order ${poNumber || documentLabel} – ${shopCompanyName || "Electric Motor Shop"}`;
 
     const mail = resolveCustomerMailDelivery(uSettings, shopCompanyName);

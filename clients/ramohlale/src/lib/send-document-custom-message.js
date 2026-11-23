@@ -1,6 +1,6 @@
 import { clampString } from "@/lib/validation";
 
-const CUSTOM_MESSAGE_MAX = 2000;
+const CUSTOM_MESSAGE_MAX = 12000;
 const CC_MAX_LENGTH = 500;
 const CC_MAX_ADDRESSES = 10;
 const TO_EMAIL_MAX = 320;

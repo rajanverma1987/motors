@@ -15,6 +15,7 @@ export default function DocumentPreviewSheet({
   vendor,
   accountSettings,
   fmt,
+  frameClassName = "",
 }) {
   const quoteForSheet = quote
     ? { ...quote, printNotesMode: quote.printNotesMode || "customer" }
@@ -33,7 +34,7 @@ export default function DocumentPreviewSheet({
     : null;
 
   return (
-    <div className="max-h-[min(70vh,720px)] overflow-auto rounded-lg border border-border bg-neutral-100 p-4 sm:p-6 shadow-inner">
+    <div className={`max-h-[min(70vh,720px)] overflow-auto rounded-lg border border-border bg-neutral-100 p-4 sm:p-6 shadow-inner ${frameClassName}`.trim()}>
       <div className="mx-auto w-full max-w-[52.8rem] bg-white p-6 shadow-sm sm:p-8">
         {documentType === "quote" && quoteForSheet ? <QuotePrintSheetBody quote={quoteForSheet} fmt={fmt} /> : null}
         {documentType === "invoice" && invoiceForSheet ? (
