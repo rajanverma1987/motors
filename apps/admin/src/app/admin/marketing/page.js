@@ -799,7 +799,7 @@ export default function AdminMarketingPage() {
         <div className="space-y-4">
           <p className="text-sm text-secondary">
             Placeholders: {"{{companyName}}"}, {"{{name}}"}, {"{{email}}"}, {"{{unsubscribe_url}}"}, {"{{watch_url}}"}.
-            The watch link is filled per shop when you send the demo. A test email uses a sample link that does not play the video.
+            The watch link is filled per shop as https://3phaseflow.com/watch-demo/… when you send. A test email uses a sample link that does not play the video.
             Unsubscribe is appended automatically if missing.
           </p>
           <div className="flex flex-wrap gap-2">

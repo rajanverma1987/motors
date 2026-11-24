@@ -10,6 +10,7 @@ import {
   renderListingMarketingSubject,
 } from "@/lib/listing-marketing-render";
 import { buildListingMarketingUnsubscribeUrl } from "@/lib/listing-marketing-unsubscribe";
+import { getMarketingSiteUrl } from "@/lib/public-site-url";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -47,6 +48,7 @@ export async function POST(request) {
       email: to,
       companyName: "Test Electric Motor Shop",
       unsubscribeUrl: buildListingMarketingUnsubscribeUrl(to, request),
+      watchUrl: `${getMarketingSiteUrl()}/watch-demo/test-preview`,
     };
 
     const renderedSubject = `[TEST] ${renderListingMarketingSubject(subject, ctx)}`;

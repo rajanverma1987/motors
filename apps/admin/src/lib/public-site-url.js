@@ -73,6 +73,11 @@ export function getPublicSiteUrl(request) {
   return stripTrailingSlash(DEFAULT_PUBLIC_SITE_URL);
 }
 
+/** Demo watch links belong on the public marketing site, never the admin host. */
+export function getMarketingSiteUrl() {
+  return stripTrailingSlash(DEFAULT_PUBLIC_SITE_URL);
+}
+
 function getSafeForwardedOrigin(request) {
   try {
     const host = (request.headers.get("x-forwarded-host") || request.headers.get("host") || "").split(",")[0].trim();

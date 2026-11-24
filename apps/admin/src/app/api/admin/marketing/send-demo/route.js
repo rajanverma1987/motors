@@ -14,7 +14,7 @@ import {
   renderListingMarketingHtml,
   renderListingMarketingSubject,
 } from "@/lib/listing-marketing-render";
-import { getPublicSiteUrl } from "@/lib/public-site-url";
+import { getMarketingSiteUrl } from "@/lib/public-site-url";
 
 function startOfUtcDay(d = new Date()) {
   return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()));
@@ -96,7 +96,7 @@ export async function POST(request) {
       if (queue.length >= quota) break;
     }
 
-    const site = getPublicSiteUrl(request);
+    const site = getMarketingSiteUrl();
     let sent = 0;
     const errors = [];
 

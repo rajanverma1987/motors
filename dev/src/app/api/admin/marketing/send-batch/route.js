@@ -20,7 +20,7 @@ import {
   renderListingMarketingHtml,
   renderListingMarketingSubject,
 } from "@/lib/listing-marketing-render";
-import { getPublicSiteUrl } from "@/lib/public-site-url";
+import { getMarketingSiteUrl } from "@/lib/public-site-url";
 
 function startOfUtcDay(d = new Date()) {
   return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()));
@@ -140,7 +140,7 @@ export async function POST(request) {
 
       const needsWatchLink = String(tpl.bodyHtml || "").includes("{{watch_url}}");
       const watchToken = needsWatchLink ? randomBytes(24).toString("base64url") : "";
-      const watchUrl = watchToken ? `${getPublicSiteUrl(request)}/watch-demo/${watchToken}` : "";
+      const watchUrl = watchToken ? `${getMarketingSiteUrl()}/watch-demo/${watchToken}` : "";
       const subject = renderListingMarketingSubject(tpl.subject, ctx);
       const html = renderListingMarketingHtml(tpl.bodyHtml, { ...ctx, watchUrl });
       const cycleId = Number(state?.cycleId || 1);

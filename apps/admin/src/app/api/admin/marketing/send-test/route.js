@@ -4,7 +4,7 @@ import MarketingTemplate from "@/models/MarketingTemplate";
 import { getAdminFromRequest } from "@/lib/auth-admin";
 import { sendListingMarketingEmailViaResend } from "@/lib/resend-marketing";
 import { LISTING_MARKETING_ALL_TEMPLATE_KEYS } from "@/lib/listing-marketing-constants";
-import { getPublicSiteUrl } from "@/lib/public-site-url";
+import { getMarketingSiteUrl } from "@/lib/public-site-url";
 import { DEFAULT_LISTING_MARKETING_TEMPLATES } from "@/lib/listing-marketing-defaults";
 import {
   renderListingMarketingHtml,
@@ -48,7 +48,7 @@ export async function POST(request) {
       email: to,
       companyName: "Test Electric Motor Shop",
       unsubscribeUrl: buildListingMarketingUnsubscribeUrl(to, request),
-      watchUrl: `${getPublicSiteUrl(request)}/watch-demo/test-preview`,
+      watchUrl: `${getMarketingSiteUrl()}/watch-demo/test-preview`,
     };
 
     const renderedSubject = `[TEST] ${renderListingMarketingSubject(subject, ctx)}`;
