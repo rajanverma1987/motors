@@ -35,6 +35,10 @@ const nextConfig = {
   outputFileTracingExcludes: {
     "*": ["./public/uploads/**/*"],
   },
+  /** Private demo mp4 is streamed only after a watch token matches. */
+  outputFileTracingIncludes: {
+    "/api/demo-video/[token]": ["./private/3PhaseFlowDemo.mp4"],
+  },
   async redirects() {
     return [
       {

@@ -1,3 +1,4 @@
+/** Drip sequence only. `templateKeyForEmailsInCycle` never returns `demo`. */
 export const LISTING_MARKETING_TEMPLATE_KEYS = [
   "initial",
   "followup1",
@@ -6,12 +7,19 @@ export const LISTING_MARKETING_TEMPLATE_KEYS = [
   "restart",
 ];
 
+/** Drip keys plus the one-off demo video email. */
+export const LISTING_MARKETING_ALL_TEMPLATE_KEYS = [
+  ...LISTING_MARKETING_TEMPLATE_KEYS,
+  "demo",
+];
+
 export const LISTING_MARKETING_TEMPLATE_META = {
   initial: { name: "Initial", label: "1. Initial" },
   followup1: { name: "Follow-up 1", label: "2. Follow-up 1" },
   followup2: { name: "Follow-up 2", label: "3. Follow-up 2" },
   followup3: { name: "Follow-up 3", label: "4. Follow-up 3" },
   restart: { name: "Restart / win-back", label: "5. Restart / win-back" },
+  demo: { name: "Demo video", label: "6. Demo video" },
 };
 
 export const LISTING_MARKETING_DAILY_LIMIT = 100;

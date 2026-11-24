@@ -1,0 +1,28 @@
+You already know how to fix the motor. The pain is everything around it. Paper. Phone calls. The same numbers typed three times. We built 3PhaseFlow to take that off your plate.
+
+You write the same job too many times.
+A motor comes in. You write it on a clipboard. Then you type it for the quote. Then again for the work order. Then again for the invoice.
+We keep it as one job. You enter it once. The quote, the work order, and the invoice all use that same job.
+Show: 01-same-job-list.png, then 02-one-job-quote-and-po.png
+
+The shop floor and the office don't match.
+Your guy on the bench knows the motor is in test. The office still thinks it is in inspection. Somebody has to walk back and tell them.
+Your tech updates the job on his phone. The office sees it right away. No more walking back to the desk.
+Show: 03-shop-floor-board.png
+
+Good calls die in email.
+A customer calls or emails. It sits there. You get busy. They call the next shop.
+Those leads come into the same system. You turn one into a customer and a job without typing it all over again.
+Show: 04-leads.png
+
+The office spends the day retyping.
+Parts are in one place. Vendor orders in another. Invoices in another. Then somebody types it all into QuickBooks.
+We put parts, purchase orders, invoices, and QuickBooks on that same job. You stop copying numbers.
+Show: 05-inventory.png, 07-purchase-orders.png, 06-invoices.png, 08-quickbooks.png
+
+And the rest of the day-to-day.
+You can also email proposals and invoices, send purchase orders to vendors, keep motor test sheets, clock your guys in and put hours on the job, run payroll, track commissions, and see when parts are running low. It works on a phone or a tablet. You can post a job when you need a winder, and list surplus motors and parts when you want to sell them.
+Show: 02 (Send By Email), 09-datasheet.png, 10-employees.png, 11-reports.png
+
+Book a demo and we will walk you through the software, screen by screen, so you can see how it fits your shop. Go to 3PhaseFlow.com and book your demo.
+Show: 12-book-demo.png

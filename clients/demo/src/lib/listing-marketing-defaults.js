@@ -16,16 +16,16 @@ export const DEFAULT_LISTING_MARKETING_TEMPLATES = {
   initial: {
     key: "initial",
     name: "Initial",
-    subject: "List your motor repair shop on 3PhaseFlow.com",
+    subject: "A short demo for {{companyName}}",
     bodyHtml: wrap(`
 <p style="margin: 0 0 1em 0;">Hi{{#name}} {{name}}{{/name}},</p>
-<p style="margin: 0 0 1em 0;">We&apos;d like to invite <strong>{{companyName}}</strong> to list on <strong>3PhaseFlow.com</strong> so customers in your area can find you.</p>
-<ul style="margin: 1em 0; padding-left: 1.25em;">
-<li>Listing is <strong>free</strong></li>
-<li>Add your services and get more leads</li>
-<li>Manage your presence in one place</li>
-</ul>
-${CTA}`),
+<p style="margin: 0 0 1em 0;">You already know how to fix the motor. The pain is everything around it. The same job written on a clipboard, typed again for the quote, and the office still not sure where it is on the floor.</p>
+<p style="margin: 0 0 1em 0;">I recorded a short demo for <strong>{{companyName}}</strong>. It shows one job number from the quote to the invoice, the shop floor and the office on the same board, and leads that do not die in email.</p>
+<p style="margin: 0 0 1em 0;">Watch it. When the video ends, book a time. We will walk through the software on your own kind of work, screen by screen.</p>
+<p style="margin: 1.25em 0;">
+<a href="{{watch_url}}" style="display: inline-block; padding: 10px 18px; background: #9a5d33; color: #fff; text-decoration: none; border-radius: 6px; font-weight: 600;">Watch the demo</a>
+</p>
+<p style="margin: 0 0 1em 0;">The link is only for your shop. It is not a public page.</p>`),
   },
   followup1: {
     key: "followup1",
@@ -60,11 +60,26 @@ ${CTA}`),
   restart: {
     key: "restart",
     name: "Restart / win-back",
-    subject: "Reconnecting: list {{companyName}} on 3PhaseFlow",
+    subject: "Watch a short demo for {{companyName}}",
     bodyHtml: wrap(`
 <p style="margin: 0 0 1em 0;">Hi{{#name}} {{name}}{{/name}},</p>
-<p style="margin: 0 0 1em 0;">We are reaching out again about a free listing for <strong>{{companyName}}</strong> on 3PhaseFlow.com.</p>
-<p style="margin: 0 0 1em 0;">If you would like to be findable by industrial buyers searching for motor repair, you can claim your listing here.</p>
-${CTA}`),
+<p style="margin: 0 0 1em 0;">One note for <strong>{{companyName}}</strong>. Instead of another long email, here is a short demo of how a motor shop runs the job, the floor, and the invoice in one place.</p>
+<p style="margin: 0 0 1em 0;">Watch it. When the video ends, book a time and we will walk through the software for your shop.</p>
+<p style="margin: 1.25em 0;">
+<a href="{{watch_url}}" style="display: inline-block; padding: 10px 18px; background: #9a5d33; color: #fff; text-decoration: none; border-radius: 6px; font-weight: 600;">Watch the demo</a>
+</p>
+<p style="margin: 0 0 1em 0;">The link is only for your shop.</p>`),
+  },
+  demo: {
+    key: "demo",
+    name: "Demo video",
+    subject: "A short demo of 3PhaseFlow for {{companyName}}",
+    bodyHtml: wrap(`
+<p style="margin: 0 0 1em 0;">Hi{{#name}} {{name}}{{/name}},</p>
+<p style="margin: 0 0 1em 0;">You already know how to fix the motor. The hard part is the paperwork around it. We made a short demo of 3PhaseFlow for <strong>{{companyName}}</strong>.</p>
+<p style="margin: 0 0 1em 0;">Watch it. When it ends, you can book a time and we will walk you through the software for your shop.</p>
+<p style="margin: 1.25em 0;">
+<a href="{{watch_url}}" style="display: inline-block; padding: 10px 18px; background: #9a5d33; color: #fff; text-decoration: none; border-radius: 6px; font-weight: 600;">Watch the demo</a>
+</p>`),
   },
 };

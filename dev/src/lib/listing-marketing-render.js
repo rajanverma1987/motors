@@ -3,19 +3,21 @@ import { buildListingMarketingUnsubscribeUrl } from "@/lib/listing-marketing-uns
 
 /**
  * @param {string} html
- * @param {{ name?: string, email?: string, companyName?: string, unsubscribeUrl?: string }} ctx
+ * @param {{ name?: string, email?: string, companyName?: string, unsubscribeUrl?: string, watchUrl?: string }} ctx
  */
 export function renderListingMarketingHtml(html, ctx) {
   const name = String(ctx.name || "").trim();
   const email = String(ctx.email || "").trim();
   const company = String(ctx.companyName || "").trim();
   const unsubscribeUrl = String(ctx.unsubscribeUrl || "").trim();
+  const watchUrl = String(ctx.watchUrl || "").trim();
   let out = String(html || "");
   out = out
     .replace(/\{\{name\}\}/g, name)
     .replace(/\{\{email\}\}/g, email)
     .replace(/\{\{companyName\}\}/g, company)
     .replace(/\{\{unsubscribe_url\}\}/g, unsubscribeUrl)
+    .replace(/\{\{watch_url\}\}/g, watchUrl)
     .replace(/\{\{#name\}\}([\s\S]*?)\{\{\/name\}\}/g, name ? "$1" : "");
 
   const baseUrl = getPublicSiteUrl();

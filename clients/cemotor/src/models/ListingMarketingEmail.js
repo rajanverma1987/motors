@@ -7,6 +7,7 @@ export const LISTING_MARKETING_TEMPLATE_KEYS = [
   "followup2",
   "followup3",
   "restart",
+  "demo",
 ];
 
 const eventLogSchema = new mongoose.Schema(
@@ -56,6 +57,13 @@ const listingMarketingEmailSchema = new mongoose.Schema(
     bounceType: { type: String, default: "" },
     bounceMessage: { type: String, default: "" },
     clickCount: { type: Number, default: 0 },
+    /** Private /watch-demo token. Omitted unless this send is the demo video. */
+    watchToken: { type: String },
+    demoPageOpenedAt: { type: Date, default: null },
+    demoPlayedAt: { type: Date, default: null },
+    demoMaxPercent: { type: Number, default: 0 },
+    demoCompletedAt: { type: Date, default: null },
+    demoBookClickedAt: { type: Date, default: null },
     events: { type: [eventLogSchema], default: [] },
   },
   { timestamps: true }
@@ -63,6 +71,7 @@ const listingMarketingEmailSchema = new mongoose.Schema(
 
 listingMarketingEmailSchema.index({ listingId: 1, sentAt: -1 });
 listingMarketingEmailSchema.index({ resendId: 1 }, { sparse: true });
+listingMarketingEmailSchema.index({ watchToken: 1 }, { unique: true, sparse: true });
 
 export default mongoose.models.ListingMarketingEmail ||
   mongoose.model("ListingMarketingEmail", listingMarketingEmailSchema);
