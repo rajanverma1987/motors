@@ -21,60 +21,53 @@ export default function WatchDemoPlayer({ token, bookingUrl }) {
   }, [token]);
 
   return (
-    <main className="min-h-screen bg-bg px-4 py-10 text-title">
-      <div className="mx-auto w-full max-w-4xl">
-        <p className="text-sm font-medium text-primary">3PhaseFlow</p>
-        <h1 className="mt-2 text-2xl font-bold tracking-tight sm:text-3xl">Watch the demo</h1>
-        <p className="mt-2 text-secondary">
-          This link is only for your shop. When the video ends, you can book a time to see the software.
-        </p>
-        <video
-          className="mt-6 w-full rounded-lg bg-black"
-          controls
-          playsInline
-          preload="metadata"
-          src={`/api/demo-video/${encodeURIComponent(token)}`}
-          onPlay={() => {
-            if (sent.current.play) return;
-            sent.current.play = true;
-            post("play", 1);
-          }}
-          onTimeUpdate={(event) => {
-            const video = event.currentTarget;
-            if (!video.duration || sent.current.half) return;
-            const percent = (video.currentTime / video.duration) * 100;
-            if (percent >= 50) {
-              sent.current.half = true;
-              post("progress", 50);
-            }
-          }}
-          onEnded={() => {
-            setShowBook(true);
-            if (sent.current.complete) return;
-            sent.current.complete = true;
-            post("complete", 100);
-          }}
-        />
-        {showBook ? (
-          <div className="mt-6 rounded-lg border border-border bg-card p-5">
-            <h2 className="text-lg font-semibold">Book a demo</h2>
-            <p className="mt-1 text-sm text-secondary">
-              We will walk you through the software, screen by screen, so you can see how it fits your shop.
-            </p>
-            <a
-              href={bookingUrl}
-              className="mt-4 inline-flex min-h-11 items-center rounded-md bg-primary px-4 py-2 text-sm font-semibold text-white"
-              onClick={() => {
-                if (sent.current.book) return;
-                sent.current.book = true;
-                post("book");
-              }}
-            >
-              Book a demo
-            </a>
-          </div>
-        ) : null}
-      </div>
+    <main className="fixed inset-0 bg-black">
+      <video
+        className="h-full w-full bg-black object-contain"
+        controls
+        playsInline
+        preload="metadata"
+        src={`/api/demo-video/${encodeURIComponent(token)}`}
+        onPlay={() => {
+          if (sent.current.play) return;
+          sent.current.play = true;
+          post("play", 1);
+        }}
+        onTimeUpdate={(event) => {
+          const video = event.currentTarget;
+          if (!video.duration || sent.current.half) return;
+          const percent = (video.currentTime / video.duration) * 100;
+          if (percent >= 50) {
+            sent.current.half = true;
+            post("progress", 50);
+          }
+        }}
+        onEnded={() => {
+          setShowBook(true);
+          if (sent.current.complete) return;
+          sent.current.complete = true;
+          post("complete", 100);
+        }}
+      />
+      {showBook ? (
+        <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/90 to-transparent px-4 pb-8 pt-16 text-white sm:px-8">
+          <h2 className="text-xl font-semibold">Book a demo</h2>
+          <p className="mt-1 max-w-xl text-sm text-white/80">
+            We will walk you through the software, screen by screen, so you can see how it fits your shop.
+          </p>
+          <a
+            href={bookingUrl}
+            className="mt-4 inline-flex min-h-11 items-center rounded-md bg-primary px-4 py-2 text-sm font-semibold text-white"
+            onClick={() => {
+              if (sent.current.book) return;
+              sent.current.book = true;
+              post("book");
+            }}
+          >
+            Book a demo
+          </a>
+        </div>
+      ) : null}
     </main>
   );
 }

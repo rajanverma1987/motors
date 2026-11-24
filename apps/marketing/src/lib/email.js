@@ -511,7 +511,7 @@ export async function sendLeadPlatformNurtureEmail({ to, name, bookingUrl, unsub
   const esc = (v) =>
     v == null ? "" : String(v).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
   const displayName = String(name || "there").trim() || "there";
-  const cal = String(bookingUrl || "https://cal.com/iqmotorbase/30min").trim();
+  const cal = String(bookingUrl || "https://cal.com/3phaseflow").trim();
   const unsub = String(unsubscribeUrl || "").trim();
   const subject = "You received a repair lead from 3PhaseFlow: here is how to get more";
   const offerLine = founderPricingOfferSentence(await getFounderSpotCounts());

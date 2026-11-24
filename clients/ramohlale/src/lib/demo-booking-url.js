@@ -1,9 +1,9 @@
 /**
- * Public demo booking URL ([Cal.com](https://cal.com/iqmotorbase/30min)).
+ * Public demo booking URL ([Cal.com](https://cal.com/3phaseflow)).
  * Override with NEXT_PUBLIC_DEMO_BOOKING_URL in .env.local if needed.
  */
 
-export const DEMO_BOOKING_DEFAULT_URL = "https://cal.com/iqmotorbase/30min";
+export const DEMO_BOOKING_DEFAULT_URL = "https://cal.com/3phaseflow";
 
 /**
  * @returns {string}
