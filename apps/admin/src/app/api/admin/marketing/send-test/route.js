@@ -3,7 +3,8 @@ import { connectDB } from "@/lib/db";
 import MarketingTemplate from "@/models/MarketingTemplate";
 import { getAdminFromRequest } from "@/lib/auth-admin";
 import { sendListingMarketingEmailViaResend } from "@/lib/resend-marketing";
-import { LISTING_MARKETING_TEMPLATE_KEYS } from "@/lib/listing-marketing-constants";
+import { LISTING_MARKETING_ALL_TEMPLATE_KEYS } from "@/lib/listing-marketing-constants";
+import { getPublicSiteUrl } from "@/lib/public-site-url";
 import { DEFAULT_LISTING_MARKETING_TEMPLATES } from "@/lib/listing-marketing-defaults";
 import {
   renderListingMarketingHtml,
@@ -27,7 +28,7 @@ export async function POST(request) {
     }
 
     const templateKey = String(body?.templateKey || "initial").trim();
-    if (!LISTING_MARKETING_TEMPLATE_KEYS.includes(templateKey)) {
+    if (!LISTING_MARKETING_ALL_TEMPLATE_KEYS.includes(templateKey)) {
       return NextResponse.json({ error: "Invalid template." }, { status: 400 });
     }
 
@@ -47,6 +48,7 @@ export async function POST(request) {
       email: to,
       companyName: "Test Electric Motor Shop",
       unsubscribeUrl: buildListingMarketingUnsubscribeUrl(to, request),
+      watchUrl: `${getPublicSiteUrl(request)}/watch-demo/test-preview`,
     };
 
     const renderedSubject = `[TEST] ${renderListingMarketingSubject(subject, ctx)}`;

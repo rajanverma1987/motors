@@ -68,6 +68,11 @@ export async function GET(request, context) {
         bounceType: e.bounceType || "",
         bounceMessage: e.bounceMessage || "",
         clickCount: e.clickCount || 0,
+        demoPageOpenedAt: e.demoPageOpenedAt,
+        demoPlayedAt: e.demoPlayedAt,
+        demoMaxPercent: e.demoMaxPercent || 0,
+        demoCompletedAt: e.demoCompletedAt,
+        demoBookClickedAt: e.demoBookClickedAt,
         events: Array.isArray(e.events) ? e.events : [],
       })),
     });

@@ -87,6 +87,20 @@ export async function GET(request) {
       latestEmails.map((row) => [String(row._id), row.doc])
     );
 
+    const latestDemoEmails = await ListingMarketingEmail.aggregate([
+      { $match: { listingId: { $in: ids }, templateKey: "demo", status: "sent" } },
+      { $sort: { sentAt: -1 } },
+      {
+        $group: {
+          _id: "$listingId",
+          doc: { $first: "$$ROOT" },
+        },
+      },
+    ]);
+    const latestDemoByListing = Object.fromEntries(
+      latestDemoEmails.map((row) => [String(row._id), row.doc])
+    );
+
     const dayStart = startOfUtcDay();
     const sentToday = await ListingMarketingEmail.countDocuments({
       status: "sent",
@@ -98,7 +112,9 @@ export async function GET(request) {
       status: "sent",
       sentAt: { $gte: since },
     })
-      .select("deliveredAt openedAt clickedAt bouncedAt complainedAt")
+      .select(
+        "deliveredAt openedAt clickedAt bouncedAt complainedAt demoPageOpenedAt demoPlayedAt demoCompletedAt demoBookClickedAt"
+      )
       .lean();
 
     const unsubscribedCount = states.filter((s) => s?.unsubscribedAt).length;
@@ -117,6 +133,10 @@ export async function GET(request) {
         clicked: recent.filter((e) => e.clickedAt).length,
         bounced: recent.filter((e) => e.bouncedAt).length,
         complained: recent.filter((e) => e.complainedAt).length,
+        demoPageOpened: recent.filter((e) => e.demoPageOpenedAt).length,
+        demoPlayed: recent.filter((e) => e.demoPlayedAt).length,
+        demoCompleted: recent.filter((e) => e.demoCompletedAt).length,
+        demoBookClicked: recent.filter((e) => e.demoBookClickedAt).length,
       },
     };
 
@@ -124,6 +144,7 @@ export async function GET(request) {
       const id = String(l._id);
       const state = stateByListing[id] || null;
       const latest = latestByListing[id] || null;
+      const demo = latestDemoByListing[id] || null;
       return {
         id,
         companyName: l.companyName || "",
@@ -141,6 +162,12 @@ export async function GET(request) {
         unsubscribedAt: state?.unsubscribedAt || null,
         lastEmailSentAt: state?.lastEmailSentAt || latest?.sentAt || null,
         lastTemplateKey: latest?.templateKey || "",
+        demoSentAt: demo?.sentAt || null,
+        demoPageOpenedAt: demo?.demoPageOpenedAt || null,
+        demoPlayedAt: demo?.demoPlayedAt || null,
+        demoMaxPercent: Number(demo?.demoMaxPercent || 0),
+        demoCompletedAt: demo?.demoCompletedAt || null,
+        demoBookClickedAt: demo?.demoBookClickedAt || null,
       };
     });
 

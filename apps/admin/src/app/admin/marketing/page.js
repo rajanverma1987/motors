@@ -12,7 +12,7 @@ import { useConfirm } from "@/components/confirm-provider";
 import SimpleRichTextEditor from "@/components/admin/simple-rich-text-editor";
 import { LISTING_MARKETING_TEMPLATE_META } from "@/lib/listing-marketing-constants";
 
-const TEMPLATE_KEYS = ["initial", "followup1", "followup2", "followup3", "restart"];
+const TEMPLATE_KEYS = ["initial", "followup1", "followup2", "followup3", "restart", "demo"];
 
 function deliveryBadgeVariant(status) {
   const s = String(status || "").toLowerCase();
@@ -29,6 +29,15 @@ function campaignBadgeVariant(status) {
   if (s.includes("restart")) return "warning";
   if (s.includes("cycle")) return "primary";
   return "default";
+}
+
+function demoStatusLabel(row) {
+  if (row?.demoBookClickedAt) return "Booked";
+  if (row?.demoCompletedAt) return "Finished";
+  if (row?.demoPlayedAt) return "Played";
+  if (row?.demoPageOpenedAt) return "Opened page";
+  if (row?.demoSentAt) return "Sent";
+  return "Not sent";
 }
 
 function formatWhen(value) {
@@ -66,6 +75,10 @@ function rowMatchesCardFilter(row, filter) {
   if (filter === "unsubscribed") {
     return Boolean(row?.unsubscribedAt) || String(row?.campaignStatus || "").toLowerCase() === "unsubscribed";
   }
+  if (filter === "demoPage") return Boolean(row?.demoPageOpenedAt);
+  if (filter === "demoPlayed") return Boolean(row?.demoPlayedAt);
+  if (filter === "demoFinished") return Boolean(row?.demoCompletedAt);
+  if (filter === "demoBooked") return Boolean(row?.demoBookClickedAt);
   return true;
 }
 
@@ -89,6 +102,7 @@ function downloadMarketingListCsv(list, filterKey) {
     "Emails in cycle",
     "Cycle",
     "Last template",
+    "Demo",
     "Unsubscribed at",
   ];
   const lines = [headers.join(",")];
@@ -107,6 +121,7 @@ function downloadMarketingListCsv(list, filterKey) {
         csvEscape(row.emailsInCycle ?? ""),
         csvEscape(row.cycleId ?? ""),
         csvEscape(row.lastTemplateKey),
+        csvEscape(demoStatusLabel(row)),
         csvEscape(row.unsubscribedAt ? new Date(row.unsubscribedAt).toISOString() : ""),
       ].join(",")
     );
@@ -188,6 +203,10 @@ function HistoryModal({ listingId, open, onClose }) {
                       ["Delivered", email.deliveredAt],
                       ["Opened", email.openedAt],
                       ["Clicked", email.clickedAt],
+                      ["Demo page", email.demoPageOpenedAt],
+                      ["Demo played", email.demoPlayedAt],
+                      ["Demo finished", email.demoCompletedAt],
+                      ["Book demo", email.demoBookClickedAt],
                       ["Bounced", email.bouncedAt],
                       ["Complained", email.complainedAt],
                       ["Failed", email.failedAt],
@@ -212,6 +231,9 @@ function HistoryModal({ listingId, open, onClose }) {
                   {email.clickCount > 0 ? (
                     <p className="mt-1 text-xs text-secondary">Clicks: {email.clickCount}</p>
                   ) : null}
+                  {email.demoMaxPercent > 0 ? (
+                    <p className="mt-1 text-xs text-secondary">Demo watched: {email.demoMaxPercent}%</p>
+                  ) : null}
                   {email.bounceMessage ? (
                     <p className="mt-1 text-xs text-danger">{email.bounceMessage}</p>
                   ) : null}
@@ -235,6 +257,7 @@ export default function AdminMarketingPage() {
   const [q, setQ] = useState("");
   const [selectedIds, setSelectedIds] = useState([]);
   const [sending, setSending] = useState(false);
+  const [sendingDemo, setSendingDemo] = useState(false);
   const [restarting, setRestarting] = useState(false);
   const [historyId, setHistoryId] = useState("");
   const [templatesOpen, setTemplatesOpen] = useState(false);
@@ -371,6 +394,36 @@ export default function AdminMarketingPage() {
       toast.error(err.message || "Test send failed");
     } finally {
       setSendingTest(false);
+    }
+  };
+
+  const sendDemo = async () => {
+    const ok = await confirm({
+      title: "Send the demo video?",
+      message: `Email the private demo link to shops that have not received it yet. Up to ${remainingToday} today (daily limit ${effectiveDailyLimit}, UTC). This does not change their listing email cycle.`,
+      confirmLabel: "Send demo",
+      variant: "primary",
+    });
+    if (!ok) return;
+    setSendingDemo(true);
+    try {
+      const res = await fetch("/api/admin/marketing/send-demo", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ dailyLimit: effectiveDailyLimit }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Demo send failed");
+      toast.success(data.message || `Sent ${data.sent || 0} demo email(s).`);
+      if (Array.isArray(data.errors) && data.errors.length) {
+        toast.warning(`${data.errors.length} send error(s). Check history for details.`);
+      }
+      await loadListings();
+    } catch (err) {
+      toast.error(err.message || "Demo send failed");
+    } finally {
+      setSendingDemo(false);
     }
   };
 
@@ -523,6 +576,19 @@ export default function AdminMarketingPage() {
       ),
     },
     {
+      key: "demoStatus",
+      label: "Demo",
+      sortable: false,
+      render: (_, row) => (
+        <Badge
+          variant={row?.demoBookClickedAt || row?.demoCompletedAt ? "success" : row?.demoPlayedAt || row?.demoPageOpenedAt ? "primary" : "default"}
+          className="rounded-full px-2.5 py-0.5 text-xs"
+        >
+          {demoStatusLabel(row)}
+        </Badge>
+      ),
+    },
+    {
       key: "lastEmailSentAt",
       label: "Last emailed",
       sortable: true,
@@ -566,6 +632,15 @@ export default function AdminMarketingPage() {
           <Button type="button" variant="primary" size="sm" disabled={sending} onClick={() => void runBatch()}>
             {sending ? "Sending…" : `Run batch (${remainingToday} left today)`}
           </Button>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            disabled={sendingDemo || remainingToday <= 0}
+            onClick={() => void sendDemo()}
+          >
+            {sendingDemo ? "Sending demo…" : "Send demo"}
+          </Button>
         </div>
       </div>
 
@@ -602,6 +677,26 @@ export default function AdminMarketingPage() {
                 key: "unsubscribed",
                 label: "Unsubscribed",
                 value: summary.unsubscribed ?? 0,
+              },
+              {
+                key: "demoPage",
+                label: "Demo page (30d)",
+                value: summary.last30Days?.demoPageOpened ?? 0,
+              },
+              {
+                key: "demoPlayed",
+                label: "Demo played (30d)",
+                value: summary.last30Days?.demoPlayed ?? 0,
+              },
+              {
+                key: "demoFinished",
+                label: "Demo finished (30d)",
+                value: summary.last30Days?.demoCompleted ?? 0,
+              },
+              {
+                key: "demoBooked",
+                label: "Book demo (30d)",
+                value: summary.last30Days?.demoBookClicked ?? 0,
               },
             ].map((card) => {
               const active = cardFilter === card.key;
@@ -703,7 +798,8 @@ export default function AdminMarketingPage() {
       >
         <div className="space-y-4">
           <p className="text-sm text-secondary">
-            Placeholders: {"{{companyName}}"}, {"{{name}}"}, {"{{email}}"}, {"{{unsubscribe_url}}"}.
+            Placeholders: {"{{companyName}}"}, {"{{name}}"}, {"{{email}}"}, {"{{unsubscribe_url}}"}, {"{{watch_url}}"}.
+            The watch link is filled per shop when you send the demo. A test email uses a sample link that does not play the video.
             Unsubscribe is appended automatically if missing.
           </p>
           <div className="flex flex-wrap gap-2">

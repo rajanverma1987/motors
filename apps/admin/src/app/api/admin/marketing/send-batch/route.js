@@ -1,3 +1,4 @@
+import { randomBytes } from "crypto";
 import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/db";
 import Listing from "@/models/Listing";
@@ -19,6 +20,7 @@ import {
   renderListingMarketingHtml,
   renderListingMarketingSubject,
 } from "@/lib/listing-marketing-render";
+import { getPublicSiteUrl } from "@/lib/public-site-url";
 
 function startOfUtcDay(d = new Date()) {
   return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()));
@@ -136,8 +138,11 @@ export async function POST(request) {
       const ctx = listingMarketingContextFromListing(listing, request);
       if (!ctx.email) continue;
 
+      const needsWatchLink = String(tpl.bodyHtml || "").includes("{{watch_url}}");
+      const watchToken = needsWatchLink ? randomBytes(24).toString("base64url") : "";
+      const watchUrl = watchToken ? `${getPublicSiteUrl(request)}/watch-demo/${watchToken}` : "";
       const subject = renderListingMarketingSubject(tpl.subject, ctx);
-      const html = renderListingMarketingHtml(tpl.bodyHtml, ctx);
+      const html = renderListingMarketingHtml(tpl.bodyHtml, { ...ctx, watchUrl });
       const cycleId = Number(state?.cycleId || 1);
 
       const result = await sendListingMarketingEmailViaResend({
@@ -177,6 +182,7 @@ export async function POST(request) {
         sentAt: now,
         resendId: result.id || "",
         status: "sent",
+        ...(watchToken ? { watchToken } : {}),
         lastEventType: "email.sent",
         lastEventAt: now,
         events: [{ type: "email.sent", at: now }],

@@ -3,7 +3,7 @@ import { connectDB } from "@/lib/db";
 import MarketingTemplate from "@/models/MarketingTemplate";
 import { getAdminFromRequest } from "@/lib/auth-admin";
 import {
-  LISTING_MARKETING_TEMPLATE_KEYS,
+  LISTING_MARKETING_ALL_TEMPLATE_KEYS,
   LISTING_MARKETING_TEMPLATE_META,
 } from "@/lib/listing-marketing-constants";
 import { DEFAULT_LISTING_MARKETING_TEMPLATES } from "@/lib/listing-marketing-defaults";
@@ -48,11 +48,11 @@ export async function GET(request) {
     await migrateLegacyTemplates();
 
     const docs = await MarketingTemplate.find({
-      key: { $in: LISTING_MARKETING_TEMPLATE_KEYS },
+      key: { $in: LISTING_MARKETING_ALL_TEMPLATE_KEYS },
     }).lean();
     const byKey = Object.fromEntries(docs.map((d) => [d.key, d]));
 
-    const templates = LISTING_MARKETING_TEMPLATE_KEYS.map((key) =>
+    const templates = LISTING_MARKETING_ALL_TEMPLATE_KEYS.map((key) =>
       normalizeTemplateDoc(byKey[key], key)
     );
 
@@ -74,7 +74,7 @@ export async function PUT(request) {
 
     for (const item of list) {
       const key = String(item?.key || "").trim();
-      if (!LISTING_MARKETING_TEMPLATE_KEYS.includes(key)) continue;
+      if (!LISTING_MARKETING_ALL_TEMPLATE_KEYS.includes(key)) continue;
       const meta = LISTING_MARKETING_TEMPLATE_META[key];
       await MarketingTemplate.findOneAndUpdate(
         { key },
@@ -94,10 +94,10 @@ export async function PUT(request) {
     }
 
     const docs = await MarketingTemplate.find({
-      key: { $in: LISTING_MARKETING_TEMPLATE_KEYS },
+      key: { $in: LISTING_MARKETING_ALL_TEMPLATE_KEYS },
     }).lean();
     const byKey = Object.fromEntries(docs.map((d) => [d.key, d]));
-    const templates = LISTING_MARKETING_TEMPLATE_KEYS.map((key) =>
+    const templates = LISTING_MARKETING_ALL_TEMPLATE_KEYS.map((key) =>
       normalizeTemplateDoc(byKey[key], key)
     );
 
